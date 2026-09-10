@@ -801,7 +801,7 @@ const STRINGS = {
     checkSharedShort: "gedeeld item",
     allOkTitle: "Alles klopt",
     allOkSub: "Ga verder naar het delen met je gasten.",
-    goGuestsBtn: "Naar Gasten en delen \u2192",
+    goGuestsBtn: "Naar Gasten en delen",
     scanModalTitle: "🧾 Rekening scannen",
     scanModalTitleAdded: "🧾 Foto toegevoegd",
     oneStepLeft: "nog 1 stap",
@@ -1449,7 +1449,7 @@ const STRINGS = {
     checkSharedShort: "article partagé",
     allOkTitle: "Tout est correct",
     allOkSub: "Continue vers le partage avec tes invit\u00e9s.",
-    goGuestsBtn: "Vers Invit\u00e9s et partage \u2192",
+    goGuestsBtn: "Vers Invités et partage",
     scanModalTitle: "🧾 Scanner l'addition",
     scanModalTitleAdded: "🧾 Photo ajoutée",
     oneStepLeft: "encore 1 étape",
@@ -6427,6 +6427,7 @@ function DeelUitleg() {
             stijl als de echte deelknoppen op de rijen — anders lijkt het voorbeeld niet
             op wat het uitlegt. */}
         <span style={{ flexShrink: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.sharedItemsQ}</span>
+        <span style={{ flex: 1, minWidth: 0 }} />
         <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px", background: "#fff", border: `1.5px solid ${INDIGO.rand}` }}><ShareIcon size={14} kleur={INDIGO.tekst} /><span style={{ fontSize: 15.5, fontWeight: 800, color: INDIGO.tekst }}>{L.makeSharedShort}</span></span>
         <span style={{ flex: 1, minWidth: 0 }} />
         <span style={{ flexShrink: 0, fontSize: 17, fontWeight: 800, color: "#4a6e73" }}>{deelInfoOpen ? "▴" : "▾"}</span>
@@ -6441,6 +6442,9 @@ function DeelUitleg() {
 
 const BON_STRINGS = {
   nl: {
+    allesKlopt: "✓ Alles klopt met de bon",
+    itemsWord: "Items",
+    bonWord: "Bon",
     diffOver: (b: string) => `${b} hoger dan de bon`,
     diffUnder: (b: string) => `${b} lager dan de bon`,
     waarom: "Waarom niet correct?",
@@ -6464,6 +6468,9 @@ const BON_STRINGS = {
     share: "delen",
   },
   fr: {
+    allesKlopt: "✓ Tout correspond à l'addition",
+    itemsWord: "Articles",
+    bonWord: "Addition",
     diffOver: (b: string) => `${b} de plus que l'addition`,
     diffUnder: (b: string) => `${b} de moins que l'addition`,
     waarom: "Pourquoi ça ne correspond pas ?",
@@ -6730,7 +6737,20 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
       })()}
 
       {onGoGuests && billOk && (
-        <button onClick={onGoGuests} className="rundo-klaar-puls" style={{ width: "100%", marginTop: 16, padding: "16px 0", fontSize: 18, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goGuestsBtn}</button>
+        <>
+          {/* De twee bedragen naast elkaar zeggen waaróm het klopt — het spiegelbeeld
+              van het rode verschilblok bovenaan de lijst. */}
+          <div style={{ marginTop: 16, background: "rgba(39,174,96,0.12)", border: "1.5px solid rgba(39,174,96,0.5)", borderRadius: 14, padding: 13, textAlign: "center" }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#15703f" }}>{B.allesKlopt}</div>
+            {(() => {
+              // billOk betekent dat items en bon binnen een halve cent gelijk zijn, dus
+              // één berekening volstaat voor allebei de bedragen.
+              const totaal = items.reduce((a, it) => a + regelBedrag(it), 0) + (taxLines || []).reduce((a, t) => a + t.amount, 0)
+              return <div style={{ fontSize: 15, color: "#3c6b51", marginTop: 3 }}>{B.itemsWord} {euro(totaal)} · {B.bonWord} {euro(totaal)}</div>
+            })()}
+          </div>
+          <button onClick={onGoGuests} className="rundo-klaar-puls" style={{ width: "100%", marginTop: 12, padding: "16px 0", fontSize: 18, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 8px 20px -8px rgba(31,138,76,0.75)", cursor: "pointer" }}>{L.goGuestsBtn}</button>
+        </>
       )}
 
     </div>
@@ -6912,6 +6932,8 @@ function ClaimScreen(props: {
   const _sharedDone = _shared.filter((i) => sharerIds(i.id).length > 0).length
   const allDone = (_totalU > 0 || _shared.length > 0) && _claimedU >= _totalU && _sharedDone === _shared.length
   const [claimCollapsed, setClaimCollapsed] = useState(false)
+  // Welke meerpersoonsplaats de beheerder net bevestigd heeft, als "itemId:pid".
+  const [ledenOpen, setLedenOpen] = useState<string | null>(null)
   // De knop "Wie nam wat" in het overzicht klapt deze lijst open (en scrollt ernaartoe).
   useEffect(() => { if (jumpToAssign) setClaimCollapsed(false) }, [jumpToAssign])
   // Vrije plaatsen (nog niemand) horen niet in de toewijslijst: enkel wie een naam heeft.
@@ -7031,7 +7053,12 @@ function ClaimScreen(props: {
                                       // het is zijn rekening, niet de jouwe. Alleen voor je eigen
                                       // plaats gaat het meteen door.
                                       if (!on && p.id !== meId) {
-                                        const doe = () => toggleShareClaim(it.id, p.id)
+                                        // Bij een plaats met meerdere personen kiest de beheerder daarna
+                                        // wie van hen meedeelde; die namen stonden er eerst altijd al,
+                                        // en dan kon je ze zonder vraag aantikken.
+                                        const doe = pSeats > 1
+                                          ? () => setLedenOpen(`${it.id}:${p.id}`)
+                                          : () => toggleShareClaim(it.id, p.id)
                                         if (explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(p.name), L.yes, doe); return }
                                         if (viaLink) { askConfirm(L.assignToQrGuest(naamVan(p)), L.yes, doe); return }
                                         askConfirm(L.assignForOther(naamVan(p)), L.yes, doe); return
@@ -7065,6 +7092,7 @@ function ClaimScreen(props: {
                           // een ±-knopje bij dat het aantal blind ophoogde — langs de grens
                           // heen én zonder te weten wíé het was. Nu overal hetzelfde venster.
                           if (pSeats <= 1 || fixed) return null
+                            if (p.id !== meId && ledenOpen !== `${it.id}:${p.id}`) return null
                           // Zelfde vraag als bij de gasten: wie van dit koppel deelde mee?
                           const parts = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
                           const sel = claimMembers(it.id, p.id)
