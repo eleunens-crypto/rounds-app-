@@ -7403,7 +7403,11 @@ function ClaimScreen(props: {
                       <span>{it.name}</span>
                     </div>
                     <div style={{ fontSize: 15.5, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `€${itemTotal(it).toFixed(2).replace(".", ",")}${L.totalSharedByDrinkers}${it.share_expected ? ` · ${L.sharedForN(it.share_expected)}` : ""}`}</div>
-                  </div>
+                      </div>
+                      {/* Ook de gast moet terug kunnen: hij mag een item op gedeeld zetten,
+                          dus ook weer af. shareBtn toont vanzelf een label in plaats van een
+                          knop wanneer hij het niet was die het deelde. */}
+                      {shareBtn(it)}
                   {/* De sleutel is "item:persoon"; met enkel het item-id stond deze knop soms
                       op "ja" terwijl er niets gekozen was, of omgekeerd. */}
                   <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" } : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
