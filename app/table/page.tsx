@@ -4330,7 +4330,20 @@ export default function RundoTable() {
             // Tot 5 cent is het vrijwel zeker afronding, geen fout: dat vraagt geen alarm.
             const rounding = entered != null && !match && diff <= 0.05
             const mismatch = entered != null && !match && !rounding
-            const saveTotal = () => { setReceiptConfirmed(false); const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", "."); if (raw === "") { setReceiptTotal(null); return } const n = parseFloat(raw); if (!isNaN(n) && n >= 0) setReceiptTotal(+n.toFixed(2)) }
+            const saveTotal = () => {
+              // Alleen een écht ander bedrag maakt de bevestiging ongeldig. Zonder deze
+              // controle wiste elke aanraking van het veld je bevestiging, ook als je
+              // er niets aan veranderde — en dan moest je opnieuw bevestigen voor je
+              // een item kon bewerken.
+              const raw = (receiptInputRef.current?.value ?? "").trim().replace(",", ".")
+              const oudBedrag = group?.receipt_total ?? null
+              if (raw === "") { if (oudBedrag != null) setReceiptConfirmed(false); setReceiptTotal(null); return }
+              const n = parseFloat(raw)
+              if (isNaN(n) || n < 0) return
+              const nieuwBedrag = +n.toFixed(2)
+              if (oudBedrag == null || Math.abs(oudBedrag - nieuwBedrag) >= 0.005) setReceiptConfirmed(false)
+              setReceiptTotal(nieuwBedrag)
+            }
             const greenState = !receiptEditing && receiptConfirmed
             // Bevestigen in één tik. We reageren op pointerdown (vóór het veld z'n focus
             // verliest en alles hertekent, wat anders de klik opat) en zetten de bevestiging
@@ -4353,7 +4366,7 @@ export default function RundoTable() {
                 {/* Eenmaal bevestigd verdwijnt "Ja" — anders lijkt het alsof je nóg eens
                     moet bevestigen. Enkel de weg terug (aanpassen) blijft staan. */}
                 {!greenState && <button onPointerDown={tikBevestig} style={{ ...keuzeBtn, borderColor: "rgba(39,174,96,0.55)", color: "#1f8a4c" }}>{L.yesMatches}</button>}
-                <button onPointerDown={(e) => { e.preventDefault(); setReceiptEditing(true); setReceiptConfirmed(false); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }}
+                <button onPointerDown={(e) => { e.preventDefault(); setReceiptEditing(true); setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 0) }}
                   style={greenState
                     ? { border: "none", background: "transparent", color: "#4a6e73", borderRadius: 10, padding: "11px 14px", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }
                     : { ...keuzeBtn, ...(receiptEditing ? { borderColor: "#0f7d90", color: "#0f7d90" } : {}) }}>{greenState ? L.changeAmount : L.noAdjust}</button>
@@ -6203,12 +6216,19 @@ export default function RundoTable() {
                 hem naar het kortingsvenster, met naam en bedrag al ingevuld — daar kies
                 je nog of het over de hele rekening of over bepaalde items gaat. */}
             {!isTax(editItem) && (
-              <button onClick={() => setTaxModal({
-                kind: "discount", mode: "amount", pct: "21",
-                name: editItem.name,
-                amount: Math.abs(itemTotal(editItem)).toFixed(2).replace(".", ","),
-                scope: "all", ids: [], vanItem: editItem.id,
-              })}
+              <button onClick={() => {
+                // Het bewerkscherm wordt ná het kortingsvenster getekend en zou er dus
+                // bovenop blijven staan. Eerst sluiten; het item zelf blijft bestaan tot
+                // de korting bevestigd is.
+                setTaxModal({
+                  kind: "discount", mode: "amount", pct: "21",
+                  name: editItem.name,
+                  amount: Math.abs(itemTotal(editItem)).toFixed(2).replace(".", ","),
+                  scope: "all", ids: [], vanItem: editItem.id,
+                })
+                setTotalDraft(null)
+                setEditItem(null)
+              }}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, marginTop: 13, cursor: "pointer",
                   border: "1.5px solid rgba(243,156,18,0.45)", background: "rgba(243,156,18,0.08)", borderRadius: 11, padding: 11,
                   fontSize: 14.5, fontWeight: 800, color: "#b5591a", textAlign: "left", lineHeight: 1.35 }}>
@@ -6459,6 +6479,9 @@ const BON_STRINGS = {
 const INDIGO = { tekst: "#3f4a8a", rand: "rgba(90,108,166,0.45)", vlak: "rgba(90,108,166,0.09)", vol: "#4b5699" }
 
 const euro = (n: number) => `€${n.toFixed(2).replace(".", ",")}`
+// Een bonregel is een bedrag in centen. Eerst afronden, dan pas optellen — anders telt
+// de app iets anders op dan er op het scherm staat, en klopt het gemelde verschil niet.
+const regelBedrag = (it: { unit_price: number; quantity: number }) => Math.round(it.unit_price * it.quantity * 100) / 100
 
 function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, shareHeads, toggleShareClaim, setShareFixed, onEdit, onToggleShared, onDelete, onAddManual, bareBill, taxLines, taxNode, onViewReceipt, recentItemId, onGoGuests, billOk, billOverBy, scanFlags }: {
   items: BillItem[]
@@ -6562,7 +6585,7 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
               </div>
               <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 9 }}>
                 <span style={{ fontSize: 17, fontWeight: 800, color: zeroPrice ? "#c0392b" : billOk ? "#15703f" : "#0f7d90", whiteSpace: "nowrap" }}>
-                  {euro(it.unit_price * it.quantity)}
+                  {euro(regelBedrag(it))}
                 </span>
                 <span aria-hidden style={{
                   width: 32, height: 32, borderRadius: 9, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 17,
