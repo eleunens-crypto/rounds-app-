@@ -1027,6 +1027,7 @@ const STRINGS = {
     tipHeader: "💶 Fooi",
     addTipShort: "Toevoegen",
     tipOptional: "Optioneel — wordt gelijk verdeeld over iedereen aan tafel. Je kan er iemand uit halen bij het afrekenen.",
+    perPersonOverview: "📋 Overzicht per persoon",
     reopenBillTip: "🔓 Rekening heropenen (gasten kunnen weer wijzigen)",
     finalizeBtn: "✅ Alles toegewezen?  Rekening afsluiten",
     finalizeConfirm: "De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.",
@@ -1101,8 +1102,8 @@ const STRINGS = {
     addGuestsInTab2: 'Voeg eerst gasten toe in de tab "Gasten".',
     closedByAdmin: "✅ Afgesloten — dit is de definitieve verdeling",
     closedShort: "✅ Afgesloten",
-    yourShareWord: "Jouw deel",
-    myDetailsBtn: "🧾 Mijn details",
+    yourShareWord: "Mijn deel",
+    myDetailsBtn: "🧾 Mijn deel",
     everyoneBtn: "👥 Iedereen",
     adminReviewing: "🔎 De beheerder past de rekening nog aan",
     adminReviewingBody: "Je bedrag kan nog wijzigen. Zodra hij opnieuw afsluit, zie je je definitieve deel.",
@@ -1677,6 +1678,7 @@ const STRINGS = {
     tipHeader: "💶 Pourboire",
     addTipShort: "Ajouter",
     tipOptional: "Optionnel — réparti également entre tous à table. Tu peux en exclure quelqu’un au moment de régler.",
+    perPersonOverview: "📋 Aperçu par personne",
     reopenBillTip: "🔓 Rouvrir l'addition (les invités peuvent à nouveau modifier)",
     finalizeBtn: "✅ Tout attribué ?  Clôturer l'addition",
     finalizeConfirm: "Clôturer l'addition ? Les invités ne pourront plus rien cocher ni modifier jusqu'à ce que tu la rouvres.",
@@ -1751,8 +1753,8 @@ const STRINGS = {
     addGuestsInTab2: "Ajoute d'abord des invités dans l'onglet « Invités ».",
     closedByAdmin: "✅ Clôturé — voici la répartition définitive",
     closedShort: "✅ Clôturé",
-    yourShareWord: "Ta part",
-    myDetailsBtn: "🧾 Mes détails",
+    yourShareWord: "Ma part",
+    myDetailsBtn: "🧾 Ma part",
     everyoneBtn: "👥 Tout le monde",
     adminReviewing: "🔎 L'hôte modifie encore l'addition",
     adminReviewingBody: "Ton montant peut encore changer. Dès qu'il clôture à nouveau, tu vois ta part définitive.",
@@ -5307,6 +5309,14 @@ export default function RundoTable() {
             </div>
           )}
 
+          {group.finalized && (
+            // Dit venster verscheen alleen op het moment van afsluiten en was daarna
+            // onbereikbaar, terwijl het het handigste overzicht is dat de app heeft.
+            <button onClick={() => setAdminFinalPopup(true)}
+              style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 16.5, fontWeight: 800, marginBottom: 9, background: "#fff", color: "#0f7d90", border: "1.5px solid rgba(20,153,176,0.45)" }}>
+              {L.perPersonOverview}
+            </button>
+          )}
           {group.finalized ? (
             <button onClick={() => finalizeBill(false)} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, background: "linear-gradient(135deg,#f39c12,#e67e22)", border: "none", color: "#fff", boxShadow: "0 6px 16px -6px rgba(230,126,34,0.6)" }}>
               {L.reopenBillTip}
@@ -6892,8 +6902,13 @@ function ClaimScreen(props: {
             padding: "10px 13px", borderRadius: 12, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -8px rgba(31,138,76,0.8)" }}>
             <span style={{ fontSize: 14.5, fontWeight: 800, flexShrink: 0 }}>{L.closedShort}</span>
             <span style={{ flex: 1, minWidth: 0 }} />
-            <span style={{ fontSize: 14.5, fontWeight: 700, opacity: 0.9, flexShrink: 0 }}>{L.yourShareWord}</span>
-            <span style={{ fontSize: 19, fontWeight: 800, whiteSpace: "nowrap" }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
+            <button onClick={() => setShowFinalPopup(true)}
+              style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
+                background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 10, padding: "4px 9px", color: "#fff" }}>
+              <span style={{ fontSize: 13.5, fontWeight: 700 }}>{L.yourShareWord}</span>
+              <span style={{ fontSize: 18, fontWeight: 800, whiteSpace: "nowrap" }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
+              <span style={{ fontSize: 13, opacity: 0.85 }}>›</span>
+            </button>
           </div>
         )
       }
@@ -7507,6 +7522,16 @@ function ClaimScreen(props: {
               {toonKnop(gastVerdelingOpen)}
             </div>
             {gastVerdelingOpen && <div style={{ fontSize: 15.5, color: "#7d999d", marginTop: 4, marginBottom: 8 }}>{L.fullBillInfo}</div>}
+            {gastVerdelingOpen && participants.length > 0 && (
+              // Dezelfde knop als de beheerder heeft: alles in één keer open of dicht,
+              // in plaats van rij per rij.
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                <button onClick={() => setOpenGuestRows((cur) => cur.size >= participants.length ? new Set() : new Set(participants.map((q) => q.id)))}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 9, padding: "6px 10px" }}>
+                  {openGuestRows.size >= participants.length ? `${L.hideDetails} ▴` : `${L.showDetails} ▾`}
+                </button>
+              </div>
+            )}
             {gastVerdelingOpen && (<>
             {participants.map((p) => {
               const pt = personTotal(p.id)
