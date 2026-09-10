@@ -997,6 +997,8 @@ const STRINGS = {
     notClaimedSuffix: "niet geclaimd",
     assignDots: "+ wijs toe…",
     sharedNobody: "— gedeeld, nog niemand",
+    sharedOnlyOne: "maar één persoon deelt mee",
+    nothingForPerson: (naam: string) => `${naam} duidde nog niets aan`,
     letShareDots: "+ laat meedelen…",
     perPersonTitle: "🧾 Per persoon",
     detailsHide: "▲ Details verbergen",
@@ -1641,6 +1643,8 @@ const STRINGS = {
     notClaimedSuffix: "non attribué(s)",
     assignDots: "+ attribuer…",
     sharedNobody: "— partagé, personne encore",
+    sharedOnlyOne: "une seule personne partage",
+    nothingForPerson: (naam: string) => `${naam} n'a encore rien indiqué`,
     letShareDots: "+ faire participer…",
     perPersonTitle: "🧾 Par personne",
     detailsHide: "▲ Masquer les détails",
@@ -3620,6 +3624,17 @@ export default function RundoTable() {
   const openUnits = baseItems.filter((it) => !it.is_shared)
     .reduce((s, it) => s + Math.max(0, it.quantity - claimedQty(it.id)), 0)
   const undecidedShared = baseItems.filter((it) => it.is_shared && sharerIds(it.id).length === 0)
+  const allesToegewezenSprong = useRef(false)
+  useEffect(() => {
+    if (!isAdmin || adminTab !== "overview" || group?.finalized) return
+    const klaar = openUnits === 0 && undecidedShared.length === 0
+    if (klaar && !allesToegewezenSprong.current) {
+      allesToegewezenSprong.current = true
+      window.setTimeout(() => document.getElementById("afsluit-knop")?.scrollIntoView({ behavior: "smooth", block: "center" }), 250)
+    }
+    if (!klaar) allesToegewezenSprong.current = false
+  }, [openUnits, undecidedShared.length, isAdmin, adminTab, group?.finalized])
+
   const sharedWarnings = baseItems.filter((it) => it.is_shared && sharedStatus(it).warn !== null)
   const zeroPriceItems = baseItems.filter((it) => it.unit_price <= 0.0001)
   const allAssignedNow = openUnits === 0 && undecidedShared.length === 0 && sharedWarnings.length === 0 && zeroPriceItems.length === 0
@@ -5242,7 +5257,7 @@ export default function RundoTable() {
               {L.reopenBillTip}
             </button>
           ) : (
-            <button onClick={() => {
+            <button id="afsluit-knop" onClick={() => {
               if (openUnits > 0 || undecidedShared.length > 0) {
                 const delen: string[] = []
                 if (openUnits > 0) delen.push(L.unitsNotAssigned(openUnits))
@@ -5261,12 +5276,22 @@ export default function RundoTable() {
                 if (st.warn === "many") return `${it.name}: ${L.tooManySharedAdmin(st.heads, it.share_expected as number)}`
                 return null
               }).filter(Boolean) as string[]
+              // Een gedeeld item met precies één deler is meestal een vergeten aanduiding:
+              // wie deelt er nu alleen? De bestaande "few"-controle mist dit, want die
+              // werkt alleen als het verwachte aantal ingevuld is.
+              const soloShared = baseItems.filter((it) => it.is_shared && shareHeads(it.id) === 1 && !it.share_expected)
+                .map((it) => `${it.name}: ${L.sharedOnlyOne}`)
+              // Iemand die niets aanduidde betaalt straks alleen mee aan gedeelde items.
+              // Dat kan kloppen, maar het is vaker een vergissing dan niet.
+              const zonderItems = participants.filter((p) => !claims.some((c) => c.participant_id === p.id && c.quantity > 0))
+                .map((p) => L.nothingForPerson(naamVan(p)))
               const naarTipOfAfsluiten = () => {
                 if (!hasTip) { setShowTipReminder(true); return }
                 askConfirm(L.finalizeConfirm, L.finalizeBtn, () => finalizeBill(true))
               }
-              if (shareProblems.length > 0) {
-                askConfirm(`• ${shareProblems.join("\n• ")}\n\n${L.sharedProblemAsk}`, L.yes, naarTipOfAfsluiten, { title: L.sharedProblemTitle, danger: true })
+              const alleProblemen = [...shareProblems, ...soloShared, ...zonderItems]
+              if (alleProblemen.length > 0) {
+                askConfirm(`• ${alleProblemen.join("\n• ")}\n\n${L.sharedProblemAsk}`, L.yes, naarTipOfAfsluiten, { title: L.sharedProblemTitle, danger: true })
                 return
               }
               naarTipOfAfsluiten()
@@ -6628,10 +6653,9 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   )
 }
 
-function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confirmedFn, vrijFn, naamVan, onAssign, onRemove, onClose }: {
+function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confirmedFn, vrijFn, naamVan, onAssign, onClose }: {
   participants: Participant[]; itemId: string; isShared?: boolean; meId: string | null; vol?: boolean
   qtyFn: (pid: string) => number
-  onRemove: (pid: string) => void
   confirmedFn: (pid: string) => boolean
   vrijFn: (p: Participant) => boolean
   naamVan: (p: Participant) => string
@@ -6666,14 +6690,17 @@ function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confir
               {i === eersteViaLink && eersteViaLink > 0 && (
                 <span style={{ width: 1, height: 24, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
               )}
-              <button disabled={vol && mij <= 0} onClick={() => mij > 0 ? onRemove(p.id) : onAssign(p.id, reden)} style={{
-                fontSize: 16, fontWeight: viaQr && mij <= 0 ? 700 : 800, borderRadius: 10, padding: "7px 11px",
-                cursor: (vol && mij <= 0) ? "not-allowed" : "pointer",
+              {/* Deze knop voegt toe, altijd één stuk per tik. Weghalen gebeurt met de min
+                  op de chips erboven: dat kan per stuk, en het is de handeling die je
+                  níét per ongeluk wil doen. */}
+              <button disabled={vol} onClick={() => onAssign(p.id, reden)} style={{
+                fontSize: 16, fontWeight: viaQr ? 700 : 800, borderRadius: 10, padding: "7px 11px",
+                cursor: vol ? "not-allowed" : "pointer",
                 border: mij > 0 ? "1px solid rgba(196,152,32,0.5)" : viaQr ? "1.5px solid rgba(18,58,66,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
                 background: mij > 0 ? "linear-gradient(135deg,#f3d27c,#ecc564)" : viaQr ? "#fff" : "rgba(20,153,176,0.06)",
                 color: mij > 0 ? "#5a4a1a" : viaQr ? "#8aa3a6" : "#123a42",
-                opacity: mij > 0 ? 1 : vol ? 0.45 : klaar ? 0.75 : viaQr ? 0.8 : 1,
-              }}>{mij <= 0 && viaQr && "📱 "}{naamVan(p)}{mij > 1 ? ` ×${mij}` : ""}{mij > 0 ? " −" : klaar ? " ✓" : ""}</button>
+                opacity: vol ? 0.45 : mij > 0 ? 1 : klaar ? 0.75 : viaQr ? 0.8 : 1,
+              }}>{mij <= 0 && viaQr && "📱 "}{naamVan(p)}{mij > 0 ? ` ×${mij}` : klaar ? " ✓" : ""}</button>
             </span>
           )
         })}
@@ -6719,7 +6746,6 @@ function ClaimScreen(props: {
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // De uitleg bij het invullen voor een nog vrije plaats hoeft maar één keer.
-  const [vrijeUitleg, setVrijeUitleg] = useState(false)
   const [disputeOpen, setDisputeOpen] = useState(false)
   const [disputeText, setDisputeText] = useState("")
   const [openGuestRows, setOpenGuestRows] = useState<Set<string>>(() => new Set())
@@ -7000,9 +7026,8 @@ function ClaimScreen(props: {
                           : <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)}
                               style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "4px 9px", cursor: "pointer", border: "1px solid rgba(39,174,96,0.35)", color: "#1f8a4c", background: "rgba(39,174,96,0.12)" }}>{L.fullyClaimed} ✏️</button>}
                       </div>
-                      {/* Staat de kiezer open, dan staan dezelfde namen daar al — en dan
-                          zou je ze hier een tweede keer lezen. */}
-                      {assignItem !== it.id && (
+                      {/* Blijft staan met de kiezer open: hier haal je per stuk weg,
+                          daar voeg je per stuk toe. */}
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25, alignItems: "center" }}>
                         {who.map(({ p, q: pq }) => (
                           <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "2px 4px 2px 9px", color: p.id === adminPid ? "#5a4a1a" : "#4a6e73", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>
@@ -7012,10 +7037,9 @@ function ClaimScreen(props: {
                         ))}
                         {who.length === 0 && open === 0 && <span style={{ fontSize: 15.5, color: "#aaa" }}>—</span>}
                       </div>
-                      )}
                       {assignItem === it.id && (
                         <AssignPicker participants={participants} itemId={it.id} meId={meId} vol={open <= 0}
-                          qtyFn={(pid) => myQty(it.id, pid)} onRemove={(pid) => setClaim(it.id, pid, 0)}
+                          qtyFn={(pid) => myQty(it.id, pid)}
                           confirmedFn={explicitConfirmed}
                           vrijFn={vrijFn} naamVan={naamVan}
                           onAssign={(pid, reden) => {
@@ -7027,8 +7051,7 @@ function ClaimScreen(props: {
                             const doe = () => { setClaim(it.id, pid, myQty(it.id, pid) + 1); setAssignItem(null) }
                             if (reden === "bevestigd") { askConfirm(L.notSelectedAdd(naam), L.yes, doe); return }
                             if (reden === "qr") { askConfirm(L.assignToQrGuest(naam), L.yes, doe); return }
-                            // Voor een vrije plaats maar één keer per sessie: daarna weet je het.
-                            if (reden === "vrij" && !vrijeUitleg) { setVrijeUitleg(true); askConfirm(L.assignToFreeSpot(naam), L.yes, doe); return }
+                            if (reden === "vrij") { askConfirm(L.assignToFreeSpot(naam), L.yes, doe); return }
                             if (reden === "ander") { askConfirm(L.assignForOther(naam), L.yes, doe); return }
                             doe()
                           }}
