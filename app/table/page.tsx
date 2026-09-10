@@ -5861,13 +5861,12 @@ export default function RundoTable() {
       {showScan && (
         <div style={S.overlay}>
           <div style={{ ...S.modal, width: "min(460px, 92vw)", maxHeight: "88vh" }}>
-            {/* Het vinkje hoort bij de titel, niet bij elke foto apart: één bevestiging dat
-                er iets klaarstaat volstaat. De kleine vinkjes op de miniaturen zijn daarom weg. */}
+                    {/* Een groen vinkje las als "klaar" terwijl de bon nog ingelezen moet
+                        worden. Dit labeltje zegt wat er staat én dat er nog iets moet gebeuren. */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: photos.length > 0 ? 14 : 4 }}>
             <h3 style={{ margin: 0, fontSize: 21, fontWeight: 800 }}>{photos.length > 0 ? L.scanModalTitleAdded : L.scanModalTitle}</h3>
               {photos.length > 0 && (
-                <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "#27ae60", color: "#fff",
-                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800 }}>✓</span>
+                        <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#4a6e73", background: "rgba(18,58,66,0.06)", borderRadius: 14, padding: "5px 10px", whiteSpace: "nowrap" }}>{L.oneStepLeft}</span>
               )}
             </div>
             {photos.length === 0 && !scanning && scanPreview.length === 0 && (
