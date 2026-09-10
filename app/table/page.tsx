@@ -1100,7 +1100,6 @@ const STRINGS = {
     forWhomTap: "Voor wie tik je aan?",
     pickPersonHint: "Kies een persoon om voor te claimen (handig als jij voor iemand zonder gsm aantikt).",
     addGuestsInTab2: 'Voeg eerst gasten toe in de tab "Gasten".',
-    closedByAdmin: "✅ Afgesloten — dit is de definitieve verdeling",
     closedShort: "✅ Afgesloten",
     yourShareWord: "Mijn deel",
     myDetailsBtn: "🧾 Mijn deel",
@@ -1174,7 +1173,8 @@ const STRINGS = {
     fullBillInfo: "De volledige rekening ter info — tik een naam aan voor het detail:",
     nothingTapped2: "Niets aangetikt.",
     youSuffix: " (jij)",
-    confirmedTapEdit: "✓ Bevestigd — tik om te wijzigen",
+    confirmedWord: "Bevestigd",
+    changeAnyway: "Toch iets wijzigen",
     confirmMyOrder: "✅ Bevestig mijn bestelling",
     confirmFailed: (msg: string) => `Bevestigen lukte niet: ${msg}`,
     claimFailed: (msg: string) => `Aanpassen lukte niet: ${msg}`,
@@ -1751,7 +1751,6 @@ const STRINGS = {
     forWhomTap: "Pour qui coches-tu ?",
     pickPersonHint: "Choisis une personne pour cocher à sa place (pratique si tu coches pour quelqu'un sans téléphone).",
     addGuestsInTab2: "Ajoute d'abord des invités dans l'onglet « Invités ».",
-    closedByAdmin: "✅ Clôturé — voici la répartition définitive",
     closedShort: "✅ Clôturé",
     yourShareWord: "Ma part",
     myDetailsBtn: "🧾 Ma part",
@@ -1821,7 +1820,8 @@ const STRINGS = {
     fullBillInfo: "L'addition complète pour info — touche un nom pour le détail :",
     nothingTapped2: "Rien coché.",
     youSuffix: " (toi)",
-    confirmedTapEdit: "✓ Confirmé — touche pour modifier",
+    confirmedWord: "Confirmé",
+    changeAnyway: "Modifier quand même",
     confirmMyOrder: "✅ Confirme ma commande",
     confirmFailed: (msg: string) => `Échec de la confirmation : ${msg}`,
     claimFailed: (msg: string) => `Modification impossible : ${msg}`,
@@ -6898,27 +6898,24 @@ function ClaimScreen(props: {
       // in de volledige balk onderaan.
       if (plek === "boven") {
         return (
-          <div style={{ position: "sticky", top: 0, zIndex: 5, width: "100%", marginBottom: 12, display: "flex", alignItems: "center", gap: 9,
-            padding: "10px 13px", borderRadius: 12, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -8px rgba(31,138,76,0.8)" }}>
-            <span style={{ fontSize: 14.5, fontWeight: 800, flexShrink: 0 }}>{L.closedShort}</span>
+          <div style={{ position: "sticky", top: 0, zIndex: 5, width: "100%", marginBottom: 12, display: "flex", alignItems: "center", gap: 10,
+            padding: "13px 14px", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -8px rgba(31,138,76,0.8)" }}>
+            <span style={{ fontSize: 15.5, fontWeight: 800, flexShrink: 0 }}>{L.closedShort}</span>
             <span style={{ flex: 1, minWidth: 0 }} />
             <button onClick={() => setShowFinalPopup(true)}
-              style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer",
-                background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 10, padding: "4px 9px", color: "#fff" }}>
-              <span style={{ fontSize: 13.5, fontWeight: 700 }}>{L.yourShareWord}</span>
-              <span style={{ fontSize: 18, fontWeight: 800, whiteSpace: "nowrap" }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
-              <span style={{ fontSize: 13, opacity: 0.85 }}>›</span>
+              style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer",
+                background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 12, padding: "7px 12px", color: "#fff" }}>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>{L.yourShareWord}</span>
+              <span style={{ fontSize: 23, fontWeight: 800, whiteSpace: "nowrap", letterSpacing: -0.3 }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
+              <span style={{ fontSize: 14, opacity: 0.85 }}>›</span>
             </button>
           </div>
         )
       }
     return (
       <div style={{ width: "100%", margin: "14px 0 0", padding: "13px 14px", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(31,138,76,0.55)" }}>
-        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 9, lineHeight: 1.3 }}>{L.closedByAdmin}</div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
-          <span style={{ fontSize: 16, fontWeight: 700 }}>{L.yourShareWord}</span>
-          <span style={{ fontSize: 27, fontWeight: 800, whiteSpace: "nowrap" }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
-        </div>
+        {/* Kop en bedrag staan al in de strook bovenaan die meescrollt; hier bleven ze
+            alleen maar herhalen. De balk houdt zijn twee knoppen. */}
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => setShowFinalPopup(true)}
             style={{ flex: 1, minWidth: 0, cursor: "pointer", border: "none", background: "#fff", color: "#1f8a4c", borderRadius: 11, padding: "13px 6px", fontSize: 15.5, fontWeight: 800 }}>{L.myDetailsBtn}</button>
@@ -7278,7 +7275,10 @@ function ClaimScreen(props: {
           </div>
         )
       })()}
-      <div style={S.card}>
+        {/* Na het afsluiten is dit lijstje identiek aan "Wat ik bevestigde": niets kan
+            nog wijzigen, dus twee keer dezelfde regels. Alleen het bevestigde blijft. */}
+        {!finalized && (
+        <div style={S.card}>
         <h3 onClick={() => setGastItemsOpen((v) => !v)}
           style={{ ...S.h3, marginBottom: gastItemsOpen ? 14 : 0, cursor: "pointer", justifyContent: "space-between", gap: 10 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
@@ -7436,7 +7436,8 @@ function ClaimScreen(props: {
           )
         })}
         </>)}
-      </div>
+        </div>
+        )}
 
       <div style={{ ...S.card, background: "linear-gradient(135deg,#fbfaff,#f1f2fb)", border: finalized ? "1px solid rgba(90,108,166,0.18)" : "1.5px solid rgba(20,153,176,0.35)" }}>
         {/* Tijdens het bestellen heet dit "dit ga ik bevestigen"; achteraf "wat ik
@@ -7445,7 +7446,7 @@ function ClaimScreen(props: {
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: gastBevestigdOpen ? 10 : 0 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
             {blokBol(2, iConfirmed)}
-            <span style={{ fontSize: 16.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56" }}>2 · {iConfirmed ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
+            <span style={{ fontSize: 16.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56" }}>{finalized ? "" : "2 · "}{iConfirmed ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
           </span>
           {toonKnop(gastBevestigdOpen)}
         </div>
@@ -7500,10 +7501,12 @@ function ClaimScreen(props: {
                 <span style={{ flexShrink: 0, fontWeight: 700, color: "#123a42" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
               </div>
             ))}
+            {!finalized && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", margin: "11px 0 14px", boxShadow: "0 4px 14px -8px rgba(20,153,176,0.6)" }}>
               <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7488", minWidth: 0 }}>{L.yourShareWord}</span>
               <span style={{ fontSize: 32, fontWeight: 800, color: "#123a42", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}</span>
             </div>
+            )}
             <div style={{ paddingTop: 12, borderTop: "1px solid rgba(90,108,166,0.18)" }}>
             {/* De verdeling van de hele tafel is naslagwerk — dicht dus, tenzij je ze wil
                 nakijken. De knop "Iedereen" in de groene balk klapt precies dit open. */}
@@ -7574,20 +7577,39 @@ function ClaimScreen(props: {
           <>
             {/* "Wat nu?" staat naast de bevestigknop in plaats van als los rondje eronder:
                 een echte knop met een woord erin wordt gelezen, een ⓘ wordt overgeslagen. */}
+            {/* Bevestigd is een toestand, geen knop: die groene balk was aantikbaar en
+                zette je bevestiging in één tik weer uit, terwijl het label "tik om te
+                wijzigen" beloofde dat er iets zou opengaan. Wijzigen staat nu apart. */}
             <div style={{ display: "flex", alignItems: "stretch", gap: 8, marginTop: 12 }}>
-              <button onClick={async () => {
-                const eerst = !iConfirmed
-                const ok = await confirmMe()
-                if (eerst && ok !== false) setShowConfirmInfo(true)
-              }} style={{ ...S.btn, flex: 3, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", ...(iConfirmed ? { background: "rgba(39,174,96,0.12)", color: "#1f8a4c" } : { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42" }) }}>
-                {iConfirmed ? L.confirmedTapEdit : L.confirmMyOrder}
-              </button>
+              {iConfirmed ? (
+                <span style={{ flex: 3, display: "flex", alignItems: "center", gap: 9, background: "rgba(39,174,96,0.10)", border: "1.5px solid rgba(39,174,96,0.45)", borderRadius: 12, padding: "12px 13px" }}>
+                  <span style={{ fontSize: 19 }}>✓</span>
+                  <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1f8a4c" }}>{L.confirmedWord}</span>
+                </span>
+              ) : (
+                <button onClick={async () => {
+                  const ok = await confirmMe()
+                  if (ok !== false) setShowConfirmInfo(true)
+                }} style={{ ...S.btn, ...S.btnPrimary, flex: 3, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none" }}>
+                  {L.confirmMyOrder}
+                </button>
+              )}
               {/* Pas na het bevestigen: deze uitleg gaat over wat er dan gebeurt. */}
               {!isAdmin && iConfirmed && (
                 <button onClick={() => setShowConfirmInfo(true)}
                   style={{ ...S.btn, flex: 1, minWidth: 0, padding: "14px 4px", fontSize: 16, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#0f7d90", whiteSpace: "nowrap" }}>{L.whatNowBtn}</button>
               )}
             </div>
+            {iConfirmed && !finalized && (
+              // Na het afsluiten heeft wijzigen geen zin meer: de balk blijft staan als
+              // vaststelling, zonder een actie aan te bieden die dan niet hoort.
+              <button onClick={async () => {
+                await confirmMe()
+              }}
+                style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "center", fontSize: 14.5, fontWeight: 700, color: "#4a6e73", textDecoration: "underline", marginTop: 9, padding: 0 }}>
+                {L.changeAnyway}
+              </button>
+            )}
           </>
         )}
 
