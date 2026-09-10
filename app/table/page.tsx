@@ -590,7 +590,6 @@ const STRINGS = {
     roleAdmin: "beheerder",
     roleGuest: "gast",
     deletePermanently: "definitief verwijderen",
-    taxAfterCloseNote: "ℹ️ Deze bedragen worden pas bij het afsluiten over iedereen verdeeld. Tot dan ziet elke gast enkel zijn eigen items — anders schuift zijn bedrag bij elke tik van een ander.",
     clearNameBtn: "🗑️ Naam wissen",
     clearNameTitle: "Naam wissen?",
     clearNameYes: "Wissen",
@@ -888,7 +887,10 @@ const STRINGS = {
     pricePerLabel: "Prijs/stuk (€)",
     lineTotalLabel: "Totaalprijs (€)",
     priceHint: "Pas prijs/stuk óf totaalprijs aan — het andere rekent zichzelf uit.",
+    removeTaxTitle: "🗑️ Regel verwijderen?",
+    removeTaxBody: (naam: string, bedrag: number) => `"${naam}" van €${bedrag.toFixed(2).replace(".", ",")} verdwijnt van de rekening.`,
     turnIntoDiscount: "Dit is een korting, geen item",
+    movedToDiscounts: (naam: string) => `"${naam}" staat nu onderaan bij de kortingen.`,
     deleteThisItem: "Dit item wissen",
     editable: "pas aan",
     orEditThis: "of pas dit aan",
@@ -1045,7 +1047,6 @@ const STRINGS = {
     overWholeBillShort: "over de hele rekening",
     overNItems: (n: number) => `over ${n} gekozen item${n === 1 ? "" : "s"}`,
     tapGearToChange: " · tik ⚙️ om te wijzigen",
-    removeCosts: "✕ Toch geen extra kosten? Weghalen",
     taxDefaultName: "BTW of andere kosten",
     taxRateName: (r: number) => `BTW ${r}%`,
     seatsColMsg: "Let op: 'telt voor meerdere personen' werkt nog niet. Voeg in Supabase de kolom seats toe aan table_participants.",
@@ -1238,7 +1239,6 @@ const STRINGS = {
     roleAdmin: "hôte",
     roleGuest: "invité",
     deletePermanently: "supprimer définitivement",
-    taxAfterCloseNote: "ℹ️ Ces montants ne sont répartis qu’à la clôture. Jusque-là, chaque invité ne voit que ses propres articles — sinon son montant bouge à chaque clic d’un autre.",
     clearNameBtn: "🗑️ Effacer le nom",
     clearNameTitle: "Effacer le nom ?",
     clearNameYes: "Effacer",
@@ -1536,7 +1536,10 @@ const STRINGS = {
     pricePerLabel: "Prix/pièce (€)",
     lineTotalLabel: "Prix total (€)",
     priceHint: "Modifie le prix/pièce ou le prix total — l’autre se calcule tout seul.",
+    removeTaxTitle: "🗑️ Supprimer cette ligne ?",
+    removeTaxBody: (naam: string, bedrag: number) => `« ${naam} » de €${bedrag.toFixed(2).replace(".", ",")} disparaît de l'addition.`,
     turnIntoDiscount: "Ceci est une réduction, pas un article",
+    movedToDiscounts: (naam: string) => `« ${naam} » figure maintenant en bas, dans les réductions.`,
     deleteThisItem: "Supprimer cet article",
     editable: "modifiable",
     orEditThis: "ou modifie ceci",
@@ -1693,7 +1696,6 @@ const STRINGS = {
     overWholeBillShort: "sur toute l'addition",
     overNItems: (n: number) => `sur ${n} article${n === 1 ? "" : "s"} choisi${n === 1 ? "" : "s"}`,
     tapGearToChange: " · touche ⚙️ pour modifier",
-    removeCosts: "✕ Pas de frais en plus finalement ? Retirer",
     taxDefaultName: "TVA ou autres frais",
     taxRateName: (r: number) => `TVA ${r}%`,
     seatsColMsg: "Attention : « compte pour plusieurs personnes » ne fonctionne pas encore. Ajoute la colonne seats à table_participants dans Supabase.",
@@ -3146,7 +3148,12 @@ export default function RundoTable() {
     }
     // Kwam dit uit een verkeerd gelezen item, dan vervangt de kortingsregel het.
     // Pas hier, want wie annuleert moet zijn item gewoon terugvinden.
-    if (tm.vanItem) await supabase.from("table_items").delete().eq("id", tm.vanItem)
+    if (tm.vanItem) {
+      await supabase.from("table_items").delete().eq("id", tm.vanItem)
+      // Het item staat niet meer in de lijst maar onderaan bij de kortingen. Zonder
+      // deze melding lijkt het gewoon weg te zijn.
+      setToast(L.movedToDiscounts(name))
+    }
     setTaxModal(null)
     setEditItem(null)
     await loadAll(group.id)
@@ -4546,24 +4553,26 @@ export default function RundoTable() {
             onViewReceipt={group.receipt_url ? () => setViewReceipt(group.receipt_url!) : undefined}
             taxNode={
               <div style={{ marginTop: 6 }}>
-                {/* Zonder deze regel lijkt het alsof de toeslagen niet doorkomen bij de
-                    gasten — terwijl ze bewust pas bij het afsluiten verdeeld worden. */}
-                {taxItems.length > 0 && !group?.finalized && (
-                  <div style={{ fontSize: 14.5, color: "#4a6e73", lineHeight: 1.45, background: "rgba(90,108,166,0.07)", borderRadius: 10, padding: "9px 11px", marginBottom: 4 }}>{L.taxAfterCloseNote}</div>
-                )}
                 {taxItems.map((t) => {
                   const overAll = t.distribute === "all"
+                  // Klopt de bon, dan kleurt deze regel net als de items erboven:
+                  // een korting of BTW hoort bij hetzelfde eindtotaal.
                   const targetCount = taxTargetIds(t).size
                   const open = taxConfig === t.id
                   return (
-                    <div key={t.id} style={{ borderTop: "1px solid rgba(0,0,0,0.05)", paddingTop: 9, marginTop: 9, minWidth: 0, overflowWrap: "anywhere" }}>
+                    <div key={t.id} style={{
+                      minWidth: 0, overflowWrap: "anywhere",
+                      ...(billOk
+                        ? { background: "rgba(39,174,96,0.06)", border: "1.5px solid rgba(39,174,96,0.55)", borderRadius: 12, padding: "10px 8px", marginTop: 6, marginBottom: 4 }
+                        : { borderTop: "1px solid rgba(0,0,0,0.05)", paddingTop: 9, marginTop: 9 }),
+                    }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 20, flexShrink: 0 }}>🧮</span>
                         <input value={t.name} onChange={(e) => setItems((cur) => cur.map((x) => x.id === t.id ? { ...x, name: e.target.value } : x))}
                           onBlur={(e) => { if (group?.finalized) { setToast(L.reopenFirst); loadAll(group.id); return } supabase.from("table_items").update({ name: e.target.value }).eq("id", t.id).then(() => loadAll(group.id)) }}
                           style={{ ...S.input, flex: 1, minWidth: 0, fontWeight: 700, padding: "8px 10px" }} />
                         {t.tax_rate ? (
-                          <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42", whiteSpace: "nowrap" }}>€{taxAmount(t).toFixed(2).replace(".", ",")}</span>
+                          <span style={{ fontSize: 18, fontWeight: 800, color: billOk ? "#15703f" : "#123a42", whiteSpace: "nowrap" }}>€{taxAmount(t).toFixed(2).replace(".", ",")}</span>
                         ) : (
                           <>
                             <span style={{ color: "#999", fontSize: 16.5 }}>€</span>
@@ -4572,6 +4581,8 @@ export default function RundoTable() {
                               style={{ ...S.input, width: 78, textAlign: "right", padding: "8px 8px" }} />
                           </>
                         )}
+                        <button onClick={() => askConfirm(L.removeTaxBody(t.name, taxAmount(t)), L.deleteTitle, () => void deleteItem(t.id), { title: L.removeTaxTitle, danger: true })}
+                          style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, border: "1px solid rgba(192,57,43,0.3)", background: "rgba(192,57,43,0.06)", color: "#c0392b", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>✕</button>
                         <button style={{ ...S.iconBtn, background: open ? "rgba(90,108,166,0.18)" : "rgba(18,58,66,0.05)" }} onClick={() => setTaxConfig(open ? null : t.id)} title={L.taxConfigTitle}>⚙️</button>
                         <button style={S.iconBtn} onClick={() => deleteItem(t.id)} title={L.deleteTitle}>🗑️</button>
                       </div>
@@ -4585,7 +4596,7 @@ export default function RundoTable() {
                         {t.tax_rate ? `${t.tax_rate}% ` : ""}{L.distributedWord} {overAll ? L.overWholeBillShort : L.overNItems(targetCount)}{L.tapGearToChange}
                       </div>
                       <div style={{ marginLeft: 25, marginTop: 4 }}>
-                        <button onClick={() => deleteItem(t.id)} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#c0685c", textAlign: "left", overflowWrap: "anywhere" }}>{L.removeCosts}</button>
+                        
                       </div>
                       {open && (
                         <div style={{ marginLeft: 25, marginTop: 8, padding: 10, borderRadius: 12, background: "#fbfaff", border: "1px solid rgba(90,108,166,0.2)" }}>
