@@ -888,6 +888,7 @@ const STRINGS = {
     pricePerLabel: "Prijs/stuk (€)",
     lineTotalLabel: "Totaalprijs (€)",
     priceHint: "Pas prijs/stuk óf totaalprijs aan — het andere rekent zichzelf uit.",
+    turnIntoDiscount: "Dit is een korting, geen item",
     deleteThisItem: "Dit item wissen",
     editable: "pas aan",
     orEditThis: "of pas dit aan",
@@ -1535,6 +1536,7 @@ const STRINGS = {
     pricePerLabel: "Prix/pièce (€)",
     lineTotalLabel: "Prix total (€)",
     priceHint: "Modifie le prix/pièce ou le prix total — l’autre se calcule tout seul.",
+    turnIntoDiscount: "Ceci est une réduction, pas un article",
     deleteThisItem: "Supprimer cet article",
     editable: "modifiable",
     orEditThis: "ou modifie ceci",
@@ -2141,7 +2143,7 @@ export default function RundoTable() {
   const [editItem, setEditItem] = useState<BillItem | null>(null)
   const [newItem, setNewItem] = useState<{ name: string; unit_price: string; quantity: number; is_shared: boolean; target: "bill" | "scan" } | null>(null)
   // Venster om BTW/kosten/korting toe te voegen: stap 1 = naam + bedrag, stap 2 = verdeling kiezen.
-  const [taxModal, setTaxModal] = useState<null | { kind: "cost" | "vat" | "discount"; mode: "amount" | "pct"; pct: string; name: string; amount: string; scope: "all" | "items"; ids: string[] }>(null)
+  const [taxModal, setTaxModal] = useState<null | { kind: "cost" | "vat" | "discount"; mode: "amount" | "pct"; pct: string; name: string; amount: string; scope: "all" | "items"; ids: string[]; vanItem?: string }>(null)
   const [recentItemId, setRecentItemId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [shareConfirm, setShareConfirm] = useState<BillItem | null>(null)
@@ -3141,7 +3143,11 @@ export default function RundoTable() {
       else setError(L.errAdd + error.message)
       return
     }
+    // Kwam dit uit een verkeerd gelezen item, dan vervangt de kortingsregel het.
+    // Pas hier, want wie annuleert moet zijn item gewoon terugvinden.
+    if (tm.vanItem) await supabase.from("table_items").delete().eq("id", tm.vanItem)
     setTaxModal(null)
+    setEditItem(null)
     await loadAll(group.id)
   }
 
@@ -3387,7 +3393,11 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  const itemTotal = (it: BillItem) => it.unit_price * it.quantity
+  // Elke regel eerst op centen afronden en dan pas optellen: op het scherm staan
+  // afgeronde bedragen, dus zonder dit telt de app andere getallen op dan jij ziet.
+  // Bij een bon met veel regels van meerdere stuks liep dat op tot een paar cent,
+  // en dan meldde de app een verschil dat niet klopte met de zichtbare lijst.
+  const itemTotal = (it: BillItem) => Math.round(it.unit_price * it.quantity * 100) / 100
 
   const isTax = (it: BillItem) => it.distribute != null && it.distribute !== ""
   const isTip = (it: BillItem) => it.name.trim().toLowerCase() === "fooi"
@@ -6170,6 +6180,25 @@ export default function RundoTable() {
 
             {/* Wissen staat achter een lijn: het is geen manier om je wijziging op te slaan
                 maar een aparte beslissing, en het is het enige onomkeerbare hier. */}
+            {/* Een scan leest een kortingsregel vaak als gewoon item. Deze knop verhuist
+                hem naar het kortingsvenster, met naam en bedrag al ingevuld — daar kies
+                je nog of het over de hele rekening of over bepaalde items gaat. */}
+            {!isTax(editItem) && (
+              <button onClick={() => setTaxModal({
+                kind: "discount", mode: "amount", pct: "21",
+                name: editItem.name,
+                amount: Math.abs(itemTotal(editItem)).toFixed(2).replace(".", ","),
+                scope: "all", ids: [], vanItem: editItem.id,
+              })}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, marginTop: 13, cursor: "pointer",
+                  border: "1.5px solid rgba(243,156,18,0.45)", background: "rgba(243,156,18,0.08)", borderRadius: 11, padding: 11,
+                  fontSize: 14.5, fontWeight: 800, color: "#b5591a", textAlign: "left", lineHeight: 1.35 }}>
+                <span style={{ fontSize: 17 }}>🏷️</span>
+                <span style={{ flex: 1, minWidth: 0 }}>{L.turnIntoDiscount}</span>
+                <span>›</span>
+              </button>
+            )}
+
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(18,58,66,0.08)" }}>
               <button onClick={() => { const id = editItem.id; setTotalDraft(null); setEditItem(null); deleteItem(id) }}
                 style={{ display: "block", width: "100%", boxSizing: "border-box", textAlign: "center", border: "1.5px solid rgba(192,57,43,0.3)", background: "#fff", color: "#c0392b", borderRadius: 12, padding: "13px 0", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>
