@@ -2099,7 +2099,8 @@ export default function RundoTable() {
   const [fillingSpots, setFillingSpots] = useState<string[]>([])  // vrije plaatsen die je nu een naam geeft
   const [askSeats, setAskSeats] = useState(false)  // "voor hoeveel personen?" bij het toevoegen
   const [roundingOk, setRoundingOk] = useState(false)  // centenverschil bewust aanvaard
-  const [naarLijstGetikt, setNaarLijstGetikt] = useState(false)  // stopt het wippende pijltje
+  const [naarLijstGetikt, setNaarLijstGetikt] = useState(false)
+  const [openPil, setOpenPil] = useState<number | null>(null)  // welke uitleg openstaat  // stopt het wippende pijltje
   const [totalDraft, setTotalDraft] = useState<string | null>(null)  // wat je intikt bij "regeltotaal"
   const [priceDraft, setPriceDraft] = useState<string | null>(null)  // idem voor de stukprijs
   const [billMismatchAck, setBillMismatchAck] = useState(false)  // bewust doorgegaan ondanks verschil
@@ -4444,23 +4445,41 @@ export default function RundoTable() {
                         </div>
                         {/* De derde pil volgt de richting: telt je lijst te veel, dan kan er iets
                             dubbel staan; telt ze te weinig, dan ontbreekt er juist iets. */}
-                        {/* Het vraagteken beloofde uitleg maar gaf ze niet. Nu opent een tik
-                            de bijhorende zin, zodat je weet waar je precies naar zoekt. */}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 7, justifyContent: "center", marginTop: 12 }}>
-                          {[
+                        {/* De uitleg stond eerst in een toast onderaan het scherm: ver van de
+                            pil die je aantikte, en weg voor je uitgelezen was. Nu klapt ze open
+                            in het blok zelf, waar ze altijd past omdat het blok meegroeit. */}
+                        {(() => {
+                          const pillen = [
                             { tekst: BON_STRINGS[lang].pillQty, uitleg: BON_STRINGS[lang].uitlegQty },
                             { tekst: BON_STRINGS[lang].pillPrice, uitleg: BON_STRINGS[lang].uitlegPrice },
                             higher
                               ? { tekst: BON_STRINGS[lang].pillDouble, uitleg: BON_STRINGS[lang].uitlegDouble }
                               : { tekst: BON_STRINGS[lang].pillMissing, uitleg: BON_STRINGS[lang].uitlegMissing },
                             { tekst: L.checkTaxShort, uitleg: BON_STRINGS[lang].uitlegTax },
-                          ].map((pil, i2) => (
-                            <button key={i2} onClick={() => setToast(pil.uitleg)}
-                              style={{ background: "#fff", border: "1px solid rgba(18,58,66,0.16)", color: "#4a6e73", borderRadius: 999, padding: "7px 13px", fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>
-                              {pil.tekst} <span style={{ fontWeight: 800, color: "#0f7d90" }}>?</span>
-                            </button>
-                          ))}
-                        </div>
+                          ]
+                          return (
+                            <>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 7, justifyContent: "center", marginTop: 12 }}>
+                                {pillen.map((pil, i2) => {
+                                  const aan = openPil === i2
+                                  return (
+                                    <button key={i2} onClick={() => setOpenPil(aan ? null : i2)}
+                                      style={{ background: aan ? "rgba(20,153,176,0.10)" : "#fff",
+                                        border: `1px solid ${aan ? "rgba(20,153,176,0.55)" : "rgba(18,58,66,0.16)"}`,
+                                        color: aan ? "#0f6d7e" : "#4a6e73", borderRadius: 999, padding: "7px 13px", fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>
+                                      {pil.tekst} <span style={{ fontWeight: 800, color: "#0f7d90" }}>?</span>
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                              {openPil != null && pillen[openPil] && (
+                                <div style={{ marginTop: 10, background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "11px 12px", fontSize: 14, color: "#2b4f56", lineHeight: 1.55 }}>
+                                  {pillen[openPil].uitleg}
+                                </div>
+                              )}
+                            </>
+                          )
+                        })()}
                         {rounding && (
                           <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 13, background: "rgba(18,58,66,0.04)", border: "1px solid rgba(18,58,66,0.10)", borderRadius: 12, padding: "10px 11px" }}>
                             <span style={{ flexShrink: 0, fontSize: 18 }}>🧮</span>
