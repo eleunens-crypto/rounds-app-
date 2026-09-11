@@ -66,6 +66,23 @@ function setMeIdStored(groupId: string, participantId: string | null) {
   else localStorage.removeItem(`rundo_table_me_${groupId}`)
 }
 
+// Je openstaande plaatsverzoek overleeft een verversing. Zonder dit viel de melding
+// "Het is in orde" weg zodra de gast zijn pagina herlaadde, en sprong hij alsnog
+// zonder waarschuwing door naar het toewijzen.
+type BewaardVerzoek = { id: string; seats: number; vrij: number }
+function getVerzoekStored(groupId: string): BewaardVerzoek | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = localStorage.getItem(`rundo_table_seatreq_${groupId}`)
+    return raw ? JSON.parse(raw) as BewaardVerzoek : null
+  } catch { return null }
+}
+function setVerzoekStored(groupId: string, v: BewaardVerzoek | null) {
+  if (typeof window === "undefined") return
+  if (v) localStorage.setItem(`rundo_table_seatreq_${groupId}`, JSON.stringify(v))
+  else localStorage.removeItem(`rundo_table_seatreq_${groupId}`)
+}
+
 const LAST_GROUP_KEY = "rundo_table_last_group"
 function rememberLastGroup(id: string | null) {
   if (typeof window === "undefined") return
@@ -681,6 +698,9 @@ const STRINGS = {
     reminderSent: "✓ Herinnering verstuurd",
     reminderIn: (s: number) => `kan over ${s}s`,
     reminderAgainIn: (s: number) => `opnieuw over ${s}s`,
+    seatAddedTitle: "Het is in orde",
+    seatAddedBody: (n: number, admin: string, totaal: number) => `${admin || "De beheerder"} zette ${n === 1 ? "1 plaats" : `${n} plaatsen`} bij. Jullie plaats telt nu voor ${totaal} personen.`,
+    seatAddedGo: "Naar toewijzen",
     waitSeatTitle: "Even wachten",
     waitSeatBody: (vrij: number, n: number, admin: string) => `Er ${vrij === 1 ? "was nog maar 1 vrije plaats" : `waren nog maar ${vrij} vrije plaatsen`}. We stuurden ${admin || "de beheerder"} de vraag om er ${n === 1 ? "1" : n} bij te zetten. Zodra dat gebeurt, ga je vanzelf verder.`,
     notOnListBtn: "✋ Ik zit er niet bij",
@@ -1022,7 +1042,7 @@ const STRINGS = {
     notClaimedSuffix: "niet geclaimd",
     assignDots: "+ wijs toe…",
     sharedNobody: "— gedeeld, nog niemand",
-    sharedOnlyOne: "maar één persoon deelt mee",
+    sharedOnlyOne: "maar één plaats nam hiervan",
     nothingForPerson: (naam: string) => `${naam} duidde nog niets aan`,
     letShareDots: "+ laat meedelen…",
     perPersonTitle: "🧾 Per persoon",
@@ -1130,9 +1150,9 @@ const STRINGS = {
     selectItemsSingular: "Selecteer jouw consumpties",
     noItemsWaitScan: "Nog geen items — wacht tot de bon gescand is.",
     totalSharedByDrinkers: " totaal · wordt gedeeld door wie meedeelt",
-    iShareYes: "✓ ik deel mee",
-    iShareNo: "+ meedelen",
-    withHowMany: (seats: number) => `🍴 Wie van jullie ${seats} deelde hiervan mee?`,
+    iShareYes: "✓ Ik nam hiervan",
+    iShareNo: "Ik nam hiervan",
+    withHowMany: (seats: number) => `🍴 Wie van jullie ${seats} nam hiervan?`,
     pickWhoShared: "Tik wie meedeelde — of kies iedereen in één keer.",
     allOfThem: (n: number) => n === 2 ? "👥 Allebei" : `👥 Allemaal (${n})`,
     clearAll: "✕ Wissen",
@@ -1354,6 +1374,9 @@ const STRINGS = {
     reminderSent: "✓ Rappel envoyé",
     reminderIn: (s: number) => `possible dans ${s}s`,
     reminderAgainIn: (s: number) => `à nouveau dans ${s}s`,
+    seatAddedTitle: "C'est réglé",
+    seatAddedBody: (n: number, admin: string, totaal: number) => `${admin || "L'organisateur"} a ajouté ${n === 1 ? "1 place" : `${n} places`}. Votre place compte maintenant pour ${totaal} personnes.`,
+    seatAddedGo: "Vers l'attribution",
     waitSeatTitle: "Un instant",
     waitSeatBody: (vrij: number, n: number, admin: string) => `Il ${vrij === 1 ? "ne restait qu'une place libre" : `ne restait que ${vrij} places libres`}. Nous avons demandé à ${admin || "l'organisateur"} d'en ajouter ${n}. Dès que c'est fait, tu continues automatiquement.`,
     notOnListBtn: "✋ Je n'y suis pas",
@@ -1695,7 +1718,7 @@ const STRINGS = {
     notClaimedSuffix: "non attribué(s)",
     assignDots: "+ attribuer…",
     sharedNobody: "— partagé, personne encore",
-    sharedOnlyOne: "une seule personne partage",
+    sharedOnlyOne: "une seule place en a pris",
     nothingForPerson: (naam: string) => `${naam} n'a encore rien indiqué`,
     letShareDots: "+ faire participer…",
     perPersonTitle: "🧾 Par personne",
@@ -1803,9 +1826,9 @@ const STRINGS = {
     selectItemsSingular: "Sélectionne tes consommations",
     noItemsWaitScan: "Aucun article — attends que l'addition soit scannée.",
     totalSharedByDrinkers: " au total · réparti entre ceux qui en boivent",
-    iShareYes: "✓ je participe",
-    iShareNo: "+ participer",
-    withHowMany: (seats: number) => `🍴 Qui de vous ${seats} a partagé ceci ?`,
+    iShareYes: "✓ J'en ai pris",
+    iShareNo: "J'en ai pris",
+    withHowMany: (seats: number) => `🍴 Qui de vous ${seats} en a pris ?`,
     pickWhoShared: "Touche qui a partagé — ou choisis tout le monde d'un coup.",
     allOfThem: (n: number) => n === 2 ? "👥 Tous les deux" : `👥 Tous (${n})`,
     clearAll: "✕ Effacer",
@@ -2196,6 +2219,7 @@ export default function RundoTable() {
   const [bezetOpen, setBezetOpen] = useState(false)  // ingenomen plaatsen uitgeklapt
   const [verzoekBezig, setVerzoekBezig] = useState(false)  // voorkomt een dubbele tik
   const [herinnerd, setHerinnerd] = useState(0)  // tijdstip van de laatste herinnering
+  const [plaatsToegekend, setPlaatsToegekend] = useState<null | number>(null)
   const [vrijeBijAanmelding, setVrijeBijAanmelding] = useState(1)
   const [nuTik, setNuTik] = useState(() => Date.now())
   // Het verzoekvenster van de gast: null = dicht.
@@ -2724,9 +2748,10 @@ export default function RundoTable() {
     if (tekort > 0) {
       // Geen apart venster meer: je komt meteen op het wachtscherm terecht, dat
       // hetzelfde zegt én je tegenhoudt tot de beheerder toekent.
-      await vraagPlaatsen(finalName, tekort)
+      const req = await vraagPlaatsen(finalName, tekort)
       setMijnVraag({ naam: finalName, seats: tekort })
       setVrijeBijAanmelding(nuSeats)
+      if (req) setVerzoekStored(group.id, { id: req.id, seats: tekort, vrij: nuSeats })
     }
     await loadAll(group.id)
   }
@@ -2915,6 +2940,7 @@ export default function RundoTable() {
     await supabase.from("table_participants").update({ name: L.guestWord, seats: 1, self_joined: false }).eq("id", meId)
     for (let i = 1; i < zit; i++) await addGuest(L.guestWord, false, 1)
     setMijnVraag(null)
+    setVerzoekStored(group.id, null)
     setMeIdStored(group.id, null); setMeId(null)
     await loadAll(group.id)
   }
@@ -2928,13 +2954,13 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  const vraagPlaatsen = async (naam: string, seats: number) => {
-    if (!group) return false
-    const { error } = await supabase.from("table_seat_requests")
-      .insert([{ group_id: group.id, name: naam.trim(), seats: Math.max(1, seats) }])
-    if (error) { setToast(L.seatRequestFailed); return false }
+  const vraagPlaatsen = async (naam: string, seats: number): Promise<SeatRequest | null> => {
+    if (!group) return null
+    const { data, error } = await supabase.from("table_seat_requests")
+      .insert([{ group_id: group.id, name: naam.trim(), seats: Math.max(1, seats) }]).select().single()
+    if (error || !data) { setToast(L.seatRequestFailed); return null }
     await loadAll(group.id)
-    return true
+    return data as SeatRequest
   }
 
   const kenPlaatsenToe = async (req: SeatRequest) => {
@@ -2948,7 +2974,18 @@ export default function RundoTable() {
       const { data: gepakt } = await supabase.from("table_seat_requests")
         .update({ status: "granted" }).eq("id", req.id).eq("status", "open").select()
       if (!gepakt || gepakt.length === 0) return
-      for (let i = 0; i < Math.max(1, req.seats); i++) await addGuest(L.guestWord, false, 1)
+      const n = Math.max(1, req.seats)
+      // Zit de aanvrager al in de app? Dan gaan de plaatsen naar zijn eigen plek, zodat
+      // een koppel ook echt voor twee telt. Vroeger kwamen er losse vrije plaatsen bij
+      // en bleef het koppel op één plaats staan — dan verscheen de vraag "wie van jullie
+      // deelde mee?" niet, en klopte de verdeling van gedeelde items niet.
+      const aanvrager = participants.find((p) => (p.name || "").trim() === req.name.trim())
+      if (aanvrager) {
+        await supabase.from("table_participants")
+          .update({ seats: Math.max(1, aanvrager.seats ?? 1) + n }).eq("id", aanvrager.id)
+      } else {
+        for (let i = 0; i < n; i++) await addGuest(L.guestWord, false, 1)
+      }
       await loadAll(group.id)
       setToast(L.seatRequestGranted(req.name))
     } finally {
@@ -4166,6 +4203,63 @@ export default function RundoTable() {
   const mijnOpenVraag = !isAdmin && ikNu
     ? seatRequests.find((r) => r.name.trim() === (ikNu.name || "").trim()) ?? null
     : null
+  // Verdwijnt je verzoek terwijl je erop wacht, dan heeft de beheerder toegekend.
+  // Zonder deze melding sprong je scherm zomaar door naar het toewijzen.
+  useEffect(() => {
+    if (!mijnVraag) return
+    if (!mijnOpenVraag) {
+      setPlaatsToegekend(mijnVraag.seats)
+      setMijnVraag(null)
+      if (group) setVerzoekStored(group.id, null)
+    }
+  }, [mijnOpenVraag, mijnVraag, group])
+
+  // Na een verversing is het geheugen leeg. Niet afgaan op "het verzoek staat niet meer
+  // in de open lijst" — genegeerd en toegekend zien er dan hetzelfde uit. We halen de
+  // status van dat ene verzoek op en beslissen daarop.
+  useEffect(() => {
+    if (!group || isAdmin || mijnVraag) return
+    const bewaard = getVerzoekStored(group.id)
+    if (!bewaard) return
+    let weg = false
+    void (async () => {
+      const { data } = await supabase.from("table_seat_requests").select("*").eq("id", bewaard.id).single()
+      if (weg) return
+      const status = (data as SeatRequest | null)?.status
+      if (status === "open") {
+        setMijnVraag({ naam: (data as SeatRequest).name, seats: bewaard.seats })
+        if (bewaard.vrij > 0) setVrijeBijAanmelding(bewaard.vrij)
+      } else if (status === "granted") {
+        setPlaatsToegekend(bewaard.seats)
+        setVerzoekStored(group.id, null)
+      } else {
+        setVerzoekStored(group.id, null)
+      }
+    })()
+    return () => { weg = true }
+  }, [group?.id, isAdmin])
+
+  if (plaatsToegekend != null && group) {
+    return (
+      <div style={S.page}>
+        <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={totalPersons} />
+        <div style={{ maxWidth: 440, margin: "0 auto" }}>
+          <div style={{ ...S.card, textAlign: "center" }}>
+            <div style={{ fontSize: 34 }}>✅</div>
+            <h3 style={{ margin: "6px 0 0", fontSize: 20, fontWeight: 800, color: "#1f8a4c" }}>{L.seatAddedTitle}</h3>
+            <div style={{ fontSize: 14.5, color: "#8aa3a6", lineHeight: 1.5, marginTop: 6 }}>
+              {L.seatAddedBody(plaatsToegekend, naamVanOwner(), Math.max(1, participants.find((p) => p.id === meId)?.seats ?? 1))}
+            </div>
+            <button onClick={() => setPlaatsToegekend(null)}
+              style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800, marginTop: 14 }}>
+              {L.seatAddedGo}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (mijnOpenVraag && group) {
     return (
       <div style={S.page}>
@@ -4496,8 +4590,12 @@ export default function RundoTable() {
                 // deze vlag maakt een tweede tik een tweede verzoek aan.
                 setVerzoekBezig(true)
                 try {
-                  const ok = await vraagPlaatsen(naam, vraagPopup.seats)
-                  if (ok) { setMijnVraag({ naam, seats: vraagPopup.seats }); setVraagPopup(null) }
+                  const req = await vraagPlaatsen(naam, vraagPopup.seats)
+                  if (req) {
+                    setMijnVraag({ naam, seats: vraagPopup.seats })
+                    if (group) setVerzoekStored(group.id, { id: req.id, seats: vraagPopup.seats, vrij: 0 })
+                    setVraagPopup(null)
+                  }
                 } finally { setVerzoekBezig(false) }
               }}
               style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 15.5, fontWeight: 800, marginTop: 11, opacity: verzoekBezig ? 0.6 : 1 }}>
@@ -5687,11 +5785,14 @@ export default function RundoTable() {
                 if (st.warn === "many") return `${it.name}: ${L.tooManySharedAdmin(st.heads, it.share_expected as number)}`
                 return null
               }).filter(Boolean) as string[]
-              // Een gedeeld item met precies één deler is meestal een vergeten aanduiding:
-              // wie deelt er nu alleen? De bestaande "few"-controle mist dit, want die
-              // werkt alleen als het verwachte aantal ingevuld is.
-              const soloShared = baseItems.filter((it) => it.is_shared && shareHeads(it.id) === 1 && !it.share_expected)
-                .map((it) => `${it.name}: ${L.sharedOnlyOne}`)
+      // Tellen op plaatsen, niet op koppen: een koppel telt voor twee, waardoor een fles
+      // die alleen zíj namen ongemerkt doorglipte terwijl het bij een alleenstaande gast
+      // wél opviel. Eén plaats die alles neemt, is zelden een gedeeld item.
+      const soloShared = baseItems.filter((it) => it.is_shared && !it.share_expected && sharerIds(it.id).length === 1)
+        .map((it) => {
+          const p = participants.find((q) => q.id === sharerIds(it.id)[0])
+          return `${it.name}: ${L.sharedOnlyOne}${p ? ` (${naamVan(p)})` : ""}`
+        })
               // Iemand die niets aanduidde betaalt straks alleen mee aan gedeelde items.
               // Dat kan kloppen, maar het is vaker een vergissing dan niet.
               const zonderItems = participants.filter((p) => !claims.some((c) => c.participant_id === p.id && c.quantity > 0))
@@ -7706,22 +7807,21 @@ function ClaimScreen(props: {
             const mySeats = seatsOf(meId)
             return (
               <div key={it.id} style={{ padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                {/* Naam en bedrag over de volle breedte, de standen op een eigen regel:
+                    met alles op één lijn werd een lange itemnaam afgekapt op een telefoon. */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                      <span>{it.name}</span>
-                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 700 }}>{it.name}</div>
                     <div style={{ fontSize: 15.5, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `€${itemTotal(it).toFixed(2).replace(".", ",")}${L.totalSharedByDrinkers}${it.share_expected ? ` · ${L.sharedForN(it.share_expected)}` : ""}`}</div>
-                      </div>
-                      {/* Ook de gast moet terug kunnen: hij mag een item op gedeeld zetten,
-                          dus ook weer af. shareBtn toont vanzelf een label in plaats van een
-                          knop wanneer hij het niet was die het deelde. */}
-                      {shareBtn(it)}
-                  {/* De sleutel is "item:persoon"; met enkel het item-id stond deze knop soms
-                      op "ja" terwijl er niets gekozen was, of omgekeerd. */}
-                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" } : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
+                  </div>
                 </div>
+                {/* Ook de gast moet terug kunnen: hij mag een item op gedeeld zetten, dus ook
+                    weer af. shareBtn toont vanzelf een label wanneer hij het niet deelde. */}
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 7 }}>
+                  {shareBtn(it)}
+                </div>
+                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" } : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
                 {meId && mySeats > 1 && !fixed && (() => {
                   // Geen venster meer: de namen staan er altijd, je tikt aan wie meedeelde.
                   // Daarmee vervallen "Klaar" en "Wis alles" — nog eens tikken zet je er weer uit.
