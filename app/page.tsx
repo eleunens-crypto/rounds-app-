@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useLang, LanguageToggle } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
@@ -8,18 +8,17 @@ import { supabase } from "@/lib/supabase"
 const T = {
   nl: {
     tagline: "Rondjes en rekeningen zonder gedoe!",
-    partySub: "Rondjes opnemen en splitten zonder gedoe",
-    // De infozin staat zonder i-badge gecentreerd bóven de stappenflow — één blok:
-    // de zin zegt wát je ermee kan, de bolletjes eronder hóe het loopt.
-    // Stap 1 heeft twee manieren (zelf opnemen óf QR scannen), vandaar twee iconen.
+    // "zonder gedoe" staat al in de tagline — hier niet nog eens.
+    partySub: "Rondjes opnemen en splitten",
+    // Stap 1 heeft twee manieren (zelf opnemen óf QR scannen). In de estafette tonen
+    // we alleen het eerste icoon; het bijschrift vertelt de "of".
     partyFlow: [
       { iconen: ["✍️", "📱"], label: "neem zelf op\nof deel QR" },
       { iconen: ["👆"], label: "tik drankjes\naan" },
       { iconen: ["📋"], label: "handig barlijstje\nen afrekenen" },
     ],
-    orWord: "of",
-    showMore: "toon meer",
-    showLess: "toon minder",
+    // Samenvatting op één regel voor de kaart die even niet aan de beurt is.
+    partyKort: "opnemen · tik aan · afrekenen",
     yourGroups: "Jouw groepen",
     guestChip: "als gast",
     modeZelf: "Zelf opnemen",
@@ -32,12 +31,13 @@ const T = {
       { iconen: ["👆"], label: "tik aan\nwat je nam" },
       { iconen: ["💶"], label: "eerlijk\nverdeeld!" },
     ],
+    tableKort: "scan · QR · tik aan · verdeeld",
     start: "Starten",
     pinOn: "Bewaren",
     pinOff: "Niet meer bewaren",
+    pinFail: (msg: string) => `Bewaren mislukt: ${msg}`,
     maxPins: (n: number) => `Je kan maximaal ${n} groepen bewaren. Maak er eerst een los.`,
     openChip: "🟡 open",
-    hiddenNote: (app: string) => `${app} verborgen`,
     wipeAll: "🗑 alles wissen",
     wipeTitle: (n: number, app: string) => `${n} ${app}-groep${n === 1 ? "" : "en"} uit jouw lijst wissen?`,
     wipeNote: "Ook de bewaarde. De groepen zelf blijven bestaan — wie de code of link heeft kan er nog in.",
@@ -47,15 +47,13 @@ const T = {
   },
   fr: {
     tagline: "Tournées et additions, sans prise de tête !",
-    partySub: "Prendre les tournées et partager, sans prise de tête",
+    partySub: "Prendre les tournées et partager",
     partyFlow: [
       { iconen: ["✍️", "📱"], label: "note toi-même\nou partage le QR" },
       { iconen: ["👆"], label: "coche les\nboissons" },
       { iconen: ["📋"], label: "liste bar pratique\net règlement" },
     ],
-    orWord: "ou",
-    showMore: "voir plus",
-    showLess: "voir moins",
+    partyKort: "note · coche · règle",
     yourGroups: "Tes groupes",
     guestChip: "invité",
     modeZelf: "Noter soi-même",
@@ -68,12 +66,13 @@ const T = {
       { iconen: ["👆"], label: "coche ce que\ntu as pris" },
       { iconen: ["💶"], label: "partagé\néquitablement !" },
     ],
+    tableKort: "scanne · QR · coche · partagé",
     start: "Démarrer",
     pinOn: "Enregistrer",
     pinOff: "Ne plus enregistrer",
+    pinFail: (msg: string) => `Échec de l'enregistrement : ${msg}`,
     maxPins: (n: number) => `Tu peux garder ${n} groupes au maximum. Détaches-en un d'abord.`,
     openChip: "🟡 ouvert",
-    hiddenNote: (app: string) => `${app} masqué`,
     wipeAll: "🗑 tout effacer",
     wipeTitle: (n: number, app: string) => `Effacer ${n} groupe${n === 1 ? "" : "s"} ${app} de ta liste ?`,
     wipeNote: "Aussi les enregistrés. Les groupes existent encore — le code ou le lien fonctionne toujours.",
@@ -84,6 +83,7 @@ const T = {
 }
 
 type Mode = "table" | "party"
+type Stap = { iconen: string[]; label: string }
 
 // Zelfde bewaaricoon als in Party en Table: gevulde diskette, met de subtiele
 // schuine streep in de niet-bewaard-stand. Dit scherm is donker, dus de
@@ -103,6 +103,9 @@ function BewaarIcoon({ aan, size = 17, gat = "#161b28" }: { aan: boolean; size?:
 }
 // Zelfde plafond als in de apps zelf: bewaren blijft een keuze, geen standaard.
 const MAX_PINS = 3
+
+// Hoe lang elke stap in de estafette blijft staan.
+const BEURT_MS = 1800
 
 // Rundo woordmerk — Poppins SemiBold, omgezet naar vectorpaden.
 // Geen font-afhankelijkheid: rendert overal identiek.
@@ -169,24 +172,39 @@ export default function Home() {
   const [lang] = useLang()
   const t = T[lang]
   const router = useRouter()
-  // Welke kaart staat open? De kaarten tonen dichtgeklapt alleen logo en ondertitel;
-  // "toon meer" vouwt de stappen uit. Er kan er maar één open staan, zodat er nooit
-  // twee even luide startknoppen tegelijk op het scherm staan.
-  const [uitgeklapt, setUitgeklapt] = useState<Mode | null>(null)
-  const klapUit = (m: Mode) => setUitgeklapt((v) => v === m ? null : m)
-  // ?via=kiezer zegt de doelpagina dat je de stappen híer al gelezen hebt, zodat die
-  // haar eigen introscherm mag overslaan. Bewust in de URL en niet in localStorage: die
-  // vlag hieronder wordt nooit gewist, en een intro die voorgoed verdwijnt omdat je ooit
-  // één keer via de kiezer binnenkwam, is erger dan een intro te veel. Wie via een QR
-  // binnenkomt heeft geen via-parameter en krijgt de uitleg dus gewoon.
+
+  // ?via=kiezer zegt de doelpagina dat je de stappen híer al gezien hebt, zodat die
+  // haar eigen introscherm mag overslaan. Bewust in de URL: een intro die voorgoed
+  // verdwijnt omdat je ooit één keer via de kiezer binnenkwam, is erger dan een intro
+  // te veel. Wie via een QR binnenkomt heeft geen via-parameter en krijgt de uitleg.
   const starten = (m: Mode) => {
     try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ }
     router.push(m === "table" ? "/table?via=kiezer" : "/party?via=kiezer")
   }
-  // Je opgeslagen Party-groepen, rechtstreeks uit dezelfde bron als de app zelf: het
-  // toestel-id in localStorage plus de twee groepsqueries (eigen + als gast). Alleen
-  // open groepen — vanaf een startscherm wil je ergens naartoe, niet terugkijken.
-  // (Zelfde structuur staat klaar voor Table-groepen zodra die bron gekoppeld is.)
+
+  // ── Estafette ────────────────────────────────────────────────────────────────
+  // Eén gedeelde teller in plaats van twee losse CSS-animaties: eerst loopt Resto
+  // zijn stappen af, dan geeft hij de beurt door aan Rundo. Er beweegt dus altijd
+  // maar op één plek. De kaart die niet aan de beurt is toont een gedimde
+  // samenvatting, zodat je beide flows toch in één blik ziet.
+  // null = geen beweging (reduced motion): beide kaarten tonen hun samenvatting.
+  const reeks: [Mode, number][] = [
+    ...t.tableFlow.map((_, i): [Mode, number] => ["table", i]),
+    ...t.partyFlow.map((_, i): [Mode, number] => ["party", i]),
+  ]
+  const [beurt, setBeurt] = useState<number | null>(0)
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { setBeurt(null); return }
+    const id = window.setInterval(() => {
+      // Niet doortikken in een verborgen tabblad: bij terugkeer begin je gewoon waar je was.
+      if (document.hidden) return
+      setBeurt((b) => (b === null ? null : (b + 1) % reeks.length))
+    }, BEURT_MS)
+    return () => window.clearInterval(id)
+  }, [reeks.length])
+  const actief = beurt === null ? null : reeks[beurt % reeks.length]
+
+  // Je opgeslagen groepen, rechtstreeks uit dezelfde bron als de apps zelf.
   type MiniGroep = { id: string; name: string; settle?: boolean; gast: boolean; af: boolean; pin: boolean; last: string; app: "party" | "table"; code?: string }
   const [groepen, setGroepen] = useState<MiniGroep[]>([])
   const [tafels, setTafels] = useState<MiniGroep[]>([])
@@ -194,47 +212,38 @@ export default function Home() {
   // het inkorten, want het plafond geldt voor alles, niet enkel wat hier zichtbaar is.
   const [pinTotaal, setPinTotaal] = useState<{ party: number; table: number }>({ party: 0, table: 0 })
   const [melding, setMelding] = useState<string | null>(null)
-  // Beide lijsten starten dichtgeklapt; elk kopje klapt apart open. Kies je bovenaan
-  // een app, dan klapt die lijst vanzelf mee open (zie het effect verderop).
+  // Beide lijsten starten dichtgeklapt; elk kopje klapt apart open.
   const [klap, setKlap] = useState<{ party: boolean; table: boolean }>({ party: false, table: false })
   // Wisbevestiging: welke app staat op het punt gewist te worden?
   const [wisVraag, setWisVraag] = useState<null | "party" | "table">(null)
   // Wissen = verbergen op dít toestel: de groep zelf blijft in de databank bestaan.
-  // De verborgen id's staan in localStorage; de laadroutine filtert ze eruit. Hier
-  // houden we ook de vólledige id-lijsten bij, want de zichtbare lijst is ingekort.
   const alleIds = useRef<{ party: string[]; table: string[] }>({ party: [], table: [] })
   const gewisteIds = (app: "party" | "table"): Set<string> => {
     try { const raw = localStorage.getItem(`rundo_chooser_gewist_${app}`); if (raw) return new Set(JSON.parse(raw)) } catch { /* niets */ }
     return new Set()
   }
-  // Telefoons houden de ingezoomde stand vast over paginawissels heen. Bij
-  // binnenkomst zetten we de zoom heel even vast op 1 en geven de viewport
-  // meteen weer vrij, zodat elke overgang op 100% begint.
+
   // Telefoons zoomen in op invoervelden en houden die stand vast, ook over
-  // paginawissels heen — en Android Chrome geeft hem met een meta-wissel niet
-  // terug. Daarom app-gedrag: de viewport staat permanent vast op schaal 1, dus
-  // invoer-autozoom bestaat niet meer. iOS laat knijpzoomen bij een echt gebaar
-  // gewoon toe (het negeert de limiet daarvoor), Android houdt alles strak op 100%.
+  // paginawissels heen. Daarom app-gedrag: de viewport staat vast op schaal 1.
   useEffect(() => {
     try {
       let m = document.querySelector('meta[name="viewport"]')
       if (!m) { m = document.createElement("meta"); m.setAttribute("name", "viewport"); document.head.appendChild(m) }
       m.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no")
-      // De witte rand op mobiel kwam van de standaardmarge én de witte body-kleur
-      // achter de pagina; en de pagina was net iets hoger dan het scherm (100vh telt
-      // de adresbalk niet mee), waardoor je kon swipen zonder inhoud. Beide dicht.
+      // Geen witte rand en geen lege swipe-ruimte op mobiel. Zelfde kleur als in de
+      // <style> onderaan — vroeger stonden daar twee verschillende tinten.
       document.documentElement.style.margin = "0"
       document.body.style.margin = "0"
       document.body.style.background = "#131826"
       document.body.style.overscrollBehaviorY = "none"
     } catch { /* niets */ }
   }, [])
+
   useEffect(() => {
     if (typeof window === "undefined") return
     ;(async () => {
       // Twee aparte poortjes: het Party-toestel-id en het Table-id zijn verschillende
-      // sleutels. Vroeger blokkeerde een ontbrekend Party-id óók de Table-lijst —
-      // op een browser waar je alleen Table gebruikte bleef de sectie dan leeg.
+      // sleutels, zodat een ontbrekend Party-id de Table-lijst niet blokkeert.
       try {
         const dev = localStorage.getItem("rundo_device_id")
         if (!dev) throw new Error("geen party-id")
@@ -253,19 +262,15 @@ export default function Home() {
             map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: true, af: !!g.finalized, pin: !!g.pinned, last: (g.last_active as string) || "", app: "party" })
           }
         }
-        // Open groepen eerst — daar wil je naartoe. Afgesloten avonden blijven
-        // raadpleegbaar (afrekening delen, terugkijken) en volgen gedimd eronder.
+        // Open groepen eerst; afgesloten volgen gedimd, bewaarde daarbinnen bovenaan.
         const weg = gewisteIds("party")
         const alles = [...map.values()].filter((g) => !weg.has(g.id)).sort((a, b) => b.last.localeCompare(a.last))
         alleIds.current.party = alles.map((g) => g.id)
-        // Binnen de afgesloten groepen komen de bewaarde eerst: dat zijn de blijvers.
         const lijst = [...alles.filter((g) => !g.af).slice(0, 4), ...alles.filter((g) => g.af).sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0)).slice(0, 3)]
         setGroepen(lijst)
         setPinTotaal((v) => ({ ...v, party: alles.filter((g) => !g.gast && g.pin).length }))
       } catch { /* stil: geen sectie is prima */ }
-      // Table: eigen groepen uit de databank (rundo_owner_id), gastgroepen uit de
-      // lokale lijst — exact de bronnen die de Table-app zelf gebruikt. De link loopt
-      // via de uitnodigingscode, die Table al kent (?code=): daar wijzigt dus niets.
+      // Table: eigen groepen uit de databank, gastgroepen uit de lokale lijst.
       try {
         const ownerId = localStorage.getItem("rundo_owner_id")
         if (!ownerId) throw new Error("geen table-id")
@@ -302,9 +307,9 @@ export default function Home() {
     } catch { /* sessionStorage niet beschikbaar */ }
   }, [])
 
-  // Accentkleur per modus — dezelfde die de kaart al gebruikt.
+  // Accentkleur per modus.
   const accent = { table: "#5b9fd6", party: "#f0c14b" }
-  useEffect(() => { if (uitgeklapt) setKlap((k) => ({ ...k, [uitgeklapt]: true })) }, [uitgeklapt])
+
   const wisAlles = (app: "party" | "table") => {
     const weg = gewisteIds(app)
     alleIds.current[app].forEach((id) => weg.add(id))
@@ -323,13 +328,11 @@ export default function Home() {
     if (!g.pin && pinTotaal[g.app] >= MAX_PINS) { meld(t.maxPins(MAX_PINS)); return }
     const tabel = g.app === "party" ? "party_groups" : "table_groups"
     const { error } = await supabase.from(tabel).update({ pinned: !g.pin }).eq("id", g.id)
-    if (error) { meld("Bewaren mislukt: " + error.message); return }
+    if (error) { meld(t.pinFail(error.message)); return }
     const zet = (prev: MiniGroep[]) => prev.map((x) => x.id === g.id ? { ...x, pin: !x.pin } : x)
     if (g.app === "party") setGroepen(zet); else setTafels(zet)
     setPinTotaal((v) => ({ ...v, [g.app]: v[g.app] + (g.pin ? -1 : 1) }))
   }
-  // De knop zelf, in de tint van de app: goud voor Party, blauw voor Table. De
-  // uitsparingen van de diskette nemen de donkere achtergrond van dit scherm aan.
   const pinKnop = (g: MiniGroep) => {
     if (g.gast) return null
     const kleur = accent[g.app]
@@ -344,100 +347,49 @@ export default function Home() {
     )
   }
 
-  // De dichte kaart houdt zijn witte rand — dat leest als "hier kan je tikken". De
-  // opengeklapte krijgt de accentkleur. De andere kaart dimmen we niet meer: je klapt
-  // uit om te lézen, niet om te kiezen, dus die blijft gewoon leesbaar.
-  const cardState = (m: Mode): React.CSSProperties => ({
-    border: uitgeklapt === m ? `2px solid ${accent[m]}` : "1.5px solid rgba(255,255,255,0.4)",
-    boxShadow: uitgeklapt === m
-      ? `0 18px 40px -18px ${m === "party" ? "rgba(240,193,75,0.45)" : "rgba(91,159,214,0.45)"}`
-      : `0 12px 34px -18px ${m === "party" ? "rgba(240,193,75,0.25)" : "rgba(91,159,214,0.25)"}`,
-  })
+  // De stappen als ketting van bolletjes met een bijschrift eronder. Aan de beurt:
+  // het actieve bolletje vult zich en het bijschrift noemt de stap. Niet aan de
+  // beurt: alles gedimd, bijschrift = samenvatting op één regel.
+  const estafette = (m: Mode, stappen: Stap[], kort: string) => {
+    const kleur = accent[m]
+    const aanDeBeurt = actief?.[0] === m
+    const stap = aanDeBeurt ? actief![1] : -1
+    const helder = aanDeBeurt || actief === null
+    return (
+      <div style={{ marginTop: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, opacity: helder ? 1 : 0.45, transition: "opacity .35s ease" }}>
+          {stappen.map((st, i) => (
+            <Fragment key={i}>
+              {i > 0 && <span aria-hidden style={{ color: "rgba(255,255,255,0.32)", fontSize: 14, fontWeight: 700 }}>›</span>}
+              <span aria-hidden style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15,
+                border: `1px solid ${kleur}80`,
+                background: i === stap ? kleur : `${kleur}2e`,
+                transform: i === stap ? "scale(1.12)" : "none",
+                transition: "background .3s ease, transform .3s ease" }}>{st.iconen[0]}</span>
+            </Fragment>
+          ))}
+        </div>
+        {/* Vaste hoogte (twee regels), zodat de kaart niet verspringt als het bijschrift wisselt. */}
+        <div style={{ height: 34, marginTop: 6, fontSize: 12.5, fontWeight: 600, lineHeight: "17px", overflow: "hidden",
+          color: "#e8e2d4", textShadow: "0 1px 3px rgba(0,0,0,0.7)", opacity: helder ? 1 : 0.55, transition: "opacity .35s ease" }}>
+          {aanDeBeurt ? `${stap + 1}. ${stappen[stap].label.replace("\n", " ")}` : kort}
+        </div>
+      </div>
+    )
+  }
 
-  // "toon meer" op de scheidingslijn onder de ondertitel: klein en grijs, zodat het
-  // nooit met de startknop concurreert. De lijn liep er al; het pilletje gaat erop.
-  const toonMeer = (m: Mode) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 13 }}>
-      <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.16)" }} />
-      <span onClick={(e) => { e.stopPropagation(); klapUit(m) }}
-        style={{ flexShrink: 0, cursor: "pointer", whiteSpace: "nowrap", fontSize: 12.5, fontWeight: 700,
-          padding: "4px 11px", borderRadius: 999, border: "1px solid rgba(255,255,255,0.2)",
-          background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.62)", userSelect: "none" }}>
-        {uitgeklapt === m ? `${t.showLess} \u25B4` : `${t.showMore} \u25BE`}
-      </span>
-      <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.16)" }} />
-    </div>
+  // De startbalk onderaan elke kaart. De hele kaart start al; de balk maakt duidelijk
+  // wát er gebeurt als je tikt, en is voor toetsenbordgebruikers het focuspunt.
+  const startKnop = (m: Mode) => (
+    <button onClick={(e) => { e.stopPropagation(); starten(m) }} className={`rundo-start-${m}`}
+      style={{ position: "relative", zIndex: 2, display: "block", width: "100%", padding: "14px 18px",
+        border: "none", borderTop: `1.5px solid ${accent[m]}66`,
+        fontSize: 18, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", letterSpacing: 0.2,
+        background: "rgba(255,255,255,0.06)", color: accent[m],
+        transition: "background .15s ease, color .15s ease" }}>
+      {t.start} →
+    </button>
   )
-
-  // Dichtgeklapt draaien de stappen één voor één voorbij op dezelfde plek. Zo weet je
-  // wat er achter "toon meer" zit zonder te tikken, en kost het maar één regel hoogte.
-  // Bij twee iconen tonen we alleen het eerste — de "of"-nuance hoort in de volle lijst.
-  const voorproef = (m: Mode, stappen: { iconen: string[]; label: string }[]) => {
-    if (uitgeklapt === m) return null
-    const kleur = accent[m]
-    return (
-      <div className={`rundo-wissel rundo-wissel-${stappen.length}`}>
-        {stappen.map((st, i) => (
-          <div key={i}>
-            <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: `${kleur}2e`,
-              border: `1px solid ${kleur}80`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>{st.iconen[0]}</span>
-            <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 700, color: "#131826", background: kleur, borderRadius: 999, padding: "1px 7px" }}>{i + 1}</span>
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: "#e8e2d4", textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}>{st.label.replace("\n", " ")}</span>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  // De stappen staan onder elkaar in plaats van naast elkaar: zo mag het bijschrift
-  // voluit in plaats van afgebroken over twee regeltjes, en lees je van boven naar
-  // beneden mee met de volgorde. Een stap kan twee iconen dragen — dan staat er een
-  // klein "of" tussen en delen ze één nummer.
-  const stappenLijst = (m: Mode, stappen: { iconen: string[]; label: string }[]) => {
-    if (uitgeklapt !== m) return null
-    const kleur = accent[m]
-    return (
-      <div style={{ position: "relative", marginTop: 13 }}>
-        {/* Verbindingslijn door de nummers heen, zodat het als één route leest. */}
-        <span style={{ position: "absolute", left: 13, top: 22, bottom: 22, width: 1.5, background: `${kleur}4d` }} />
-        {stappen.map((st, i) => (
-          <div key={i} style={{ position: "relative", display: "flex", alignItems: "center", gap: 9, padding: "5px 0" }}>
-            <span style={{ flexShrink: 0, width: 27, height: 27, borderRadius: "50%", background: kleur, color: "#131826",
-              fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
-            {st.iconen.map((ic, k) => (
-              <span key={k} style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                {k > 0 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#b9a67c" }}>{t.orWord}</span>}
-                <span style={{ flexShrink: 0, width: 32, height: 32, borderRadius: "50%", background: `${kleur}2e`,
-                  border: `1px solid ${kleur}80`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{ic}</span>
-              </span>
-            ))}
-            {/* De labels dragen een \n voor de oude tweeregelige opmaak; hier past het op één regel.
-                De schaduw houdt de tekst leesbaar waar ze over de foto loopt. */}
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#e8e2d4", lineHeight: 1.3,
-              textShadow: "0 1px 3px rgba(0,0,0,0.7)" }}>{st.label.replace("\n", " ")}</span>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  // De startknop hoort bij de kaart en staat er altijd, ook dichtgeklapt — maar dan
-  // omlijnd. Vol gekleurd pas als de kaart openstaat, zodat er nooit twee even luide
-  // knoppen tegelijk staan te roepen. Fors gezet: dit is waar je naartoe wil.
-  const startKnop = (m: Mode) => {
-    const open = uitgeklapt === m
-    return (
-      <button onClick={(e) => { e.stopPropagation(); starten(m) }} className={`rundo-start-${m}`}
-        style={{ position: "relative", zIndex: 2, display: "block", width: "100%", padding: "17px 18px",
-          border: "none", borderTop: open ? "none" : `1.5px solid ${accent[m]}66`,
-          fontSize: 20, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", letterSpacing: 0.2,
-          background: open ? accent[m] : "rgba(255,255,255,0.06)",
-          color: open ? "#131826" : accent[m],
-          transition: "background .15s ease, color .15s ease" }}>
-        {t.start} →
-      </button>
-    )
-  }
 
   return (
     <div style={S.page}>
@@ -447,83 +399,60 @@ export default function Home() {
           <LanguageToggle />
         </div>
 
-        {/* Kop: algemeen Rundo-logo (symbool + naam in één), ondertitel eronder. Links
-            uitgelijnd met 34px inspringing: gecentreerd kwam de merknaam vlak onder de
-            taalpil rechtsboven te zitten, en die twee vechten dan om dezelfde hoek. De
-            inspringing houdt het logo van de rand af en lijnt het ongeveer uit met de
-            tekst binnen de kaarten, die ook padding hebben. De negatieve bovenmarge trekt
-            de kop op tot naast de taalpil: die staat rechts, het logo links, dus ze zitten
-            elkaar niet in de weg en we winnen de hele hoogte van die rij. */}
-        <div style={{ textAlign: "left", marginTop: -30, marginBottom: 20, paddingLeft: 20 }}>
-          <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={76} /></span>
+        {/* Kop: logo links, naast de taalpil (negatieve bovenmarge), tagline eronder. */}
+        <div style={{ textAlign: "left", marginTop: -30, marginBottom: 18, paddingLeft: 20 }}>
+          <span style={{ display: "inline-block", marginBottom: 8 }}><RundoLogo size={68} /></span>
           <p style={{ color: "#f0c14b", fontSize: 18, fontWeight: 600, margin: 0 }}>
             {t.tagline}
           </p>
         </div>
 
-        {/* TABLE-kaart — koel blauw */}
-        <div onClick={() => klapUit("table")} style={{ ...S.modeCard, ...S.tableCard, ...cardState("table") }} className="rundo-card rundo-card-table">
+        {/* TABLE-kaart — koel blauw. De hele kaart is één tikdoel: starten. */}
+        <div onClick={() => starten("table")} style={{ ...S.modeCard, ...S.tableCard }} className="rundo-card rundo-card-table">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/table-image.png" alt="" style={S.cardPhoto} />
-          <div style={{ position: "absolute", inset: 0, zIndex: 1, transition: "background .2s ease",
-            background: uitgeklapt === "table"
-              ? "linear-gradient(90deg, #131e2b 0%, #131e2b 46%, rgba(19,30,43,0.94) 62%, rgba(19,30,43,0.78) 82%, rgba(19,30,43,0.6) 100%)"
-              : "linear-gradient(90deg, #131e2b 0%, #131e2b 42%, rgba(19,30,43,0.85) 56%, rgba(19,30,43,0.35) 72%, rgba(19,30,43,0) 100%)" }} />
-          <div style={{ ...S.cardBody, paddingBottom: 16, maxWidth: uitgeklapt === "table" ? "100%" : "74%" }}>
-            <span style={{ display: "block", marginBottom: 6 }}><RundoLogo size={44} resto /></span>
+          <div style={{ position: "absolute", inset: 0, zIndex: 1,
+            background: "linear-gradient(90deg, #131e2b 0%, #131e2b 42%, rgba(19,30,43,0.85) 56%, rgba(19,30,43,0.35) 72%, rgba(19,30,43,0) 100%)" }} />
+          <div style={S.cardBody}>
+            <span style={{ display: "block", marginBottom: 6 }}><RundoLogo size={40} resto /></span>
             <div style={{ ...S.logoSub, color: "#3bbfc4", display: "flex", alignItems: "center", gap: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icon-table.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
+              <img src="/icon-table.png" alt="" style={{ height: 22, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.tableSub}</span>
             </div>
-            {voorproef("table", t.tableFlow)}
-            {toonMeer("table")}
-            {stappenLijst("table", t.tableFlow)}
+            {estafette("table", t.tableFlow, t.tableKort)}
           </div>
           {startKnop("table")}
         </div>
 
-        {/* Je kíest hier niet meer — elke kaart heeft zijn eigen startknop. De lijn
-            blijft als scheiding tussen de twee, met een kaal "of" ertussen. */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 14px" }}>
-          <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
-          <span style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.55)", whiteSpace: "nowrap" }}>{t.orWord}</span>
-          <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
-        </div>
         {/* PARTY-kaart — warm geel */}
-        <div onClick={() => klapUit("party")} style={{ ...S.modeCard, ...S.partyCard, ...cardState("party") }} className="rundo-card rundo-card-party">
+        <div onClick={() => starten("party")} style={{ ...S.modeCard, ...S.partyCard }} className="rundo-card rundo-card-party">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/party-image.png" alt="" style={S.cardPhoto} />
           {/* Warme gloed die de foto iets verlicht */}
           <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "62%", zIndex: 1, background: "radial-gradient(120% 90% at 88% 32%, rgba(255,214,130,0.42) 0%, rgba(255,190,90,0.16) 42%, rgba(255,190,90,0) 72%)", mixBlendMode: "screen", pointerEvents: "none" }} />
-          <div style={{ position: "absolute", inset: 0, zIndex: 1, transition: "background .2s ease",
-            background: uitgeklapt === "party"
-              ? "linear-gradient(90deg, #211c14 0%, #211c14 46%, rgba(33,28,20,0.94) 62%, rgba(33,28,20,0.78) 82%, rgba(33,28,20,0.6) 100%)"
-              : "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
-          <div style={{ ...S.cardBody, paddingBottom: 16, maxWidth: uitgeklapt === "party" ? "100%" : "74%" }}>
-            <span style={{ display: "block", marginBottom: 6 }}><RundoLogo size={44} /></span>
+          <div style={{ position: "absolute", inset: 0, zIndex: 1,
+            background: "linear-gradient(90deg, #211c14 0%, #211c14 42%, rgba(33,28,20,0.85) 56%, rgba(33,28,20,0.35) 72%, rgba(33,28,20,0) 100%)" }} />
+          <div style={S.cardBody}>
+            <span style={{ display: "block", marginBottom: 6 }}><RundoLogo size={40} /></span>
             <div style={{ ...S.logoSub, color: "#f0a500", display: "flex", alignItems: "center", gap: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icon-party.png" alt="" style={{ height: 24, width: "auto", objectFit: "contain", flexShrink: 0 }} />
+              <img src="/icon-party.png" alt="" style={{ height: 22, width: "auto", objectFit: "contain", flexShrink: 0 }} />
               <span>{t.partySub}</span>
             </div>
-            {voorproef("party", t.partyFlow)}
-            {toonMeer("party")}
-            {stappenLijst("party", t.partyFlow)}
+            {estafette("party", t.partyFlow, t.partyKort)}
           </div>
           {startKnop("party")}
         </div>
 
-        {/* Jouw open groepen, gesplitst per app — één tik en je zit erin. De Rundo-rij
-            linkt met ?g=, waar de app de groep meteen opent. De Table-kolom volgt
-            zodra die bron gekoppeld is. */}
+        {/* Jouw groepen, gesplitst per app — één tik en je zit erin. */}
         {(groepen.length > 0 || tafels.length > 0) && (
-          <div style={{ marginTop: 26 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#9aa2b8", letterSpacing: "0.05em", marginBottom: 9 }}>📂 {t.yourGroups}{uitgeklapt === "party" && tafels.length > 0 && <span style={{ fontWeight: 600, color: "#5d6478" }}> · {t.hiddenNote("Rundo Resto")}</span>}{uitgeklapt === "table" && groepen.length > 0 && <span style={{ fontWeight: 600, color: "#5d6478" }}> · {t.hiddenNote("Rundo")}</span>}</div>
+          <div style={{ marginTop: 22 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#9aa2b8", letterSpacing: "0.05em", marginBottom: 9 }}>📂 {t.yourGroups}</div>
             {melding && (
               <div style={{ fontSize: 12.5, fontWeight: 700, color: "#f2d9a0", background: "rgba(240,193,75,0.12)", border: "1px solid rgba(240,193,75,0.4)", borderRadius: 10, padding: "8px 11px", marginBottom: 8 }}>{melding}</div>
             )}
-            {groepen.length > 0 && uitgeklapt !== "table" && (<>
+            {groepen.length > 0 && (<>
               <div onClick={() => { setKlap((k) => ({ ...k, party: !k.party })); setWisVraag(null) }}
                 style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,193,75,0.3)", borderRadius: 12, padding: "11px 12px", marginBottom: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: accent.party }}>🍻 Rundo</span>
@@ -536,8 +465,6 @@ export default function Home() {
                   <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: "rgba(240,193,75,0.12)" }}>{g.settle ? "📱" : "✍️"}</span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "#e8e4d8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || "Rundo"}</span>
-                    {/* Alleen de hoofdsplitsing telt hier: zelf opnemen of via QR —
-                        dezelfde keuze als op het Party-startscherm. */}
                     <span style={{ display: "block", fontSize: 11, fontWeight: 800, color: "#d9c58a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.settle ? t.modeQr : t.modeZelf}</span>
                   </span>
                   {g.gast && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 800, color: "#d9c58a", background: "rgba(240,193,75,0.14)", borderRadius: 7, padding: "2px 7px" }}>{t.guestChip}</span>}
@@ -549,7 +476,7 @@ export default function Home() {
               ))}
               {klap.party && (wisVraag === "party" ? (
                 <div style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "10px 12px", margin: "2px 0 10px" }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: "#f0a89e", marginBottom: 6 }}>{t.wipeTitle(alleIds.current.party.length, "Party")}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#f0a89e", marginBottom: 6 }}>{t.wipeTitle(alleIds.current.party.length, "Rundo")}</div>
                   <div style={{ fontSize: 11.5, color: "#c9a9a3", lineHeight: 1.45, marginBottom: 8 }}>{t.wipeNote}</div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button onClick={() => setWisVraag(null)} style={{ flex: 1, background: "transparent", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 9, padding: "8px 4px", fontSize: 12.5, fontWeight: 800, color: "#e8e4d8", cursor: "pointer" }}>{t.cancelWord}</button>
@@ -562,7 +489,7 @@ export default function Home() {
                 </div>
               ))}
             </>)}
-            {tafels.length > 0 && uitgeklapt !== "party" && (<>
+            {tafels.length > 0 && (<>
               <div onClick={() => { setKlap((k) => ({ ...k, table: !k.table })); setWisVraag(null) }}
                 style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(91,159,214,0.35)", borderRadius: 12, padding: "11px 12px", marginBottom: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: accent.table }}>🧾 Rundo Resto</span>
@@ -583,7 +510,7 @@ export default function Home() {
               ))}
               {klap.table && (wisVraag === "table" ? (
                 <div style={{ background: "rgba(224,104,92,0.1)", border: "1px solid rgba(224,104,92,0.45)", borderRadius: 12, padding: "10px 12px", margin: "2px 0 10px" }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: "#f0a89e", marginBottom: 6 }}>{t.wipeTitle(alleIds.current.table.length, "Table")}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#f0a89e", marginBottom: 6 }}>{t.wipeTitle(alleIds.current.table.length, "Rundo Resto")}</div>
                   <div style={{ fontSize: 11.5, color: "#c9a9a3", lineHeight: 1.45, marginBottom: 8 }}>{t.wipeNote}</div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button onClick={() => setWisVraag(null)} style={{ flex: 1, background: "transparent", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 9, padding: "8px 4px", fontSize: 12.5, fontWeight: 800, color: "#e8e4d8", cursor: "pointer" }}>{t.cancelWord}</button>
@@ -608,37 +535,25 @@ export default function Home() {
       </div>
 
       <style>{`
-@keyframes rundoKiesPuls{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0.25)}50%{box-shadow:0 0 0 8px rgba(255,255,255,0)}}
-@keyframes rundoKiesWip{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
         * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; background: #0e1119; }
-        .rundo-card { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .15s ease; }
-        .rundo-card-party:hover { transform: translateY(-2px); border-color: rgba(240,193,75,0.55); }
-        .rundo-card-table:hover { transform: translateY(-2px); border-color: rgba(91,159,214,0.55); }
-        /* Voorproef in de dichtgeklapte kaart: de stappen wisselen elkaar af op hun
-           plek, zodat je ziet wat er achter "toon meer" zit zonder te tikken. */
-        .rundo-wissel { position: relative; height: 34px; margin-top: 11px; }
-        .rundo-wissel > div { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; opacity: 0; }
-        .rundo-wissel-3 > div { animation: rundoBeurt3 9s infinite; }
-        .rundo-wissel-3 > div:nth-child(2) { animation-delay: 3s; }
-        .rundo-wissel-3 > div:nth-child(3) { animation-delay: 6s; }
-        .rundo-wissel-4 > div { animation: rundoBeurt4 12s infinite; }
-        .rundo-wissel-4 > div:nth-child(2) { animation-delay: 3s; }
-        .rundo-wissel-4 > div:nth-child(3) { animation-delay: 6s; }
-        .rundo-wissel-4 > div:nth-child(4) { animation-delay: 9s; }
-@keyframes rundoBeurt3{0%{opacity:0;transform:translateY(6px)}4%{opacity:1;transform:none}30%{opacity:1;transform:none}36%{opacity:0;transform:translateY(-6px)}100%{opacity:0}}
-@keyframes rundoBeurt4{0%{opacity:0;transform:translateY(6px)}3%{opacity:1;transform:none}22%{opacity:1;transform:none}27%{opacity:0;transform:translateY(-6px)}100%{opacity:0}}
-        /* Op een telefoon bestaat :hover niet. Zonder deze regel geeft de omlijnde
-           startknop geen enkel teken dat je hem raakte; nu vult hij bij het indrukken. */
+        html, body { margin: 0; padding: 0; background: #131826; }
+        /* De randkleur staat hier en niet inline: anders wint de inline stijl altijd
+           en doet :hover niets (dat was eerder het geval). */
+        .rundo-card { transition: transform .15s ease, border-color .15s ease; }
+        .rundo-card-party { border-color: rgba(240,193,75,0.35); }
+        .rundo-card-table { border-color: rgba(91,159,214,0.4); }
+        .rundo-card:active { transform: scale(0.99); }
         .rundo-start-party:active { background: #f0c14b !important; color: #131826 !important; border-top-color: transparent !important; }
         .rundo-start-table:active { background: #5b9fd6 !important; color: #131826 !important; border-top-color: transparent !important; }
+        .rundo-start-party:focus-visible, .rundo-start-table:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
         @media (hover: hover) {
-          .rundo-start-party:hover { background: rgba(240,193,75,0.18); }
-          .rundo-start-table:hover { background: rgba(91,159,214,0.18); }
+          .rundo-card-party:hover { transform: translateY(-2px); border-color: rgba(240,193,75,0.7); }
+          .rundo-card-table:hover { transform: translateY(-2px); border-color: rgba(91,159,214,0.75); }
+          .rundo-card-party:hover .rundo-start-party { background: rgba(240,193,75,0.18); }
+          .rundo-card-table:hover .rundo-start-table { background: rgba(91,159,214,0.18); }
         }
         @media (prefers-reduced-motion: reduce) {
-          .rundo-wissel > div { animation: none; }
-          .rundo-wissel > div:first-child { opacity: 1; }
+          .rundo-card, .rundo-card:hover, .rundo-card:active { transform: none !important; }
         }
       `}</style>
     </div>
@@ -661,11 +576,15 @@ const S: Record<string, React.CSSProperties> = {
     marginBottom: 14,
     cursor: "pointer",
     overflow: "hidden",
+    // Geen `border`-shorthand: de kleur komt uit de CSS-klasse (zie <style>).
+    borderWidth: 1.5,
+    borderStyle: "solid",
   },
   cardBody: {
     position: "relative",
     zIndex: 2,
-    padding: "20px 22px 20px",
+    padding: "18px 20px 14px",
+    maxWidth: "76%",
   },
   cardPhoto: {
     position: "absolute",
@@ -678,16 +597,16 @@ const S: Record<string, React.CSSProperties> = {
     zIndex: 0,
     filter: "brightness(1.18) saturate(0.92)",
   },
-  // Party: warme gele gloed
   partyCard: {
     background: "#211c14",
+    boxShadow: "0 12px 34px -18px rgba(240,193,75,0.3)",
   },
-  // Table: koele blauwe gloed
   tableCard: {
     background: "#131e2b",
+    boxShadow: "0 12px 34px -18px rgba(91,159,214,0.3)",
   },
   logoSub: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 600,
     letterSpacing: -0.2,
     lineHeight: 1.2,
