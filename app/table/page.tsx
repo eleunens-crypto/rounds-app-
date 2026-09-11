@@ -2918,6 +2918,43 @@ export default function RundoTable() {
   const naamVan = (p: Participant) => vrijeNummers[p.id] ? `${L.guestWord} ${vrijeNummers[p.id]}` : p.name
   // Een gast zonder plaats kan er een vragen. De beheerder houdt de controle, want
   // het aantal personen bepaalt mee hoe gedeelde items verdeeld worden.
+  // Deze twee moeten bóven elke vroege return staan: hooks mogen niet overgeslagen
+  // worden bij het eerste laden en daarna plots wel uitgevoerd.
+  useEffect(() => {
+    if (!mijnVraag || !group) return
+    const nogOpen = seatRequests.some((r) => r.name.trim() === mijnVraag.naam.trim())
+    if (!nogOpen) {
+      setPlaatsToegekend(mijnVraag.seats)
+      setMijnVraag(null)
+      setVerzoekStored(group.id, null)
+    }
+  }, [seatRequests, mijnVraag, group])
+
+  // Na een verversing is het geheugen leeg. Niet afgaan op "het verzoek staat niet meer
+  // in de open lijst" — genegeerd en toegekend zien er dan hetzelfde uit. We halen de
+  // status van dat ene verzoek op en beslissen daarop.
+  useEffect(() => {
+    if (!group || isAdmin || mijnVraag) return
+    const bewaard = getVerzoekStored(group.id)
+    if (!bewaard) return
+    let weg = false
+    void (async () => {
+      const { data } = await supabase.from("table_seat_requests").select("*").eq("id", bewaard.id).single()
+      if (weg) return
+      const status = (data as SeatRequest | null)?.status
+      if (status === "open") {
+        setMijnVraag({ naam: (data as SeatRequest).name, seats: bewaard.seats })
+        if (bewaard.vrij > 0) setVrijeBijAanmelding(bewaard.vrij)
+      } else if (status === "granted") {
+        setPlaatsToegekend(bewaard.seats)
+        setVerzoekStored(group.id, null)
+      } else {
+        setVerzoekStored(group.id, null)
+      }
+    })()
+    return () => { weg = true }
+  }, [group?.id, isAdmin])
+
   useEffect(() => {
     // Alleen laten lopen wanneer er iets af te tellen valt.
     if (seatRequests.length === 0) return
@@ -4205,40 +4242,6 @@ export default function RundoTable() {
     : null
   // Verdwijnt je verzoek terwijl je erop wacht, dan heeft de beheerder toegekend.
   // Zonder deze melding sprong je scherm zomaar door naar het toewijzen.
-  useEffect(() => {
-    if (!mijnVraag) return
-    if (!mijnOpenVraag) {
-      setPlaatsToegekend(mijnVraag.seats)
-      setMijnVraag(null)
-      if (group) setVerzoekStored(group.id, null)
-    }
-  }, [mijnOpenVraag, mijnVraag, group])
-
-  // Na een verversing is het geheugen leeg. Niet afgaan op "het verzoek staat niet meer
-  // in de open lijst" — genegeerd en toegekend zien er dan hetzelfde uit. We halen de
-  // status van dat ene verzoek op en beslissen daarop.
-  useEffect(() => {
-    if (!group || isAdmin || mijnVraag) return
-    const bewaard = getVerzoekStored(group.id)
-    if (!bewaard) return
-    let weg = false
-    void (async () => {
-      const { data } = await supabase.from("table_seat_requests").select("*").eq("id", bewaard.id).single()
-      if (weg) return
-      const status = (data as SeatRequest | null)?.status
-      if (status === "open") {
-        setMijnVraag({ naam: (data as SeatRequest).name, seats: bewaard.seats })
-        if (bewaard.vrij > 0) setVrijeBijAanmelding(bewaard.vrij)
-      } else if (status === "granted") {
-        setPlaatsToegekend(bewaard.seats)
-        setVerzoekStored(group.id, null)
-      } else {
-        setVerzoekStored(group.id, null)
-      }
-    })()
-    return () => { weg = true }
-  }, [group?.id, isAdmin])
-
   if (plaatsToegekend != null && group) {
     return (
       <div style={S.page}>
