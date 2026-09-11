@@ -7170,6 +7170,11 @@ function ClaimScreen(props: {
                                         if (viaLink) { askConfirm(L.assignToQrGuest(naamVan(p)), L.yes, doe); return }
                                         askConfirm(L.assignForOther(naamVan(p)), L.yes, doe); return
                                       }
+                                      // Staat er al iemand van deze plaats op? Dan haalt deze tik ze
+                                      // er allemaal af en sluit het keuzeblokje — anders bleef er een
+                                      // venster openstaan over een plaats die niets meer deelt.
+                                      if (pSeats > 1 && pHeads > 0) { setLedenOpen(null); toggleShareClaim(it.id, p.id); return }
+                                      if (pSeats > 1) { setLedenOpen(`${it.id}:${p.id}`); return }
                                       toggleShareClaim(it.id, p.id)
                                     }} style={{
                                       fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "5px 10px", cursor: "pointer",
@@ -7190,15 +7195,6 @@ function ClaimScreen(props: {
                                 )
                               })}
                         </div>
-                        {onSetExpected && (
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 7, marginLeft: 25, background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "9px 9px" }}>
-                            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8aa3a6", background: "rgba(18,58,66,0.05)", borderRadius: 12, padding: "3px 8px" }}>{L.optionalShort}</span></span>
-                            <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5 }}>−</button>
-                            <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
-                            <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5, background: "rgba(27,42,74,0.12)" }}>+</button>
-                            <span style={{ flexBasis: "100%", fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.expectedHint}</span>
-                          </div>
-                        )}
                         {toewijsbaar.map((p) => {
                           const pSeats = Math.max(1, p.seats ?? 1)
                           const key = `${it.id}:${p.id}`
@@ -7207,7 +7203,10 @@ function ClaimScreen(props: {
                           // een ±-knopje bij dat het aantal blind ophoogde — langs de grens
                           // heen én zonder te weten wíé het was. Nu overal hetzelfde venster.
                           if (pSeats <= 1 || fixed) return null
-                            if (p.id !== meId && ledenOpen !== `${it.id}:${p.id}`) return null
+                            // Alleen na een tik op de pil. Anders hangt er een keuzeblokje onder
+                            // een lijst die je gewoon aan het lezen bent; de teller op de pil
+                            // zelf (1/2) vertelt al hoe het ervoor staat.
+                            if (ledenOpen !== key) return null
                           // Zelfde vraag als bij de gasten: wie van dit koppel deelde mee?
                           const parts = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
                           const sel = claimMembers(it.id, p.id)
@@ -7236,6 +7235,15 @@ function ClaimScreen(props: {
                                     }}>{on ? "✓ " : ""}{parts[i] || `${L.personWord} ${i + 1}`}</button>
                                   )
                                 })}
+                        {onSetExpected && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 7, marginLeft: 25, background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "9px 9px" }}>
+                            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8aa3a6", background: "rgba(18,58,66,0.05)", borderRadius: 12, padding: "3px 8px" }}>{L.optionalShort}</span></span>
+                            <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5 }}>−</button>
+                            <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
+                            <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5, background: "rgba(27,42,74,0.12)" }}>+</button>
+                            <span style={{ flexBasis: "100%", fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.expectedHint}</span>
+                          </div>
+                        )}
                               </div>
                               <div style={{ fontSize: 15.5, color: "#4a6e73", marginTop: 8, lineHeight: 1.4 }}>{L.pickWhoShared}</div>
                             </div>
