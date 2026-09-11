@@ -728,11 +728,9 @@ const STRINGS = {
     scanThis: "Laat je gasten dit scannen",
     personWord: "Persoon",
     onlyOneShares: "⚠️ Maar 1 persoon deelt mee",
-    expectedSharers: "Met hoeveel gedeeld?",
     expectedHint: "Optioneel. Vul je het in, dan waarschuwt de app als er te weinig of te veel personen aantikken — tegenhouden doet ze niets.",
     expectedForGuest: (n: number) => `Aantal verwachte delers: ${n}`,
     expectedShort: (n: number) => `verwacht: ${n}`,
-    tooFewShared: (have: number, want: number) => `⚠️ Pas ${have} van de ${want} personen duidden dit aan.`,
     tooManySharedAdmin: (have: number, want: number) => `⚠️ ${have} personen duidden dit aan, maar je verwachtte er ${want}.`,
     pickerDone: "Klaar",
     tooManySharedGuest: (have: number, want: number) => `${have} personen duidden dit aan, maar het waren er ${want}. Tik opnieuw als jij dit niet deelde.`,
@@ -1025,7 +1023,6 @@ const STRINGS = {
     roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
     roundingSub: "Aanvaarden en verdergaan",
     roundingDone: (d: string) => `€${d} afronding aanvaard. Je kan verder naar Gasten & delen.`,
-    shareOfN: (have: number, want: number, now: number, then: number) => `${have} van ${want} delers · nu €${now.toFixed(2).replace(".", ",")} elk → €${then.toFixed(2).replace(".", ",")} zodra allen aanduiden`,
     shareOpen: (have: number, now: number) => `Momenteel ${have} ${have === 1 ? "deler" : "delers"} · nu €${now.toFixed(2).replace(".", ",")} → daalt als er meer meedelen`,
     shareDone: (n: number, each: number) => `Gedeeld door ${n} ${n === 1 ? "persoon" : "personen"} · €${each.toFixed(2).replace(".", ",")} elk`,
     noFreeSpots: "Alle plaatsen zijn bezet. Verhoog eerst het aantal personen bovenaan.",
@@ -1404,11 +1401,9 @@ const STRINGS = {
     scanThis: "Fais scanner à tes invités",
     personWord: "Personne",
     onlyOneShares: "⚠️ Une seule personne partage",
-    expectedSharers: "Partagé à combien ?",
     expectedHint: "Optionnel. Si tu le remplis, l'app prévient quand trop peu ou trop de personnes cochent — elle ne bloque rien.",
     expectedForGuest: (n: number) => `Nombre de partageurs attendus : ${n}`,
     expectedShort: (n: number) => `attendu : ${n}`,
-    tooFewShared: (have: number, want: number) => `⚠️ Seulement ${have} sur ${want} personnes l'ont indiqué.`,
     tooManySharedAdmin: (have: number, want: number) => `⚠️ ${have} personnes l'ont indiqué, mais tu en attendais ${want}.`,
     pickerDone: "Terminé",
     tooManySharedGuest: (have: number, want: number) => `${have} personnes l'ont indiqué, mais vous n'étiez que ${want}. Retire ta sélection si ce n'était pas toi.`,
@@ -1701,7 +1696,6 @@ const STRINGS = {
     roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
     roundingSub: "Accepter et continuer",
     roundingDone: (d: string) => `Écart d'arrondi de €${d} accepté. Tu peux continuer.`,
-    shareOfN: (have: number, want: number, now: number, then: number) => `${have} sur ${want} participants · maintenant €${now.toFixed(2).replace(".", ",")} chacun → €${then.toFixed(2).replace(".", ",")} quand tous auront coché`,
     shareOpen: (have: number, now: number) => `Actuellement ${have} participant${have === 1 ? "" : "s"} · maintenant €${now.toFixed(2).replace(".", ",")} → baisse si d'autres partagent`,
     shareDone: (n: number, each: number) => `Partagé par ${n} personne${n === 1 ? "" : "s"} · €${each.toFixed(2).replace(".", ",")} chacun`,
     noFreeSpots: "Toutes les places sont prises. Augmente d'abord le nombre de personnes en haut.",
@@ -3574,7 +3568,6 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  const shareVerwacht = (itemId: string) => items.find((x) => x.id === itemId)?.share_expected ?? 0
 
   const toggleShareClaim = async (itemId: string, pid: string) => {
     if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
@@ -3674,26 +3667,15 @@ export default function RundoTable() {
   }
 
   const sharedRevealed = (it: BillItem) => sharerIds(it.id).length > 0
-  // Controleert of een gedeeld item genoeg delers heeft.
-  // "warn" = niemand duidde aan, of minder dan het verwachte aantal, of slechts één persoon.
-  const sharedStatus = (it: BillItem): { heads: number; expected: number | null; warn: null | "none" | "few" | "one" | "many" } => {
+  // Controleert of een gedeeld item genoeg delers heeft. Het verwachte aantal is
+  // vervallen; wat overblijft is wat echt fout kan zijn: niemand nam ervan, of alles
+  // ging naar één plaats — en dat laatste is zelden een gedeeld item.
+  const sharedStatus = (it: BillItem): { heads: number; plekken: number; warn: null | "none" | "one" } => {
     const heads = shareHeads(it.id)
-    const expected = it.share_expected ?? null
-    if (heads === 0) return { heads, expected, warn: "none" }
-    if (expected != null && expected > 0) {
-      if (heads < expected) return { heads, expected, warn: "few" }
-      // Meer mensen duidden aan dan er waren: het geld klopt nog, maar iemand claimt iets
-      // wat hij niet at. Dat mag nooit groen kleuren.
-      if (heads > expected) return { heads, expected, warn: "many" }
-      return { heads, expected, warn: null }
-    }
-    if (heads === 1) return { heads, expected, warn: "one" }
-    return { heads, expected, warn: null }
-  }
-  const setShareExpected = async (itemId: string, n: number | null) => {
-    if (!group) return
-    await supabase.from("table_items").update({ share_expected: n }).eq("id", itemId)
-    await loadAll(group.id)
+    const plekken = sharerIds(it.id).length
+    if (heads === 0) return { heads, plekken, warn: "none" }
+    if (plekken === 1) return { heads, plekken, warn: "one" }
+    return { heads, plekken, warn: null }
   }
 
   const baseAmountForItem = (pid: string, it: BillItem): number => {
@@ -5514,7 +5496,7 @@ export default function RundoTable() {
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             onRename={renameGuest}
             onEditMe={!isAdmin ? editMySpot : undefined}
-            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} magOntdelen={magOntdelen} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined} onSetExpected={isAdmin ? setShareExpected : undefined}
+            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} magOntdelen={magOntdelen} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
@@ -5541,23 +5523,15 @@ export default function RundoTable() {
               return p.name
             }).filter(Boolean).join(", ")
             return (
-              <div key={it.id} style={{ marginBottom: 8, padding: "8px 10px", borderRadius: 10, background: st.warn === "many" ? "rgba(224,107,94,0.09)" : st.warn ? "rgba(243,156,18,0.08)" : "rgba(39,174,96,0.06)", border: st.warn ? "1px solid rgba(243,156,18,0.45)" : "1px solid rgba(39,174,96,0.35)" }}>
+              <div key={it.id} style={{ marginBottom: 8, padding: "8px 10px", borderRadius: 10, background: st.warn ? "rgba(243,156,18,0.09)" : "rgba(39,174,96,0.07)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
                   <span style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{it.name}</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: "#4a6e73", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}{it.share_expected ? ` · ${L.expectedShort(it.share_expected)}` : ""}</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "#4a6e73", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
                 </div>
                 <div style={{ fontSize: 15.5, color: "#4a6e73", marginTop: 3, lineHeight: 1.45 }}>
                   {st.heads > 0 ? <>{L.sharedByLabel} <b style={{ color: "#123a42" }}>{st.heads}</b>: {names}</> : L.nobodyShared}
                 </div>
-                {st.warn === "few" && <div style={{ fontSize: 15.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.tooFewShared(st.heads, it.share_expected as number)}</div>}
                 {st.warn === "one" && <div style={{ fontSize: 15.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.onlyOneShares}</div>}
-                {st.warn === "many" && (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
-                    <span style={{ fontSize: 15.5, fontWeight: 700, color: "#c0392b" }}>{L.tooManySharedAdmin(st.heads, it.share_expected as number)}</span>
-                    <button onClick={() => setShareExpected(it.id, st.heads)}
-                      style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#0f7d90", background: "#fff", border: "1px solid rgba(20,153,176,0.45)", borderRadius: 9, padding: "7px 10px", cursor: "pointer" }}>{L.expectedFixTo(st.heads)}</button>
-                  </div>
-                )}
               </div>
             )
           })}
@@ -5780,22 +5754,14 @@ export default function RundoTable() {
               }
               // De bon klopt niet: toon de in-app waarschuwing i.p.v. een browser-popup.
               if (!billOk) { setShowFinalizeWarn(true); return }
-              // Gedeelde items: waarschuw als er te weinig mensen aanduidden dat ze meededen.
+      // Gedeelde items: waarschuw als niemand aanduidde, of als alles naar één plaats ging.
               const shareProblems = baseItems.filter((it) => it.is_shared).map((it) => {
                 const st = sharedStatus(it)
                 if (st.warn === "none") return `${it.name}: ${L.nobodyShared}`
-                if (st.warn === "few") return `${it.name}: ${L.tooFewShared(st.heads, it.share_expected as number)}`
-                if (st.warn === "many") return `${it.name}: ${L.tooManySharedAdmin(st.heads, it.share_expected as number)}`
+        if (st.warn === "one") return `${it.name}: ${L.onlyOneShares}`
                 return null
               }).filter(Boolean) as string[]
-      // Tellen op plaatsen, niet op koppen: een koppel telt voor twee, waardoor een fles
-      // die alleen zíj namen ongemerkt doorglipte terwijl het bij een alleenstaande gast
-      // wél opviel. Eén plaats die alles neemt, is zelden een gedeeld item.
-      const soloShared = baseItems.filter((it) => it.is_shared && !it.share_expected && sharerIds(it.id).length === 1)
-        .map((it) => {
-          const p = participants.find((q) => q.id === sharerIds(it.id)[0])
-          return `${it.name}: ${L.sharedOnlyOne}${p ? ` (${naamVan(p)})` : ""}`
-        })
+      // De controle op één plaats zit nu in sharedStatus zelf ("one"), dus hier niet nog eens.
               // Iemand die niets aanduidde betaalt straks alleen mee aan gedeelde items.
               // Dat kan kloppen, maar het is vaker een vergissing dan niet.
               const zonderItems = participants.filter((p) => !claims.some((c) => c.participant_id === p.id && c.quantity > 0))
@@ -5804,7 +5770,7 @@ export default function RundoTable() {
                 if (!hasTip) { setShowTipReminder(true); return }
                 askConfirm(L.finalizeConfirm, L.finalizeBtn, () => finalizeBill(true))
               }
-              const alleProblemen = [...shareProblems, ...soloShared, ...zonderItems]
+              const alleProblemen = [...shareProblems, ...zonderItems]
               if (alleProblemen.length > 0) {
                 askConfirm(`• ${alleProblemen.join("\n• ")}\n\n${L.sharedProblemAsk}`, L.yes, naarTipOfAfsluiten, { title: L.sharedProblemTitle, danger: true })
                 return
@@ -7308,10 +7274,9 @@ function ClaimScreen(props: {
   warnCount?: number
   jumpToAssign?: number
   onDeleteItem?: (id: string) => void
-  onSetExpected?: (id: string, n: number | null) => void
   onRename: (id: string, name: string) => void
   onEditMe?: (id: string) => void
-  sharedStatus: (it: BillItem) => { heads: number; expected: number | null; warn: null | "none" | "few" | "one" | "many" }
+  sharedStatus: (it: BillItem) => { heads: number; plekken: number; warn: null | "none" | "one" }
   itemTotal: (it: BillItem) => number; personTotal: (pid: string) => { settled: number; pendingShared: boolean }
   personItems: (pid: string, metToeslagen?: boolean) => { name: string; qty: number; amount: number; shared: boolean; revealed: boolean; sharers: number; myHeads: number; viaAdmin?: boolean }[]
   sharedRevealed: (it: BillItem) => boolean; allConfirmed: boolean; isConfirmed: (pid: string) => boolean; explicitConfirmed: (pid: string) => boolean
@@ -7323,7 +7288,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onSetExpected, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
+  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // De uitleg bij het invullen voor een nog vrije plaats hoeft maar één keer.
@@ -7511,7 +7476,6 @@ function ClaimScreen(props: {
                     const sh = sharerIds(it.id)
                     const ok = sh.length > 0
                     const heads = shareHeads(it.id)
-                    const verwacht = it.share_expected && it.share_expected > 0 ? it.share_expected : null
                     const perHead = heads > 0 ? itemTotal(it) / heads : 0
                     const fixed = !!it.share_fixed
                     const mine = adminPid ? sh.includes(adminPid) : false
@@ -7526,22 +7490,15 @@ function ClaimScreen(props: {
                                 wordt. Een vast "p.p." toonde een bedrag dat meteen halveerde
                                 zodra de tweede deler zich aanduidde. */}
                             {ok && (
-                              <div style={{ fontSize: 14.5, fontWeight: 700, marginTop: 2, color: verwacht != null && heads < verwacht ? "#b5591a" : "#1f8a4c" }}>
-                                {verwacht != null && heads !== verwacht
-                                  ? L.shareOfN(heads, verwacht, perHead, itemTotal(it) / verwacht)
-                                  : verwacht == null
-                                    ? L.shareOpen(heads, perHead)
-                                    : L.shareDone(heads, perHead)}
+                              <div style={{ fontSize: 14.5, fontWeight: 700, marginTop: 2, color: "#1f8a4c" }}>
+                                {L.shareOpen(heads, perHead)}
                               </div>
                             )}
                           </div>
                           <span style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "4px 9px", flexShrink: 0, whiteSpace: "nowrap",
                             ...(!ok ? { color: "#c0392b", background: "rgba(224,107,94,0.12)" }
-                              : verwacht != null && heads !== verwacht ? { color: "#b5591a", background: "rgba(243,156,18,0.14)" }
                               : { color: "#1f8a4c", background: "rgba(39,174,96,0.12)" }) }}>
-                            {!ok ? L.nobodyYet
-                              : verwacht != null ? `${heads} ${L.ofWord} ${verwacht}`
-                              : `${heads} ${heads === 1 ? L.person : L.persons}`}
+                            {!ok ? L.nobodyYet : `${heads} ${heads === 1 ? L.person : L.persons}`}
                           </span>
                           {isAdmin && shareBtn(it)}
                         </div>
@@ -7641,15 +7598,6 @@ function ClaimScreen(props: {
                                     }}>{on ? "✓ " : ""}{parts[i] || `${L.personWord} ${i + 1}`}</button>
                                   )
                                 })}
-                        {onSetExpected && (
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 7, marginLeft: 25, background: "rgba(90,108,166,0.06)", borderRadius: 9, padding: "9px 9px" }}>
-                            <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8aa3a6", background: "rgba(18,58,66,0.05)", borderRadius: 12, padding: "3px 8px" }}>{L.optionalShort}</span></span>
-                            <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5 }}>−</button>
-                            <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
-                            <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5, background: "rgba(27,42,74,0.12)" }}>+</button>
-                            <span style={{ flexBasis: "100%", fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.expectedHint}</span>
-                          </div>
-                        )}
                               </div>
                               <div style={{ fontSize: 15.5, color: "#4a6e73", marginTop: 8, lineHeight: 1.4 }}>{L.pickWhoShared}</div>
                             </div>
@@ -7783,7 +7731,7 @@ function ClaimScreen(props: {
           style={{ ...S.h3, marginBottom: gastItemsOpen ? 14 : 0, cursor: "pointer", justifyContent: "space-between", gap: 10 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
             {blokBol(1, iConfirmed)}
-            <span style={{ fontSize: 16.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56" }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
+            <span style={{ fontSize: 17.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56", lineHeight: 1.25 }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
           </span>
           {toonKnop(gastItemsOpen)}
         </h3>
@@ -7857,23 +7805,18 @@ function ClaimScreen(props: {
                   const st = sharedStatus(it)
                   const heads = st.heads
                   const total = itemTotal(it)
-                  const want = it.share_expected ?? null
-                  const nowEach = heads > 0 ? total / heads : total
-                  const thenEach = want && want > 0 ? total / want : nowEach
-                  // Niemand duidde aan: dat is een échte fout, want er blijft geld onverdeeld.
-                  const isError = heads === 0
-                  // Méér mensen dan er waren: het geld klopt nog, maar iemand claimt iets wat hij
-                  // niet at. Dit mag nooit als "klaar" doorgaan — dus rood, en nooit groen.
-                  const isOver = want != null && want > 0 && heads > want
-                  // Klaar is enkel: exact het verwachte aantal (of geen verwachting ingesteld).
-                  const isDone = heads > 0 && !isOver && (want == null || heads === want)
-                  const who = sharerIds(it.id).map((q) => participants.find((x) => x.id === q)?.name).filter(Boolean).join(", ")
-                  const msg = isError ? `${want != null ? L.nobodySharedOf(want) : L.nobodySharedZero} · ${L.nobodyShared}`
-                    : !revealed ? L.sharingWaitReveal
-                    : isOver ? L.tooManySharedGuest(heads, want as number)
-                    : isDone ? L.shareDone(heads, nowEach)
-                    : want != null ? L.shareOfN(heads, want, nowEach, thenEach)
-                    : L.shareOpen(heads, nowEach)
+                    const nowEach = heads > 0 ? total / heads : total
+                    // Niemand duidde aan: dat is een échte fout, want er blijft geld onverdeeld.
+                    const isError = heads === 0
+                    // Zonder verwacht aantal is "klaar" pas klaar als de rekening dicht is;
+                    // daarvoor kan er altijd nog iemand bijkomen en zakt het bedrag.
+                    const isDone = heads > 0 && finalized
+                    const isOver = false
+                    const who = sharerIds(it.id).map((q) => participants.find((x) => x.id === q)?.name).filter(Boolean).join(", ")
+                    const msg = isError ? L.nobodyShared
+                      : !revealed ? L.sharingWaitReveal
+                      : isDone ? L.shareDone(heads, nowEach)
+                      : L.shareOpen(heads, nowEach)
                   return (
                     <div style={{ marginTop: 8, borderRadius: 10, padding: "9px 11px",
                       background: isOver ? "rgba(224,107,94,0.1)" : isError ? "rgba(243,156,18,0.1)" : isDone ? "rgba(39,174,96,0.07)" : "rgba(90,108,166,0.07)",
@@ -7885,22 +7828,6 @@ function ClaimScreen(props: {
                       </div>
                       {isOver && who && (
                         <div style={{ fontSize: 15.5, color: "#a5443a", marginTop: 4, lineHeight: 1.4 }}>{L.sharedBy}{who}</div>
-                      )}
-                      {/* Heeft de beheerder een aantal vastgelegd, dan mag de gast dat gewoon
-                          zien: hij kan het niet wijzigen, maar hij weet dan of er nog iemand
-                          moet aantikken. Zonder ingesteld aantal staat hier niets. */}
-                      {want != null && want > 0 && !onSetExpected && (
-                        <div style={{ fontSize: 15.5, color: "#4a6e73", marginTop: 5, paddingTop: 5, borderTop: "1px dashed rgba(18,58,66,0.12)", fontWeight: 700 }}>
-                          {L.expectedForGuest(want)}
-                        </div>
-                      )}
-                      {onSetExpected && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 8, paddingTop: 7, borderTop: "1px dashed rgba(18,58,66,0.12)" }}>
-                          <span style={{ fontSize: 15.5, fontWeight: 700, color: "#4a6e73" }}>{L.expectedSharers} <span style={{ fontSize: 12.5, fontWeight: 800, color: "#8aa3a6", background: "rgba(18,58,66,0.05)", borderRadius: 12, padding: "3px 8px" }}>{L.optionalShort}</span></span>
-                          <button onClick={() => onSetExpected(it.id, Math.max(0, (it.share_expected ?? 0) - 1) || null)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5 }}>−</button>
-                          <b style={{ minWidth: 14, textAlign: "center", fontSize: 16.5, color: it.share_expected ? "#123a42" : "#b6cacc" }}>{it.share_expected ?? "–"}</b>
-                          <button onClick={() => onSetExpected(it.id, (it.share_expected ?? 0) + 1)} style={{ ...S.iconBtn, width: 24, height: 24, fontSize: 16.5, background: "rgba(27,42,74,0.12)" }}>+</button>
-                        </div>
                       )}
                     </div>
                   )
@@ -7930,7 +7857,30 @@ function ClaimScreen(props: {
                       <span style={{ fontSize: 15.5, color: "#c0392b", fontWeight: 700 }}>⚠️ {L.zeroPriceShort}</span>
                       {onDeleteItem && <button onClick={(e) => { e.stopPropagation(); onDeleteItem(it.id) }} style={{ fontSize: 15.5, fontWeight: 800, color: "#c0392b", background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.4)", borderRadius: 7, padding: "4px 8px", cursor: "pointer" }}>🗑️ {L.zeroPriceDelete}</button>}
                     </div>
-                  : <div style={{ fontSize: 15.5, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600 }}>{open > 0 ? L.stillFree(open) : L.allClaimedWord}</div>}
+                  : <>
+                      {/* Wie nam wat: zonder deze namen zie je wel dat er nog iets vrij is,
+                          maar niet of je vriend het al pakte. Je eigen naam in de accentkleur. */}
+                      {(() => {
+                        const nemers = participants
+                          .map((p) => ({ p, n: myQty(it.id, p.id) }))
+                          .filter((x) => x.n > 0)
+                        if (nemers.length === 0) return null
+                        return (
+                          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 5 }}>
+                            {nemers.map(({ p, n }) => {
+                              const ikZelf = p.id === meId
+                              return (
+                                <span key={p.id} style={{ fontSize: 13, fontWeight: ikZelf ? 800 : 700, borderRadius: 8, padding: "3px 8px",
+                                  background: ikZelf ? "rgba(20,153,176,0.14)" : "rgba(18,58,66,0.05)", color: ikZelf ? "#0f7488" : "#4a6e73" }}>
+                                  {naamVan(p)} {n}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()}
+                      <div style={{ fontSize: 15.5, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600, marginTop: 4 }}>{open > 0 ? L.stillFree(open) : L.allClaimedWord}</div>
+                    </>}
               </div>
               <button style={{ width: 42, height: 34, fontSize: 22, fontWeight: 800, lineHeight: 1, borderRadius: 8, cursor: mine > 0 ? "pointer" : "default", color: mine > 0 ? "#c0392b" : "#c9ced8", background: "#fff", border: "2px solid " + (mine > 0 ? "#2b2f38" : "#e2e6ee") }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0} title={L.removeOne}>−</button>
               <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{mine}</span>
@@ -7949,7 +7899,7 @@ function ClaimScreen(props: {
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: gastBevestigdOpen ? 10 : 0 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
             {blokBol(2, iConfirmed)}
-            <span style={{ fontSize: 16.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56" }}>{finalized ? "" : "2 · "}{iConfirmed ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
+            <span style={{ fontSize: 17.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56", lineHeight: 1.25 }}>{finalized ? "" : "2 · "}{iConfirmed ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
           </span>
           {toonKnop(gastBevestigdOpen)}
         </div>
@@ -8023,7 +7973,7 @@ function ClaimScreen(props: {
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
                 {blokBol(4, false)}
-                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#4a6e73" }}>👥 {L.everyoneSplitTitle}</span>
+                <span style={{ fontSize: 17.5, fontWeight: 800, color: "#4a6e73", lineHeight: 1.25 }}>👥 {L.everyoneSplitTitle}</span>
               </span>
               {toonKnop(gastVerdelingOpen)}
             </div>
