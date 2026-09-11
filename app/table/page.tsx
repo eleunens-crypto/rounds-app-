@@ -709,10 +709,8 @@ const STRINGS = {
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} verschil`,
     taxSplitAtClose: "Toeslagen worden bij het afsluiten over iedereen verdeeld.",
     ownNamePlaceholder: "Zet hier je eigen naam",
-    pickFreeSpotTitle: "👇 Tik hieronder op een vrije plaats",
-    pickFreeSpotTitleOrName: "👇 Tik op een vrije plaats — of op je eigen naam",
+    tapFreeSpotNow: "Tik op een vrije plaats",
     pickFreeSpot: "Daarna vul je je naam in, en met hoeveel jullie zijn.",
-    freeSpotsHead: "VRIJE PLAATSEN",
     yourNameHead: "STAAT JE NAAM ER AL BIJ?",
     freeSpotLabel: "👤 Vrije plaats",
     notEnoughSpotsTitle: "Niet genoeg vrije plaatsen",
@@ -1366,10 +1364,8 @@ const STRINGS = {
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} d'écart`,
     taxSplitAtClose: "Les suppléments sont répartis entre tous à la clôture.",
     ownNamePlaceholder: "Mets ton propre nom ici",
-    pickFreeSpotTitle: "👇 Touche une place libre ci-dessous",
-    pickFreeSpotTitleOrName: "👇 Touche une place libre — ou ton propre nom",
+    tapFreeSpotNow: "Touche une place libre",
     pickFreeSpot: "Ensuite tu indiques ton nom et avec combien vous êtes.",
-    freeSpotsHead: "PLACES LIBRES",
     yourNameHead: "TON NOM Y FIGURE DÉJÀ ?",
     freeSpotLabel: "👤 Place libre",
     notEnoughSpotsTitle: "Pas assez de places libres",
@@ -4046,16 +4042,16 @@ export default function RundoTable() {
             // mens bij. De groepsnaam is verplicht bij het aanmaken, dus hij is er altijd.
             const beheerder = participants.find((q) => q.id === ownerPid)
             const groepNaam = (group.name || "").trim()
-            const eerste = (groepNaam || beheerder?.name || "?").trim().charAt(0).toUpperCase()
             return (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(20,153,176,0.10)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 14, padding: "11px 12px", marginBottom: 10 }}>
-                <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: "rgba(20,153,176,0.2)", color: "#0f7488", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>{eerste}</span>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: "#123a42", lineHeight: 1.4 }}>
-                  {L.youJoinPrefix} <b>{groepNaam || beheerder?.name}</b>
-                  {beheerder?.name && groepNaam && (
-                    <span style={{ display: "block", fontSize: 12.5, color: "#4a6e73", marginTop: 2 }}>{L.sharedByName(beheerder.name)}</span>
-                  )}
-                </span>
+              // Wit met een blauwgroen streepje links: rustig genoeg om niet met de kaart
+              // eronder te concurreren, maar duidelijk een mededeling en geen tweede kaart.
+              <div style={{ background: "#fff", border: "1px solid rgba(18,58,66,0.06)", borderLeft: "4px solid #3ec9d8", borderRadius: 14, padding: "12px 13px", marginBottom: 10 }}>
+                <div style={{ fontSize: 15.5, color: "#123a42", lineHeight: 1.4 }}>
+                  {L.youJoinPrefix} <b style={{ color: "#0f7488" }}>{groepNaam || beheerder?.name}</b>
+                </div>
+                {beheerder?.name && groepNaam && (
+                  <div style={{ fontSize: 12.5, color: "#8aa3a6", marginTop: 2 }}>{L.sharedByName(beheerder.name)}</div>
+                )}
               </div>
             )
           })()}
@@ -4089,15 +4085,15 @@ export default function RundoTable() {
                   )
                   return (
                     <>
-                      {/* Staat er nog geen enkele naam, dan is "tik op een vrije plaats" het
-                          hele verhaal — dan hoeft de titel niet over namen te spreken. */}
+                      {/* De hint stond in een eigen blauw blok. Als twee regels onder de vraag
+                          zegt hij hetzelfde met één element minder: de opdracht krijgt kleur en
+                          gewicht, de toelichting blijft klein. */}
                       {vrijeLijst.length > 0 && (
-                        <div style={{ background: "rgba(20,153,176,0.08)", border: "1.5px solid rgba(20,153,176,0.35)", borderRadius: 12, padding: "13px 14px", margin: "2px 0 16px" }}>
-                          <div style={{ fontSize: 20, fontWeight: 800, color: "#0f7d91", lineHeight: 1.35, marginBottom: 4 }}>{naamLijst.length > 0 ? L.pickFreeSpotTitleOrName : L.pickFreeSpotTitle}</div>
-                          <div style={{ fontSize: 16.5, color: "#2b4f56", lineHeight: 1.5 }}>{L.pickFreeSpot}</div>
-                        </div>
+                        <>
+                          <div style={{ fontSize: 17.5, fontWeight: 800, color: "#0f7488", lineHeight: 1.35, margin: "8px 0 3px" }}>{L.tapFreeSpotNow}</div>
+                          <div style={{ fontSize: 14.5, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 11 }}>{L.pickFreeSpot}</div>
+                        </>
                       )}
-                      {vrijeLijst.length > 0 && <div style={{ ...kop, color: "#0f7d90" }}>{L.freeSpotsHead}</div>}
                       {vrijeLijst.map((q) => rij(q, true, false))}
                       {naamLijst.length > 0 && <div style={{ ...kop, color: "#8aa3a6", marginTop: vrijeLijst.length > 0 ? 16 : 0 }}>{L.yourNameHead}</div>}
                       {naamLijst.map((q) => rij(q, false, false))}
@@ -4109,7 +4105,7 @@ export default function RundoTable() {
                 {/* Vroeger stond hier "+ Extra plaats toevoegen". Daarmee kon een gast het
                     aantal personen aan tafel verhogen, en dat hoort alleen de beheerder te
                     kunnen. Nu een regel die zegt bij wie je moet zijn. */}
-                <div style={{ marginTop: 8, fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.45, textAlign: "center" }}>{L.askAdminForSpot}</div>
+                {participants.filter((q) => q.id !== ownerPid && isFreeSpot(q)).length === 0 && <div style={{ marginTop: 8, fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.45, textAlign: "center" }}>{L.askAdminForSpot}</div>}
               </>
             ) : (
               <>
