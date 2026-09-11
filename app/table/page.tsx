@@ -37,6 +37,7 @@ type Claim = {
   created_by?: string | null
   created_at?: string
 }
+type SeatRequest = { id: string; group_id: string; name: string; seats: number; status: string; created_at?: string }
 type Confirmation = { id: string; group_id: string; participant_id: string; confirmed_at?: string }
 
 type ParsedItem = { name: string; unit_price: number; quantity: number; is_shared: boolean; distribute?: string; tax_rate?: number; _isNew?: boolean; uncertain?: boolean; note?: string }
@@ -678,6 +679,20 @@ const STRINGS = {
     seatFreedUp: "Die plaats telt nu voor 2 — er is één vrije plaats minder.",
     howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
     personsWord: "Aantal personen",
+    notOnListBtn: "✋ Ik zit er niet bij",
+    seatRequestSent: (n: number) => `⏳ Je vraag voor ${n === 1 ? "een plaats" : `${n} plaatsen`} is verstuurd. Zodra de beheerder ze bijzet, sta je erbij.`,
+    askSeatTitle: "Een plaats vragen",
+    askSeatSub: "De beheerder krijgt je vraag en kan ze met één tik toekennen.",
+    askSeatSend: "Vraag versturen",
+    askSeatSendN: (n: number) => `${n} plaatsen vragen`,
+    seatRequestTitle: (naam: string) => `${naam} vraagt een plaats`,
+    seatRequestTitleN: (naam: string, n: number) => `${naam} ${n > 1 ? "vragen" : "vraagt"} ${n} plaatsen`,
+    seatRequestEffect: (van: number, naar: number) => `Je gaat van ${van} naar ${naar} personen`,
+    seatRequestGrant: "✓ Plaats bijzetten",
+    seatRequestGrantN: (n: number) => `✓ ${n} plaatsen bijzetten`,
+    seatRequestLater: "Nu niet",
+    seatRequestFailed: "Je vraag kon niet verstuurd worden. Probeer het opnieuw.",
+    seatRequestGranted: (naam: string) => `Plaats bijgezet voor ${naam}.`,
     shareStepTitle: "📱 Laat je gasten de QR scannen",
     orSendLinkTitle: "Of stuur de link zelf door naar je gasten",
     linkWord: "Link",
@@ -715,7 +730,6 @@ const STRINGS = {
     freeSpotLabel: "👤 Vrije plaats",
     notEnoughSpotsTitle: "Niet genoeg vrije plaatsen",
     notEnoughSpotsBody: (n: number) => `Er zijn er nog ${n} beschikbaar op deze plaats. Vraag de beheerder om er een bij te zetten — alleen die kan het aantal personen aan tafel wijzigen.`,
-    askAdminForSpot: "Geen vrije plaats meer? Vraag de beheerder om er een bij te zetten.",
     tapToPick: "tik om te kiezen →",
     imThisOne: "dit ben ik →",
     yourNameQ: "Hoe heet je?",
@@ -1333,6 +1347,20 @@ const STRINGS = {
     seatFreedUp: "Cette place compte maintenant pour 2 — il y a une place libre en moins.",
     howManyGroupSub: "Tout le monde à table — toi compris.",
     personsWord: "Nombre de personnes",
+    notOnListBtn: "✋ Je n'y suis pas",
+    seatRequestSent: (n: number) => `⏳ Ta demande pour ${n === 1 ? "une place" : `${n} places`} est envoyée. Dès que l'organisateur l'ajoute, tu y es.`,
+    askSeatTitle: "Demander une place",
+    askSeatSub: "L'organisateur reçoit ta demande et peut l'accorder d'un seul geste.",
+    askSeatSend: "Envoyer la demande",
+    askSeatSendN: (n: number) => `Demander ${n} places`,
+    seatRequestTitle: (naam: string) => `${naam} demande une place`,
+    seatRequestTitleN: (naam: string, n: number) => `${naam} ${n > 1 ? "demandent" : "demande"} ${n} places`,
+    seatRequestEffect: (van: number, naar: number) => `Tu passes de ${van} à ${naar} personnes`,
+    seatRequestGrant: "✓ Ajouter la place",
+    seatRequestGrantN: (n: number) => `✓ Ajouter ${n} places`,
+    seatRequestLater: "Pas maintenant",
+    seatRequestFailed: "Ta demande n'a pas pu être envoyée. Réessaie.",
+    seatRequestGranted: (naam: string) => `Place ajoutée pour ${naam}.`,
     shareStepTitle: "📱 Fais scanner le QR à tes invités",
     orSendLinkTitle: "Ou envoie le lien toi-même à tes invités",
     linkWord: "Lien",
@@ -1370,7 +1398,6 @@ const STRINGS = {
     freeSpotLabel: "👤 Place libre",
     notEnoughSpotsTitle: "Pas assez de places libres",
     notEnoughSpotsBody: (n: number) => `Il en reste ${n} disponibles sur cette place. Demande à l’hôte d’en ajouter une — lui seul peut changer le nombre de personnes à table.`,
-    askAdminForSpot: "Plus de place libre ? Demande à l’hôte d’en ajouter une.",
     tapToPick: "touche pour choisir →",
     imThisOne: "c'est moi →",
     yourNameQ: "Comment t'appelles-tu ?",
@@ -2155,6 +2182,10 @@ export default function RundoTable() {
   const [showTodo, setShowTodo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
   const [taxConfig, setTaxConfig] = useState<string | null>(null)
+  const [seatRequests, setSeatRequests] = useState<SeatRequest[]>([])
+  // Het verzoekvenster van de gast: null = dicht.
+  const [vraagPopup, setVraagPopup] = useState<null | { seats: number; namen: string[] }>(null)
+  const [mijnVraag, setMijnVraag] = useState<null | { naam: string; seats: number }>(null)
   const [editItem, setEditItem] = useState<BillItem | null>(null)
   // Het item zoals het was bij het openen. Zonder dit kan je niet zien of een tik
   // naast het venster iets weggooit of niets.
@@ -2169,7 +2200,7 @@ export default function RundoTable() {
   const [asleep, setAsleep] = useState(false)
 
   const loadAll = useCallback(async (groupId: string) => {
-    const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: g }] = await Promise.all([
+    const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: sr }, { data: g }] = await Promise.all([
       // Bewust een sterretje. Ik heb hier ooit de kolommen benoemd om bandbreedte te sparen
       // en daarbij twee fouten gemaakt: een kolom die niet bestaat (confirmed i.p.v.
       // confirmed_at) waardoor bevestigen stilviel, en vier vergeten kolommen op items
@@ -2180,6 +2211,7 @@ export default function RundoTable() {
       supabase.from("table_items").select("*").eq("group_id", groupId),
       supabase.from("table_claims").select("*").eq("group_id", groupId),
       supabase.from("table_confirmations").select("*").eq("group_id", groupId),
+      supabase.from("table_seat_requests").select("*").eq("group_id", groupId).eq("status", "open"),
       supabase.from("table_groups").select("*").eq("id", groupId).single(),
     ])
     if (!mounted.current) return
@@ -2193,6 +2225,7 @@ export default function RundoTable() {
     setItems(order(it as BillItem[] || []))
     setClaims((cl as Claim[]) || [])
     setConfirmations((cf as Confirmation[]) || [])
+    setSeatRequests((sr as SeatRequest[]) || [])
     if (g) setGroup((cur) => cur ? { ...cur, ...(g as Group) } : cur)
   }, [])
 
@@ -2227,7 +2260,7 @@ export default function RundoTable() {
     const connect = () => {
       if (!active) return
       ch = supabase.channel(`table-${groupId}`)
-      ;["table_participants", "table_items", "table_claims", "table_confirmations", "table_groups"].forEach((table) => {
+      ;["table_participants", "table_items", "table_claims", "table_confirmations", "table_seat_requests", "table_groups"].forEach((table) => {
         const filter = table === "table_groups" ? `id=eq.${groupId}` : `group_id=eq.${groupId}`
         ch!.on("postgres_changes", { event: "*", schema: "public", table, filter }, reload)
       })
@@ -2831,6 +2864,32 @@ export default function RundoTable() {
     return m
   })()
   const naamVan = (p: Participant) => vrijeNummers[p.id] ? `${L.guestWord} ${vrijeNummers[p.id]}` : p.name
+  // Een gast zonder plaats kan er een vragen. De beheerder houdt de controle, want
+  // het aantal personen bepaalt mee hoe gedeelde items verdeeld worden.
+  const vraagPlaatsen = async (naam: string, seats: number) => {
+    if (!group) return false
+    const { error } = await supabase.from("table_seat_requests")
+      .insert([{ group_id: group.id, name: naam.trim(), seats: Math.max(1, seats) }])
+    if (error) { setToast(L.seatRequestFailed); return false }
+    await loadAll(group.id)
+    return true
+  }
+
+  const kenPlaatsenToe = async (req: SeatRequest) => {
+    if (!group) return
+    for (let i = 0; i < Math.max(1, req.seats); i++) await addGuest(L.guestWord, false, 1)
+    await supabase.from("table_seat_requests").update({ status: "granted" }).eq("id", req.id)
+    await loadAll(group.id)
+    setToast(L.seatRequestGranted(req.name))
+  }
+
+  const negeerVerzoek = async (req: SeatRequest) => {
+    if (!group) return
+    // "ignored" en niet wissen: zo kan de beheerder later alsnog toekennen.
+    await supabase.from("table_seat_requests").update({ status: "ignored" }).eq("id", req.id)
+    await loadAll(group.id)
+  }
+
   const setGuestCount = async (target: number) => {
     setPersonsTouched(true)
     if (!group) return
@@ -4105,7 +4164,18 @@ export default function RundoTable() {
                 {/* Vroeger stond hier "+ Extra plaats toevoegen". Daarmee kon een gast het
                     aantal personen aan tafel verhogen, en dat hoort alleen de beheerder te
                     kunnen. Nu een regel die zegt bij wie je moet zijn. */}
-                {participants.filter((q) => q.id !== ownerPid && isFreeSpot(q)).length === 0 && <div style={{ marginTop: 8, fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.45, textAlign: "center" }}>{L.askAdminForSpot}</div>}
+                {participants.filter((q) => q.id !== ownerPid && isFreeSpot(q)).length === 0 && (
+                  mijnVraag ? (
+                    <div style={{ marginTop: 10, background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 12, padding: 12, fontSize: 14, color: "#b5591a", lineHeight: 1.5, textAlign: "center" }}>
+                      {L.seatRequestSent(mijnVraag.seats)}
+                    </div>
+                  ) : (
+                    <button onClick={() => setVraagPopup({ seats: 1, namen: [""] })}
+                      style={{ width: "100%", boxSizing: "border-box", marginTop: 11, border: "1.5px solid rgba(20,153,176,0.45)", background: "#fff", color: "#0f7d90", borderRadius: 12, padding: "12px 0", fontSize: 15.5, fontWeight: 800, cursor: "pointer" }}>
+                      {L.notOnListBtn}
+                    </button>
+                  )
+                )}
               </>
             ) : (
               <>
@@ -4201,6 +4271,84 @@ export default function RundoTable() {
         @media (prefers-reduced-motion: reduce) {
           .rundo-klaar-puls, .rundo-qr-puls, .rundo-pijl-wip { animation: none; }
         }`}</style>
+      {/* Over elk scherm heen: de beheerder zit meestal op een andere tab, en er staat
+          iemand te wachten. Alleen weg met toekennen of "nu niet". */}
+      {isAdmin && seatRequests.length > 0 && (() => {
+        const req = seatRequests[0]
+        const naar = totalPersons + Math.max(1, req.seats)
+        return (
+          <div style={{ ...S.overlay, zIndex: 3000 }}>
+            <div style={{ ...S.modal, width: "min(300px, 90vw)", textAlign: "center" }}>
+              <div style={{ fontSize: 28 }}>✋</div>
+              <div style={{ fontSize: 17.5, fontWeight: 800, color: "#123a42", marginTop: 4, lineHeight: 1.3 }}>
+                {req.seats > 1 ? L.seatRequestTitleN(req.name, req.seats) : L.seatRequestTitle(req.name)}
+              </div>
+              <div style={{ background: "rgba(20,153,176,0.08)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 11, padding: "10px 11px", fontSize: 14, color: "#0f6d7e", marginTop: 11, fontWeight: 700 }}>
+                {L.seatRequestEffect(totalPersons, naar)}
+              </div>
+              <button onClick={() => void kenPlaatsenToe(req)}
+                style={{ width: "100%", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 16.5, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", marginTop: 11, cursor: "pointer", boxShadow: "0 6px 16px -8px rgba(31,138,76,0.85)" }}>
+                {req.seats > 1 ? L.seatRequestGrantN(req.seats) : L.seatRequestGrant}
+              </button>
+              <button onClick={() => void negeerVerzoek(req)}
+                style={{ width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#8aa3a6", marginTop: 10 }}>
+                {L.seatRequestLater}
+              </button>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Zelfde onderdelen als het gewone aanmelden: keuzeknoppen voor het aantal en
+          één naamveld per persoon, samengevoegd met een & zoals overal elders. */}
+      {vraagPopup && (
+        <div style={{ ...S.overlay, alignItems: "flex-start", paddingTop: "8vh" }} onClick={() => setVraagPopup(null)}>
+          <div style={{ ...S.modal, width: "min(320px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#2b4f56" }}>{L.askSeatTitle}</h3>
+            <div style={{ fontSize: 13.5, color: "#8aa3a6", lineHeight: 1.45, marginTop: 4 }}>{L.askSeatSub}</div>
+
+            <div style={{ fontSize: 13.5, color: "#8aa3a6", fontWeight: 700, margin: "13px 0 6px" }}>{L.howManyPersons}</div>
+            <div style={{ display: "flex", gap: 7 }}>
+              {[1, 2, 3].map((n) => {
+                const aan = vraagPopup.seats === n
+                return (
+                  <button key={n} onClick={() => setVraagPopup((c) => c ? { seats: n, namen: Array.from({ length: n }, (_, i) => c.namen[i] ?? "") } : c)}
+                    style={{ flex: 1, borderRadius: 11, padding: "9px 4px", cursor: "pointer", textAlign: "center",
+                      border: aan ? "1.5px solid rgba(196,152,32,0.5)" : "1.5px solid rgba(18,58,66,0.12)",
+                      background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
+                      color: aan ? "#6b5a2a" : "#123a42", fontSize: 14, fontWeight: 800 }}>
+                    {n === 3 ? "3+" : n}
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 600, marginTop: 2, color: aan ? "#6b5a2a" : "#4a6e73" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ fontSize: 13.5, color: "#8aa3a6", fontWeight: 700, margin: "13px 0 6px" }}>{vraagPopup.seats > 1 ? L.yourNamesQ : L.yourNameQ}</div>
+            {Array.from({ length: vraagPopup.seats }, (_, i) => (
+              <input key={i} value={vraagPopup.namen[i] ?? ""} autoFocus={i === 0}
+                onChange={(e) => setVraagPopup((c) => { if (!c) return c; const n = [...c.namen]; n[i] = e.target.value; return { ...c, namen: n } })}
+                placeholder={vraagPopup.seats === 1 ? L.namePlaceholder : i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)}
+                style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 6 }} />
+            ))}
+            {vraagPopup.seats > 1 && vraagPopup.namen.some((n) => n.trim()) && (
+              <div style={{ fontSize: 13, color: "#8aa3a6", marginTop: 2 }}>{L.showsAsOne} <b style={{ color: "#123a42" }}>{vraagPopup.namen.filter((n) => n.trim()).join(" & ")}</b></div>
+            )}
+
+            <button onMouseDown={(e) => e.preventDefault()}
+              onClick={async () => {
+                const naam = vraagPopup.namen.filter((n) => n.trim()).join(" & ").trim()
+                if (!naam) return
+                const ok = await vraagPlaatsen(naam, vraagPopup.seats)
+                if (ok) { setMijnVraag({ naam, seats: vraagPopup.seats }); setVraagPopup(null) }
+              }}
+              style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 15.5, fontWeight: 800, marginTop: 11 }}>
+              {vraagPopup.seats > 1 ? L.askSeatSendN(vraagPopup.seats) : L.askSeatSend}
+            </button>
+          </div>
+        </div>
+      )}
+
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {error && (
         <div style={S.errorBanner}>⚠️ {error}
