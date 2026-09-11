@@ -1141,8 +1141,10 @@ const STRINGS = {
     yourShareWord: "Mijn deel",
     myDetailsBtn: "🧾 Mijn deel",
     everyoneBtn: "👥 Iedereen",
-    adminReviewing: "🔎 De beheerder past de rekening nog aan",
-    adminReviewingBody: "Je bedrag kan nog wijzigen. Zodra hij opnieuw afsluit, zie je je definitieve deel.",
+    reopenedShort: "Heropend",
+    reopenedShortSub: "je bevestiging blijft staan",
+    reopenedTitle: "De rekening is heropend",
+    reopenedBody: "De beheerder past nog iets aan. Je bevestiging blijft staan, maar je kan nog wijzigen.",
     selectItemsPlural: "Selecteer jullie consumpties",
     selectItemsSingular: "Selecteer jouw consumpties",
     noItemsWaitScan: "Nog geen items — wacht tot de bon gescand is.",
@@ -1814,8 +1816,10 @@ const STRINGS = {
     yourShareWord: "Ma part",
     myDetailsBtn: "🧾 Ma part",
     everyoneBtn: "👥 Tout le monde",
-    adminReviewing: "🔎 L'hôte modifie encore l'addition",
-    adminReviewingBody: "Ton montant peut encore changer. Dès qu'il clôture à nouveau, tu vois ta part définitive.",
+    reopenedShort: "Rouverte",
+    reopenedShortSub: "ta confirmation reste valable",
+    reopenedTitle: "L'addition est rouverte",
+    reopenedBody: "L'organisateur modifie encore quelque chose. Ta confirmation reste valable, mais tu peux encore modifier.",
     selectItemsPlural: "Sélectionnez vos consommations",
     selectItemsSingular: "Sélectionne tes consommations",
     noItemsWaitScan: "Aucun article — attends que l'addition soit scannée.",
@@ -7355,6 +7359,7 @@ function ClaimScreen(props: {
     )
   }
   const [reviewing, setReviewing] = useState(false)
+  const [showReopenPopup, setShowReopenPopup] = useState(false)
   const prevFinalizedRef = useRef<boolean | null>(null)
 
   // Er stonden twee popups op hetzelfde moment: de bestaande "rekening afgesloten" en een
@@ -7372,13 +7377,21 @@ function ClaimScreen(props: {
     const sleutel = `rundo_table_afgesloten_${meId}`
     const ooitAfgesloten = () => { try { return localStorage.getItem(sleutel) === "1" } catch { return false } }
     const prev = prevFinalizedRef.current
+    // Eén keer per heropening. De sleutel wordt gewist zodra de beheerder opnieuw
+    // afsluit, zodat een volgende heropening wél weer gemeld wordt.
+    const gezien = `rundo_table_heropend_gezien_${meId}`
     if (finalized) {
       if (prev !== true) setShowFinalPopup(true)
-      try { localStorage.setItem(sleutel, "1") } catch { /* geen opslag beschikbaar */ }
+      try { localStorage.setItem(sleutel, "1"); localStorage.removeItem(gezien) } catch { /* geen opslag beschikbaar */ }
       setReviewing(false)
+      setShowReopenPopup(false)
     } else {
       setShowFinalPopup(false)
-      setReviewing(ooitAfgesloten())
+      const heropend = ooitAfgesloten()
+      setReviewing(heropend)
+      let al = false
+      try { al = localStorage.getItem(gezien) === "1" } catch { /* geen opslag */ }
+      if (heropend && !al) setShowReopenPopup(true)
     }
     prevFinalizedRef.current = finalized
   }, [finalized, isAdmin, meId])
@@ -7703,12 +7716,16 @@ function ClaimScreen(props: {
   return (
     <div>
       {afgeslotenBalk("boven")}
-      {/* Amber, niet blauw: dit is geen mededeling maar een waarschuwing dat je bedrag nog
-          kan schuiven. De balk blijft staan zolang de rekening open is. */}
+      {/* Zelfde vorm als de groene strook bij een afgesloten rekening, maar oranje: één
+          plek bovenaan die zegt in welke stand de rekening staat, kleur zegt welke. */}
       {!finalized && reviewing && (
-        <div style={{ width: "100%", marginBottom: 14, padding: "12px 16px", borderRadius: 14, background: "linear-gradient(135deg,#e08a00,#f0a500)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(224,138,0,0.55)" }}>
-          <div style={{ fontSize: 18, fontWeight: 800 }}>{L.adminReviewing}</div>
-          <div style={{ fontSize: 16, opacity: 0.93, marginTop: 2, lineHeight: 1.4 }}>{L.adminReviewingBody}</div>
+        <div style={{ position: "sticky", top: 0, zIndex: 5, width: "100%", marginBottom: 12, display: "flex", alignItems: "center", gap: 9,
+          padding: "10px 13px", borderRadius: 13, background: "linear-gradient(135deg,#e08a00,#f0a500)", color: "#fff", boxShadow: "0 6px 16px -8px rgba(224,138,0,0.9)" }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>🔓</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, lineHeight: 1.3 }}>{L.reopenedShort}</span>
+            <span style={{ display: "block", fontSize: 12, fontWeight: 600, opacity: 0.9, lineHeight: 1.35 }}>{L.reopenedShortSub}</span>
+          </span>
         </div>
       )}
       {/* Wie te snel was, kan zijn naam én het aantal personen alsnog rechtzetten. */}
@@ -8090,6 +8107,25 @@ function ClaimScreen(props: {
         )}
 
         {/* Popup 2: de beheerder sloot af — dit is je definitieve bedrag. */}
+        {/* Eén venster bij een heropening, in plaats van een balk die blijft staan: de
+            boodschap is dat je níéts hoeft te doen, en daar hoort geen permanente
+            waarschuwing bij. */}
+        {showReopenPopup && meId && (
+          <div style={S.overlay}>
+            <div style={{ ...S.modal, width: "min(300px, 90vw)", textAlign: "center" }}>
+              <div style={{ fontSize: 28 }}>🔓</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#123a42", marginTop: 3 }}>{L.reopenedTitle}</div>
+              <div style={{ fontSize: 14.5, color: "#8aa3a6", lineHeight: 1.45, marginTop: 5 }}>{L.reopenedBody}</div>
+              <button onClick={() => {
+                setShowReopenPopup(false)
+                try { localStorage.setItem(`rundo_table_heropend_gezien_${meId}`, "1") } catch { /* geen opslag */ }
+              }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 15.5, fontWeight: 800, marginTop: 12 }}>
+                {L.understood}
+              </button>
+            </div>
+          </div>
+        )}
+
         {showFinalPopup && meId && (
           <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setShowFinalPopup(false)}>
             <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
