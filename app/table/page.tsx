@@ -1032,6 +1032,8 @@ const STRINGS = {
     kindVatName: "BTW",
     kindDiscountName: "Korting",
     statusConfirmed: "✓ bevestigd",
+    // Bij een afgesloten rekening is niemand nog "bezig" — dan staat alles vast.
+    statusSettled: "✓ afgesloten",
     statusBusy: "● bezig",
     statusNothing: "nog niets",
     todoTitle: "⚠️ Nog te regelen — wijs snel toe",
@@ -1153,6 +1155,7 @@ const STRINGS = {
     iShareNo: "Ik nam hiervan",
     withHowMany: (seats: number) => `🍴 Wie van jullie ${seats} nam hiervan?`,
     pickWhoShared: "Tik wie meedeelde — of kies iedereen in één keer.",
+    pickWhoTook: "Tik wie ervan nam — meerdere mag.",
     allOfThem: (n: number) => n === 2 ? "👥 Allebei" : `👥 Allemaal (${n})`,
     clearAll: "✕ Wissen",
     whoSharedOf: (nm: string, n: number) => `Wie van ${nm} (${n}) deelde hiervan mee?`,
@@ -1707,6 +1710,7 @@ const STRINGS = {
     kindVatName: "TVA",
     kindDiscountName: "Réduction",
     statusConfirmed: "✓ confirmé",
+    statusSettled: "✓ clôturé",
     statusBusy: "● en cours",
     statusNothing: "rien encore",
     todoTitle: "⚠️ Encore à régler — attribue vite",
@@ -1828,6 +1832,7 @@ const STRINGS = {
     iShareNo: "J'en ai pris",
     withHowMany: (seats: number) => `🍴 Qui de vous ${seats} en a pris ?`,
     pickWhoShared: "Touche qui a partagé — ou choisis tout le monde d'un coup.",
+    pickWhoTook: "Touche qui en a pris — plusieurs, c'est possible.",
     allOfThem: (n: number) => n === 2 ? "👥 Tous les deux" : `👥 Tous (${n})`,
     clearAll: "✕ Effacer",
     whoSharedOf: (nm: string, n: number) => `Qui de ${nm} (${n}) a partagé ?`,
@@ -3796,6 +3801,15 @@ export default function RundoTable() {
   const iConfirmed = !!meId && confirmations.some((c) => c.participant_id === meId)
 
   const guestStatus = (pid: string): { label: string; color: string; bg: string } => {
+    // Is de rekening afgesloten, dan kan niemand nog "bezig" zijn: er valt niets meer aan
+    // te tikken. Deze stand kwam er vroeger toch, omdat enkel naar de bevestigingsrij werd
+    // gekeken — en die wordt op meerdere plaatsen gewist (bij je plaats aanpassen, bij
+    // vrijgeven, bij de laatste verwijderen). Wie toegewezen kreeg, staat dus gewoon rond.
+    if (group?.finalized) {
+      return hasAssignment(pid)
+        ? { label: L.statusSettled, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
+        : { label: L.statusNothing, color: "#8aa3a6", bg: "rgba(18,58,66,0.05)" }
+    }
     if (explicitConfirmed(pid)) return { label: L.statusConfirmed, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
    if (hasAssignment(pid)) {
       const p = participants.find((x) => x.id === pid)
@@ -7786,35 +7800,49 @@ function ClaimScreen(props: {
                 </div>
                 {/* Ook de gast moet terug kunnen: hij mag een item op gedeeld zetten, dus ook
                     weer af. shareBtn toont vanzelf een label wanneer hij het niet deelde. */}
+                {/* De aanduiding staat op dezelfde regel als de deelknop, rechts — daar duid je
+                    bij een gewoon item ook aan dat je het nam. Bij een plaats met meerdere
+                    personen zijn de namen zélf de aanduiding: je tikt wie ervan nam, meerdere
+                    mag. Vroeger stond er een knop "Ik nam hiervan" die in werkelijkheid
+                    iedereen van de plaats aanzette — dat label kon dus niet kloppen — met
+                    daaronder altijd al de vraag wie precies. Nu is het één vraag, en verschijnt
+                    er pas iets onder het item zodra er iemand is aangeduid. */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 7 }}>
                   {shareBtn(it)}
+                  <span style={{ flex: 1, minWidth: 0 }} />
+                  {meId && mySeats > 1 && !fixed ? (() => {
+                    const raw = participants.find((p) => p.id === meId)?.name ?? ""
+                    const parts = raw.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+                    const sel = claimMembers(it.id, meId)
+                    const wide = mySeats > 2
+                    return Array.from({ length: mySeats }, (_, i) => i).map((i) => {
+                      const on = sel.includes(i)
+                      const label = parts[i] || `${L.personWord} ${i + 1}`
+                      return (
+                        <button key={i} onClick={() => toggleShareMember(it.id, meId, i)}
+                          style={{ flexShrink: 0, maxWidth: wide ? 104 : 132, fontSize: wide ? 13.5 : 14.5, fontWeight: 800, padding: "10px 13px", borderRadius: 999, cursor: "pointer", color: "#123a42",
+                            background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
+                            border: on ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.18)",
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{on ? "✓ " : ""}{label}</button>
+                      )
+                    })
+                  })() : (
+                    <button onClick={() => toggleShareClaim(it.id, meId)}
+                      style={{ ...S.btn, flexShrink: 0, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" } : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
+                  )}
                 </div>
-                  <button onClick={() => toggleShareClaim(it.id, meId)} style={{ ...S.btn, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" } : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
+                {/* Niets aangeduid: één regeltje uitleg, geen kader. Zodra er iemand aan staat,
+                    zegt dit hoeveel aandelen jullie betalen, met één tik om alles te wissen. */}
                 {meId && mySeats > 1 && !fixed && (() => {
-                  // Geen venster meer: de namen staan er altijd, je tikt aan wie meedeelde.
-                  // Daarmee vervallen "Klaar" en "Wis alles" — nog eens tikken zet je er weer uit.
-                  const raw = participants.find((p) => p.id === meId)?.name ?? ""
-                  const parts = raw.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
-                  const sel = meId ? claimMembers(it.id, meId) : []
-                  const toggle = (i: number) => { if (meId) toggleShareMember(it.id, meId, i) }
-                  const wide = mySeats > 2
+                  const sel = claimMembers(it.id, meId)
+                  if (sel.length === 0) return (
+                    <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 7, lineHeight: 1.4 }}>{L.pickWhoTook}</div>
+                  )
                   return (
-                    <div style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "10px 11px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.withHowMany(mySeats)}</span>
-                      </div>
-                      <div style={{ display: "flex", gap: wide ? 6 : 7, flexWrap: "wrap" }}>
-                        {Array.from({ length: mySeats }, (_, i) => i).map((i) => {
-                          const on = sel.includes(i)
-                          const label = parts[i] || `${L.personWord} ${i + 1}`
-                          return (
-                            <button key={i} onClick={() => toggle(i)} style={{ flex: 1, minWidth: wide ? 70 : 90, fontSize: wide ? 12.5 : 13, fontWeight: 800, padding: wide ? "9px 5px" : "10px 6px", borderRadius: 10, cursor: "pointer", color: "#123a42", background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: on ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.15)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{on ? "✓ " : ""}{label}</button>
-                          )
-                        })}
-                      </div>
-                      <div style={{ fontSize: 15.5, color: sel.length > 0 ? "#4a6e73" : "#8aa3a6", marginTop: 8, lineHeight: 1.45 }}>
-                        {sel.length > 0 ? L.sharesInstead(sel.length, mySeats) : L.pickWhoShared}
-                      </div>
+                    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "9px 11px" }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, color: "#4a6e73", lineHeight: 1.4 }}>{L.sharesInstead(sel.length, mySeats)}</span>
+                      <button onClick={() => setClaim(it.id, meId, 0, [])}
+                        style={{ flexShrink: 0, cursor: "pointer", background: "transparent", border: "1.5px solid rgba(18,58,66,0.18)", borderRadius: 10, padding: "7px 11px", fontSize: 14, fontWeight: 800, color: "#4a6e73" }}>{L.clearAll}</button>
                     </div>
                   )
                 })()}
