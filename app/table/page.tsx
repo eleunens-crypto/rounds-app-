@@ -115,7 +115,6 @@ const DAG_MS = 24 * 60 * 60 * 1000
 // honderd keer meer dan alle rijen samen en je hebt hem na het afsluiten niet meer nodig.
 const BEWAAR_AFGESLOTEN = 14 * DAG_MS
 const BEWAAR_OPEN = 14 * DAG_MS
-const BEWAAR_FOTO = 7 * DAG_MS
 
 // Beheerder is een rol, geen probleem — dus geen rood. Een cursieve schreefletter naast
 // de schreefloze naam leest als een handgeschreven aantekening: het valt op zonder te
@@ -2108,20 +2107,15 @@ export default function RundoTable() {
       return nu - new Date(anker).getTime()
     }
 
-    // Opruimen — alleen wat van jou is. Vastzetten bestaat niet meer: bewaren gebeurt
-    // vanzelf, en na de termijn gaat alles weg. Anders zou een afgeronde rekening voor
-    // altijd blijven staan, want "afgerond" gebruikt dezelfde kolom als het oude pinnen.
-    const wissen = (eigen || []).filter((g: Record<string, unknown>) =>
+    // Verlopen rekeningen verbergen we hier, maar wissen doen we niet meer: dat doet
+    // een nachtelijke taak in de databank. Vroeger gebeurde het opruimen alleen wanneer
+    // de beheerder de app opende — wie nooit terugkwam, liet zijn rekening en bonfoto
+    // voor altijd staan. En met twee plaatsen die dezelfde regels toepassen, is het een
+    // kwestie van tijd voor ze het oneens worden. De regels staan dus één keer, in
+    // rundo_table_opruimen(), en de lijst hier laat gewoon weg wat op is.
+    const verlopen = (eigen || []).filter((g: Record<string, unknown>) =>
       ouderdom(g) > (g.finalized ? BEWAAR_AFGESLOTEN : BEWAAR_OPEN))
-    for (const g of wissen) { await wisGroepVolledig(g.id as string); removeMyGroup(g.id as string) }
-
-    // De bonfoto gaat er veel eerder uit dan de rekening zelf.
-    const fotoWeg = (eigen || []).filter((g: Record<string, unknown>) =>
-      g.receipt_url && g.finalized && ouderdom(g) > BEWAAR_FOTO && !wissen.some((w: Record<string, unknown>) => w.id === g.id))
-    for (const g of fotoWeg) {
-      await wisBonfotos(g.id as string)
-      await supabase.from("table_groups").update({ receipt_url: null }).eq("id", g.id as string)
-    }
+    for (const g of verlopen) removeMyGroup(g.id as string)
 
     const maak = (g: Record<string, unknown>, role: "admin" | "gast"): SavedGroup => ({
       id: g.id as string, name: (g.name as string) || "", invite_code: (g.invite_code as string) || "",
@@ -2129,7 +2123,7 @@ export default function RundoTable() {
       created_at: g.created_at as string, finalized: g.finalized as boolean, finalized_at: g.finalized_at as string, pinned: g.pinned as boolean,
     })
     const lijst = [
-      ...(eigen || []).filter((g: Record<string, unknown>) => !wissen.some((w: Record<string, unknown>) => w.id === g.id)).map((g: Record<string, unknown>) => maak(g, "admin")),
+      ...(eigen || []).filter((g: Record<string, unknown>) => !verlopen.some((w: Record<string, unknown>) => w.id === g.id)).map((g: Record<string, unknown>) => maak(g, "admin")),
       ...gasten.map((g) => maak(g, "gast")),
     ].sort((a, b) => b.savedAt - a.savedAt)
     setMyGroups(lijst)
