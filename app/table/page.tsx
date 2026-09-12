@@ -10,7 +10,10 @@ import { useLang, LanguageToggle, getLang } from "@/lib/i18n"
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
-type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; disputed_by?: string | null; created_at?: string }
+// `pinned` stond alleen in SavedGroup, terwijl select("*") hem hier ook meebrengt.
+// Hij betekent nu twee dingen die samenvallen: de groep blijft bewaard (de opruiming
+// slaat hem over) én de beheerder verklaarde alles verrekend.
+type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; disputed_by?: string | null; pinned?: boolean | null; created_at?: string }
 type Participant = { id: string; name: string; group_id: string; self_joined?: boolean; seats?: number | null; created_at?: string }
 type BillItem = {
   id: string
@@ -1049,6 +1052,20 @@ const STRINGS = {
     reopenShort: "🔓 heropen",
     disputeCtaTitle: "Klopt er iets niet?",
     disputeCtaSub: "Tik hier en laat de beheerder weten wat er scheelt",
+    settleSaveBtn: "🔒 Sluit af en bewaar",
+    settleAskTitle: "Ben je zeker?",
+    settleAskBody: "Is alles verrekend en heeft iedereen betaald? Daarna verandert er niets meer aan deze rekening.",
+    settleAskKeep: "Je groepje blijft bewaard zolang je het bewaard laat staan — je vindt het terug op het startscherm onder \u201cJouw groepen\u201d.",
+    settleAskYes: "Ja, sluit af en bewaar",
+    settleDoneTitle: "Alles verrekend",
+    settleDoneKeepTitle: "📂 Bewaard",
+    settleDoneKeepAdmin: "Je vindt dit groepje terug op het startscherm onder \u201cJouw groepen\u201d. Zolang het bewaard staat, ruimt niets het op.",
+    settleDoneKeepGuest: "Hou de link of de code bij, dan kan je deze verdeling later nog bekijken. Op je startscherm staat dit groepje ook onder \u201cJouw groepen\u201d.",
+    settleGuestTitle: "De rekening is verrekend",
+    settleGuestBody: "De beheerder heeft alles afgerond. Je bedrag hieronder blijft staan zoals het is.",
+    settleSavedToast: "Afgesloten en bewaard",
+    settleKeepLink: "🔗 Link bewaren",
+    settleOk: "Duidelijk",
     statusBusy: "● bezig",
     statusNothing: "nog niets",
     todoTitle: "⚠️ Nog te regelen — wijs snel toe",
@@ -1739,6 +1756,20 @@ const STRINGS = {
     reopenShort: "🔓 rouvrir",
     disputeCtaTitle: "Quelque chose ne va pas ?",
     disputeCtaSub: "Touche ici et préviens l'hôte de ce qui ne colle pas",
+    settleSaveBtn: "🔒 Clôturer et garder",
+    settleAskTitle: "Tu es sûr ?",
+    settleAskBody: "Tout est réglé et tout le monde a payé ? Ensuite, plus rien ne change sur cette addition.",
+    settleAskKeep: "Ton groupe reste gardé aussi longtemps que tu le laisses enregistré — tu le retrouves sur l\u2019écran d\u2019accueil sous \u00ab Tes groupes \u00bb.",
+    settleAskYes: "Oui, clôturer et garder",
+    settleDoneTitle: "Tout est réglé",
+    settleDoneKeepTitle: "📂 Gardé",
+    settleDoneKeepAdmin: "Tu retrouves ce groupe sur l\u2019écran d\u2019accueil sous \u00ab Tes groupes \u00bb. Tant qu\u2019il est gardé, rien ne l\u2019efface.",
+    settleDoneKeepGuest: "Garde le lien ou le code, tu pourras revoir cette répartition plus tard. Ce groupe est aussi sur ton écran d\u2019accueil sous \u00ab Tes groupes \u00bb.",
+    settleGuestTitle: "L\u2019addition est réglée",
+    settleGuestBody: "L\u2019hôte a tout clôturé. Ton montant ci-dessous reste tel quel.",
+    settleSavedToast: "Clôturée et gardée",
+    settleKeepLink: "🔗 Garder le lien",
+    settleOk: "Compris",
     statusBusy: "● en cours",
     statusNothing: "rien encore",
     todoTitle: "⚠️ Encore à régler — attribue vite",
@@ -1973,6 +2004,9 @@ const WOORD_RESTO = "M249.48 74.9 241.16 60.21H237.6V74.9H230.04V37.21H244.19Q24
 
 // Waar Rundo draait. Pas dit aan als het adres wijzigt.
 const PARTY_URL = "/party"
+// "Probeer het eens" gaat naar de kiespagina en niet rechtstreeks naar /party: daar zie
+// je Rundo Resto en Rundo naast elkaar staan, en kies je zelf waar je naartoe wil.
+const KIEZER_URL = "/"
 function RundoLogo({
   size = 40,
   opDonker = true,
@@ -2143,6 +2177,14 @@ export default function RundoTable() {
   // eigen open/dicht bij, dus vragen we het via een signaal in plaats van die stand
   // hierheen te tillen.
   const [klapToewijzenSignaal, setKlapToewijzenSignaal] = useState(0)
+  // "Sluit af en bewaar": de laatste stap. `settleVraag` is de bevestiging, `settleKlaar`
+  // het scherm erna met waar je het groepje terugvindt en de verwijzing naar Rundo.
+  const [settleVraag, setSettleVraag] = useState(false)
+  const [settleKlaar, setSettleKlaar] = useState(false)
+  // Bij de gast: de melding dat de beheerder alles verrekend heeft. Eén keer per keer
+  // dat het gebeurt — de sleutel wordt gewist zodra het groepje weer losgemaakt wordt,
+  // zodat een tweede afronding wél opnieuw gemeld wordt.
+  const [settleGastPopup, setSettleGastPopup] = useState(false)
   const [showShareWarn, setShowShareWarn] = useState(false)   // waarschuwing bij delen terwijl totalen niet kloppen
   const [showFinalizeWarn, setShowFinalizeWarn] = useState(false) // waarschuwing bij afsluiten terwijl totalen niet kloppen
   // Centrale in-app melding (midden op het scherm, met OK) — vervangt browser-alerts en
@@ -2717,6 +2759,32 @@ export default function RundoTable() {
     // wat je wil nakijken.
     if (on) { setExpandedPeople(new Set()); setAdminFinalPopup(true) }
   }
+
+  // Alles verrekend: we zetten `pinned` aan. Dat is precies wat bewaren al betekende —
+  // de opruiming laat gepinde groepen staan — en het is tegelijk het teken waaraan de
+  // gasten zien dat de beheerder klaar is. Geen extra kolom nodig, dus geen migratie.
+  const sluitAfEnBewaar = async () => {
+    if (!group) return
+    setGroup((cur) => cur ? { ...cur, pinned: true } : cur)
+    const { error } = await supabase.from("table_groups").update({ pinned: true }).eq("id", group.id)
+    if (error) { setError(L.errPing); return }
+    setMyGroups((prev) => prev.map((x) => x.id === group.id ? { ...x, pinned: true } : x))
+    setSettleVraag(false)
+    setSettleKlaar(true)
+    setToast(L.settleSavedToast)
+  }
+
+  useEffect(() => {
+    if (isAdmin || !meId || !group) return
+    const sleutel = `rundo_table_verrekend_gezien_${meId}`
+    if (group.finalized && group.pinned) {
+      let al = false
+      try { al = localStorage.getItem(sleutel) === "1" } catch { /* geen opslag */ }
+      if (!al) { setSettleGastPopup(true); try { localStorage.setItem(sleutel, "1") } catch { /* geen opslag */ } }
+    } else {
+      try { localStorage.removeItem(sleutel) } catch { /* geen opslag */ }
+    }
+  }, [isAdmin, meId, group])
 
   const flagDispute = async (name: string, on: boolean, comment = "") => {
     if (!group) return
@@ -4069,7 +4137,7 @@ export default function RundoTable() {
                 <div style={{ display: "flex", gap: 8, marginTop: 13 }}>
                   <button onClick={() => setPartyInfo(false)}
                     style={{ flex: 1, cursor: "pointer", background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 12, padding: 11, fontSize: 14, fontWeight: 600, color: "#cbbf9e", fontFamily: "inherit" }}>{L.closeBtn}</button>
-                  <a href={PARTY_URL} style={{ flex: 1.5, textDecoration: "none", background: "linear-gradient(135deg,#f5c451,#e0a020)", borderRadius: 12, padding: 11, fontSize: 15, fontWeight: 700, color: "#2a2110", textAlign: "center" }}>{L.tryItOut} →</a>
+                  <a href={KIEZER_URL} style={{ flex: 1.5, textDecoration: "none", background: "linear-gradient(135deg,#f5c451,#e0a020)", borderRadius: 12, padding: 11, fontSize: 15, fontWeight: 700, color: "#2a2110", textAlign: "center" }}>{L.tryItOut} →</a>
                 </div>
               </div>
             )}
@@ -5874,6 +5942,30 @@ export default function RundoTable() {
         </div>
       )}
 
+      {/* Laatste stap, en enkel zichtbaar wanneer de rekening al afgesloten is: de melding
+          en het heropenen zitten sinds kort in de balk bovenaan, dus hier is plaats voor
+          de knop die het groepje wegzet. Is het al bewaard, dan is er niets meer te doen
+          en zegt deze plek dat gewoon. */}
+      {isAdmin && adminTab === "overview" && group.finalized && (
+        <div style={{ ...S.card, marginTop: 12, padding: 14 }}>
+          {group.pinned ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "rgba(39,174,96,0.16)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>✓</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#1f8a4c" }}>{L.settleDoneTitle}</span>
+                <span style={{ display: "block", fontSize: 15, color: "#4a6e73", lineHeight: 1.4, marginTop: 2 }}>{L.settleDoneKeepAdmin}</span>
+              </span>
+            </div>
+          ) : (
+            <button onClick={() => setSettleVraag(true)}
+              style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 18, fontWeight: 800, fontFamily: "inherit", color: "#fff",
+                background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
+              {L.settleSaveBtn}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Zwevende voet op de overzichttab: fooi en afsluiten blijven in beeld terwijl de
           rekening erboven doorscrolt. Beide zaten alleen onderaan de pagina, dus bij een
           lange rekening moest je eerst een heel eind naar beneden om ze te vinden. De
@@ -6340,6 +6432,66 @@ export default function RundoTable() {
       )}
 
       {/* ─── Pop-up: rekening afgesloten (voor de beheerder), met overzicht per persoon ─── */}
+      {/* De gast hoort het ook: de avond is rond, dit is het bedrag, en zo vind je het
+          groepje later terug. De verwijzing naar Rundo staat hier en niet meer in het
+          afsluitvenster — daar was je nog met de verdeling bezig. */}
+      {!isAdmin && settleGastPopup && meId && (
+        <div style={{ ...S.overlay, zIndex: 3400 }} onClick={() => setSettleGastPopup(false)}>
+          <div style={{ ...S.modal, width: "min(380px, 92vw)", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ textAlign: "center", marginBottom: 13 }}>
+              <div style={{ width: 58, height: 58, borderRadius: "50%", background: "rgba(39,174,96,0.16)", border: "2px solid rgba(39,174,96,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 10px", color: "#1f8a4c", fontWeight: 800 }}>✓</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#1f8a4c" }}>{L.settleGuestTitle}</div>
+              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45, marginTop: 5 }}>{L.settleGuestBody}</div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", marginBottom: 12 }}>
+              <span style={{ fontSize: 17, fontWeight: 800, color: "#0f7488" }}>{L.yourTotal}</span>
+              <span style={{ fontSize: 28, fontWeight: 800, color: "#123a42" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>
+            </div>
+            <div style={{ background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "11px 13px" }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#0f7488", marginBottom: 4 }}>{L.settleDoneKeepTitle}</div>
+              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45 }}>{L.settleDoneKeepGuest}</div>
+            </div>
+            <div style={{ marginTop: 4 }}>{renderPartyVerwijzing()}</div>
+            <button onClick={() => setSettleGastPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.settleOk}</button>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && settleVraag && (
+        <div style={{ ...S.overlay, zIndex: 3300 }} onClick={() => setSettleVraag(false)}>
+          <div style={{ ...S.modal, width: "min(360px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 21, fontWeight: 800, color: "#123a42", marginBottom: 6 }}>{L.settleAskTitle}</div>
+            <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 11px" }}>{L.settleAskBody}</p>
+            <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.5, background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>{L.settleAskKeep}</div>
+            <button onClick={() => void sluitAfEnBewaar()}
+              style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 17, fontWeight: 800, fontFamily: "inherit", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{L.settleAskYes}</button>
+            <button onClick={() => setSettleVraag(false)}
+              style={{ ...S.btn, width: "100%", padding: "11px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#8aa3a6", background: "transparent", border: "none" }}>{L.cancelWord}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Het scherm na het bewaren: waar je het groepje terugvindt, en pas hier de
+          verwijzing naar Rundo. Die stond in het afsluitvenster, waar je hoofd nog bij
+          de verdeling zat — nu staat ze op het moment dat de avond echt rond is. */}
+      {isAdmin && settleKlaar && (
+        <div style={{ ...S.overlay, zIndex: 3400 }} onClick={() => setSettleKlaar(false)}>
+          <div style={{ ...S.modal, width: "min(380px, 92vw)", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ textAlign: "center", marginBottom: 14 }}>
+              <div style={{ width: 62, height: 62, borderRadius: "50%", background: "rgba(39,174,96,0.16)", border: "2px solid rgba(39,174,96,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, margin: "0 auto 10px", color: "#1f8a4c", fontWeight: 800 }}>✓</div>
+              <div style={{ fontSize: 21, fontWeight: 800, color: "#1f8a4c" }}>{L.settleDoneTitle}</div>
+              <div style={{ fontSize: 16, color: "#8aa3a6", marginTop: 3 }}>{group.name || L.groupWord} · €{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</div>
+            </div>
+            <div style={{ background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "11px 13px" }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#0f7488", marginBottom: 4 }}>{L.settleDoneKeepTitle}</div>
+              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45 }}>{L.settleDoneKeepAdmin}</div>
+            </div>
+            <div style={{ marginTop: 4 }}>{renderPartyVerwijzing()}</div>
+            <button onClick={() => setSettleKlaar(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.settleOk}</button>
+          </div>
+        </div>
+      )}
+
       {/* Alles toegewezen: een melding in plaats van een lijst die vanzelf dichtklapt.
           "Later" laat je gewoon verder sleutelen; volg je hem, dan klapt de toewijslijst
           dicht, staat iedereen open in het overzicht en spring je ernaartoe. */}
@@ -6415,7 +6567,6 @@ export default function RundoTable() {
               setExpandedPeople(new Set(participants.map((p) => p.id)))
               if (typeof document !== "undefined") setTimeout(() => document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80)
             }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.showDetailsBtn}</button>
-              <div style={{ marginTop: 12 }}>{renderPartyVerwijzing()}</div>
           </div>
         </div>
       )}
