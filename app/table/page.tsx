@@ -1034,6 +1034,16 @@ const STRINGS = {
     statusConfirmed: "✓ bevestigd",
     // Bij een afgesloten rekening is niemand nog "bezig" — dan staat alles vast.
     statusSettled: "✓ afgesloten",
+    // Alles toegewezen, enkel de bevestiging van de gast ontbreekt nog. Vroeger stond
+    // hier "bezig", wat leek alsof die persoon nog zat te tikken.
+    statusToConfirm: "● te bevestigen",
+    allAssignedTitle: "Alles toegewezen",
+    allAssignedBody: "Elk item op de rekening heeft nu een naam. Wil je het overzicht per persoon bekijken?",
+    allAssignedGo: "Ga naar rekeningoverzicht",
+    allAssignedLater: "Later",
+    stickyTipNone: "Nog geen fooi",
+    stickyTipSet: (b: string) => `Fooi €${b}`,
+    stickyTipEdit: "wijzig",
     statusBusy: "● bezig",
     statusNothing: "nog niets",
     todoTitle: "⚠️ Nog te regelen — wijs snel toe",
@@ -1711,6 +1721,14 @@ const STRINGS = {
     kindDiscountName: "Réduction",
     statusConfirmed: "✓ confirmé",
     statusSettled: "✓ clôturé",
+    statusToConfirm: "● à confirmer",
+    allAssignedTitle: "Tout est attribué",
+    allAssignedBody: "Chaque article de l'addition a un nom. Tu veux voir le récapitulatif par personne ?",
+    allAssignedGo: "Voir le récapitulatif",
+    allAssignedLater: "Plus tard",
+    stickyTipNone: "Pas de pourboire",
+    stickyTipSet: (b: string) => `Pourboire €${b}`,
+    stickyTipEdit: "modifier",
     statusBusy: "● en cours",
     statusNothing: "rien encore",
     todoTitle: "⚠️ Encore à régler — attribue vite",
@@ -2105,6 +2123,16 @@ export default function RundoTable() {
   const [adminTab, setAdminTab] = useState<AdminTab>("scan")
   const [showScan, setShowScan] = useState(false)
   const [adminFinalPopup, setAdminFinalPopup] = useState(false)
+  // Alles toegewezen: dit vervangt het vanzelf dichtklappen van de toewijslijst. Er komt
+  // een melding, en pas als je die volgt klapt de lijst dicht en spring je naar het
+  // overzicht per persoon. De ref houdt het bij één melding per keer dat de rekening
+  // volledig raakt, zodat hij niet bij elk tikje terugkomt.
+  const [allesPopup, setAllesPopup] = useState(false)
+  const allesToegewezenGezien = useRef(false)
+  // Gaat met één omhoog wanneer de toewijslijst mag dichtklappen. ClaimScreen houdt zijn
+  // eigen open/dicht bij, dus vragen we het via een signaal in plaats van die stand
+  // hierheen te tillen.
+  const [klapToewijzenSignaal, setKlapToewijzenSignaal] = useState(0)
   const [showShareWarn, setShowShareWarn] = useState(false)   // waarschuwing bij delen terwijl totalen niet kloppen
   const [showFinalizeWarn, setShowFinalizeWarn] = useState(false) // waarschuwing bij afsluiten terwijl totalen niet kloppen
   // Centrale in-app melding (midden op het scherm, met OK) — vervangt browser-alerts en
@@ -3810,11 +3838,16 @@ export default function RundoTable() {
         ? { label: L.statusSettled, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
         : { label: L.statusNothing, color: "#8aa3a6", bg: "rgba(18,58,66,0.05)" }
     }
-    if (explicitConfirmed(pid)) return { label: L.statusConfirmed, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
-   if (hasAssignment(pid)) {
-      const p = participants.find((x) => x.id === pid)
+    // Hier stond `explicitConfirmed`, terwijl `allConfirmed` elders met `isConfirmed`
+    // rekende. Daardoor kon je op één scherm "iedereen bevestigd" lezen en bij dezelfde
+    // persoon "bezig" op het andere. Beide rekenen nu met hetzelfde begrip, dus wie
+    // bevestigde kan nergens nog als bezig verschijnen.
+    if (isConfirmed(pid)) return { label: L.statusConfirmed, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
+    if (hasAssignment(pid)) {
+      // Staat de hele rekening toegewezen, dan is er niets meer "bezig": er wordt enkel
+      // nog op een bevestiging gewacht. Dat is een ander bericht.
       const billFullyAssigned = openUnits === 0 && undecidedShared.length === 0
-      if (p && !p.self_joined && billFullyAssigned) return { label: L.statusConfirmed, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
+      if (billFullyAssigned) return { label: L.statusToConfirm, color: "#0f7488", bg: "rgba(20,153,176,0.12)" }
       return { label: L.statusBusy, color: "#0f7d90", bg: "rgba(90,108,166,0.12)" }
     }
     return { label: L.statusNothing, color: "#8aa3a6", bg: "rgba(18,58,66,0.05)" }
@@ -3893,8 +3926,48 @@ export default function RundoTable() {
   const sharedWarnings = baseItems.filter((it) => it.is_shared && sharedStatus(it).warn !== null)
   const zeroPriceItems = baseItems.filter((it) => it.unit_price <= 0.0001)
   const allAssignedNow = openUnits === 0 && undecidedShared.length === 0 && sharedWarnings.length === 0 && zeroPriceItems.length === 0
+  // Raakt de rekening weer onvolledig (item bijgezet, iets losgemaakt), dan mag de
+  // melding "alles toegewezen" later opnieuw komen.
+  useEffect(() => { if (!allAssignedNow) allesToegewezenGezien.current = false }, [allAssignedNow])
   const tipItem = items.find((i) => i.name.trim().toLowerCase() === "fooi") || null
   const hasTip = !!tipItem
+
+  // Deze hele controle zat als losse onClick in de afsluitknop, waardoor de zwevende
+  // balk hem niet kon hergebruiken. Nu staat hij één keer hier en roepen beide hem.
+  const probeerAfsluiten = () => {
+    if (openUnits > 0 || undecidedShared.length > 0) {
+      const delen: string[] = []
+      if (openUnits > 0) delen.push(L.unitsNotAssigned(openUnits))
+      if (undecidedShared.length > 0) delen.push(L.sharedNobodyTakes(undecidedShared.length))
+      setCenterNote({ title: L.cantFinalizeTitle, body: `• ${delen.join("\n• ")}\n\n${L.assignFirstHint}` })
+      setShowTodo(true)
+      return
+    }
+    // De bon klopt niet: toon de in-app waarschuwing i.p.v. een browser-popup.
+    if (!billOk) { setShowFinalizeWarn(true); return }
+      // Gedeelde items: waarschuw als niemand aanduidde, of als alles naar één plaats ging.
+    const shareProblems = baseItems.filter((it) => it.is_shared).map((it) => {
+      const st = sharedStatus(it)
+      if (st.warn === "none") return `${it.name}: ${L.nobodyShared}`
+        if (st.warn === "one") return `${it.name}: ${L.onlyOneShares}`
+      return null
+    }).filter(Boolean) as string[]
+      // De controle op één plaats zit nu in sharedStatus zelf ("one"), dus hier niet nog eens.
+    // Iemand die niets aanduidde betaalt straks alleen mee aan gedeelde items.
+    // Dat kan kloppen, maar het is vaker een vergissing dan niet.
+    const zonderItems = participants.filter((p) => !claims.some((c) => c.participant_id === p.id && c.quantity > 0))
+      .map((p) => L.nothingForPerson(naamVan(p)))
+    const naarTipOfAfsluiten = () => {
+      if (!hasTip) { setShowTipReminder(true); return }
+      askConfirm(L.finalizeConfirm, L.finalizeBtn, () => finalizeBill(true))
+    }
+    const alleProblemen = [...shareProblems, ...zonderItems]
+    if (alleProblemen.length > 0) {
+      askConfirm(`• ${alleProblemen.join("\n• ")}\n\n${L.sharedProblemAsk}`, L.yes, naarTipOfAfsluiten, { title: L.sharedProblemTitle, danger: true })
+      return
+    }
+    naarTipOfAfsluiten()
+  }
 
   const confirmMe = async (): Promise<boolean> => {
     if (!group) return false
@@ -5515,6 +5588,8 @@ export default function RundoTable() {
             onRename={renameGuest}
             onEditMe={!isAdmin ? editMySpot : undefined}
             setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} magOntdelen={magOntdelen} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined}
+            onAllAssigned={() => { if (allesToegewezenGezien.current) return; allesToegewezenGezien.current = true; setAllesPopup(true) }}
+            klapSignaal={klapToewijzenSignaal}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
@@ -5761,40 +5836,7 @@ export default function RundoTable() {
               {L.reopenBillTip}
             </button>
           ) : (
-            <button id="afsluit-knop" onClick={() => {
-              if (openUnits > 0 || undecidedShared.length > 0) {
-                const delen: string[] = []
-                if (openUnits > 0) delen.push(L.unitsNotAssigned(openUnits))
-                if (undecidedShared.length > 0) delen.push(L.sharedNobodyTakes(undecidedShared.length))
-                setCenterNote({ title: L.cantFinalizeTitle, body: `• ${delen.join("\n• ")}\n\n${L.assignFirstHint}` })
-                setShowTodo(true)
-                return
-              }
-              // De bon klopt niet: toon de in-app waarschuwing i.p.v. een browser-popup.
-              if (!billOk) { setShowFinalizeWarn(true); return }
-      // Gedeelde items: waarschuw als niemand aanduidde, of als alles naar één plaats ging.
-              const shareProblems = baseItems.filter((it) => it.is_shared).map((it) => {
-                const st = sharedStatus(it)
-                if (st.warn === "none") return `${it.name}: ${L.nobodyShared}`
-        if (st.warn === "one") return `${it.name}: ${L.onlyOneShares}`
-                return null
-              }).filter(Boolean) as string[]
-      // De controle op één plaats zit nu in sharedStatus zelf ("one"), dus hier niet nog eens.
-              // Iemand die niets aanduidde betaalt straks alleen mee aan gedeelde items.
-              // Dat kan kloppen, maar het is vaker een vergissing dan niet.
-              const zonderItems = participants.filter((p) => !claims.some((c) => c.participant_id === p.id && c.quantity > 0))
-                .map((p) => L.nothingForPerson(naamVan(p)))
-              const naarTipOfAfsluiten = () => {
-                if (!hasTip) { setShowTipReminder(true); return }
-                askConfirm(L.finalizeConfirm, L.finalizeBtn, () => finalizeBill(true))
-              }
-              const alleProblemen = [...shareProblems, ...zonderItems]
-              if (alleProblemen.length > 0) {
-                askConfirm(`• ${alleProblemen.join("\n• ")}\n\n${L.sharedProblemAsk}`, L.yes, naarTipOfAfsluiten, { title: L.sharedProblemTitle, danger: true })
-                return
-              }
-              naarTipOfAfsluiten()
-            }} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
+            <button id="afsluit-knop" onClick={probeerAfsluiten} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
               {L.finalizeBtn}
             </button>
           )}
@@ -5808,6 +5850,33 @@ export default function RundoTable() {
           <div style={{ textAlign: "center", marginTop: 10 }}>
             <button onClick={() => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }) }} style={{ ...S.btn, fontSize: 16, fontWeight: 700, padding: "8px 16px" }}>{L.backToTop}</button>
           </div>
+        </div>
+      )}
+
+      {/* Zwevende voet op de overzichttab: fooi en afsluiten blijven in beeld terwijl de
+          rekening erboven doorscrolt. Beide zaten alleen onderaan de pagina, dus bij een
+          lange rekening moest je eerst een heel eind naar beneden om ze te vinden. De
+          knop hier is dezelfde als die onderaan — één handler, geen dubbele logica. */}
+      {isAdmin && adminTab === "overview" && !group.finalized && items.length > 0 && participants.length > 0 && (
+        <div style={{ position: "sticky", bottom: 0, zIndex: 20, marginTop: 12,
+          padding: "10px 12px calc(10px + env(safe-area-inset-bottom))",
+          background: "rgba(247,251,252,0.97)", backdropFilter: "blur(6px)",
+          borderTop: "1.5px solid rgba(18,58,66,0.12)", borderRadius: "14px 14px 0 0",
+          boxShadow: "0 -8px 22px -14px rgba(18,58,66,0.45)",
+          display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={() => { if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }}
+            style={{ flex: 1, minWidth: 0, textAlign: "left", cursor: "pointer", background: "transparent", border: "none", padding: 0, fontFamily: "inherit" }}>
+            <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: tipTotal > 0.005 ? "#15703f" : "#8aa3a6", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {tipTotal > 0.005 ? `✓ ${L.stickyTipSet(tipTotal.toFixed(2).replace(".", ","))}` : `💛 ${L.stickyTipNone}`}
+            </span>
+            <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#0f7488", textDecoration: "underline", textUnderlineOffset: 3, marginTop: 1 }}>{L.stickyTipEdit}</span>
+          </button>
+          <button onClick={probeerAfsluiten}
+            style={{ flexShrink: 0, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 20px", fontSize: 17, fontWeight: 800, fontFamily: "inherit", color: "#fff",
+              background: allAssignedNow ? "linear-gradient(135deg,#1f8a4c,#27ae60)" : "rgba(18,58,66,0.3)",
+              boxShadow: allAssignedNow ? "0 6px 16px -6px rgba(39,174,96,0.6)" : "none" }}>
+            {L.finalizeBtn}
+          </button>
         </div>
       )}
 
@@ -6250,6 +6319,29 @@ export default function RundoTable() {
       )}
 
       {/* ─── Pop-up: rekening afgesloten (voor de beheerder), met overzicht per persoon ─── */}
+      {/* Alles toegewezen: een melding in plaats van een lijst die vanzelf dichtklapt.
+          "Later" laat je gewoon verder sleutelen; volg je hem, dan klapt de toewijslijst
+          dicht, staat iedereen open in het overzicht en spring je ernaartoe. */}
+      {isAdmin && allesPopup && (
+        <div style={{ ...S.overlay, zIndex: 3100 }} onClick={() => setAllesPopup(false)}>
+          <div style={{ ...S.modal, width: "min(360px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}>
+              <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>✓</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c" }}>{L.allAssignedTitle}</span>
+            </div>
+            <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 14px" }}>{L.allAssignedBody}</p>
+            <button onClick={() => {
+              setAllesPopup(false)
+              setKlapToewijzenSignaal((n) => n + 1)
+              setExpandedPeople(new Set(participants.map((p) => p.id)))
+              if (typeof document !== "undefined") setTimeout(() => document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80)
+            }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.allAssignedGo}</button>
+            <button onClick={() => setAllesPopup(false)}
+              style={{ ...S.btn, width: "100%", padding: "11px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#8aa3a6", background: "transparent", border: "none" }}>{L.allAssignedLater}</button>
+          </div>
+        </div>
+      )}
+
       {adminFinalPopup && (
         <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setAdminFinalPopup(false)}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)", maxHeight: "84vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
@@ -7291,6 +7383,10 @@ function ClaimScreen(props: {
   claimMembers: (itemId: string, pid: string) => number[]
   warnCount?: number
   jumpToAssign?: number
+  /** roept de ouder zodra de laatste eenheid is toegewezen */
+  onAllAssigned?: () => void
+  /** gaat omhoog wanneer de toewijslijst mag dichtklappen */
+  klapSignaal?: number
   onDeleteItem?: (id: string) => void
   onRename: (id: string, name: string) => void
   onEditMe?: (id: string) => void
@@ -7306,7 +7402,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
+  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // De uitleg bij het invullen voor een nog vrije plaats hoeft maar één keer.
@@ -7455,11 +7551,15 @@ function ClaimScreen(props: {
       </span>
     </button>
   )
+  // Vroeger klapte deze lijst vanzelf dicht zodra alles was toegewezen — je zag je werk
+  // verdwijnen zonder erom te vragen. Nu meldt hij het alleen; de ouder toont een bericht
+  // en klapt pas dicht wanneer jij dat bericht volgt (via klapSignaal).
   const prevDoneRef = useRef(false)
   useEffect(() => {
-    if (isAdmin && allDone && !prevDoneRef.current) setClaimCollapsed(true)
+    if (isAdmin && allDone && !prevDoneRef.current) onAllAssigned?.()
     prevDoneRef.current = allDone
-  }, [allDone, isAdmin])
+  }, [allDone, isAdmin, onAllAssigned])
+  useEffect(() => { if (klapSignaal && klapSignaal > 0) setClaimCollapsed(true) }, [klapSignaal])
 
   if (isAdmin) {
     const normalItems = items.filter((i) => !i.is_shared)
