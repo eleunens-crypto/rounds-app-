@@ -6466,7 +6466,7 @@ export default function RundoTable() {
             <button onClick={() => void sluitAfEnBewaar()}
               style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 17, fontWeight: 800, fontFamily: "inherit", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{L.settleAskYes}</button>
             <button onClick={() => setSettleVraag(false)}
-              style={{ ...S.btn, width: "100%", padding: "11px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#8aa3a6", background: "transparent", border: "none" }}>{L.cancelWord}</button>
+              style={{ ...S.btn, width: "100%", padding: "11px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#8aa3a6", background: "transparent", border: "none" }}>{L.cancel}</button>
           </div>
         </div>
       )}
