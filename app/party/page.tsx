@@ -630,7 +630,7 @@ const T = {
     sameAgainTitle: "🔁 Zelfde als vorig rondje",
     sameAgainTake: "Overnemen",
     sameAgainEdit: "daarna nog aanpasbaar",
-    leaveNoNameTitle: "Deze avond bewaren?",
+    leaveNoNameTitle: "Dit groepje bewaren?",
     leaveAutoSub: "We noemen hem naar de datum, tenzij je zelf iets typt.",
     leaveRoundLine: (n: number, d: number) => `Rondje ${n} · ${d} drankje${d === 1 ? "" : "s"}`,
     closeNeedName: "Geef je groep een naam om ze te bewaren in je lijst.",
@@ -782,7 +782,7 @@ const T = {
     canAlsoLater: "Kan ook later",
     backToOverviewHint: "Er zijn nog rondjes om af te werken.",
     toRoundsOverview: "Naar het rondjesoverzicht",
-    nameLockedNote: "🔒 vast — de avond is afgesloten",
+    nameLockedNote: "🔒 vast — het groepje is afgesloten",
     editNamesBtn: "✏️ Namen aanpassen",
     doneNamesBtn: "✓ Klaar met namen",
     editNamesHint: "Pas de namen aan — ze veranderen overal mee, ook in al toegewezen drankjes.",
@@ -805,13 +805,20 @@ const T = {
     filterAll: "Alle",
     moreGroups: (n: number) => `meer groepen (${n}) ▾`,
     lessGroups: "▴ minder tonen",
-    extendMsg: (naam: string, datum: string) => `"${naam}" 30 dagen langer bewaren? De avond blijft dan staan tot ${datum}.`,
+    extendMsg: (naam: string, datum: string) => `"${naam}" 30 dagen langer bewaren? Het groepje blijft dan staan tot ${datum}.`,
     extendYes: "+30 dagen",
     unpinMsg: (naam: string) => `"${naam}" staat voor onbepaalde tijd bewaard. Losmaken? Dan verdwijnt hij na een tijdje vanzelf.`,
-    closeEveBtn: "🌙 Avond afsluiten",
-    eveClosedTitle: "🌙 Avond afgesloten ✓",
-    eveClosedSub: "Alles staat veilig bewaard — je vindt deze avond terug bij Opgeslagen groepen.",
+    // "Avond" klopte niet altijd: een lunch of een namiddag op een terras is geen
+    // avond. En "veilig bewaard" was een belofte zonder termijn, terwijl het groepje
+    // na zeven dagen verdwijnt. Nu zegt de kop wat er gebeurd is in plaats van wanneer,
+    // en staat de termijn erbij met de uitweg ernaast.
+    closeEveBtn: "Groepje afsluiten",
+    eveClosedTitle: "🍻 Alles verrekend ✓",
+    eveClosedSub: "Je groepje staat 7 dagen bij Opgeslagen groepen. Wil je het langer houden, deel de afrekening dan nu.",
     shareBillBtn: "📤 Afrekening delen",
+    shareRoundsHead: (n: number) => `De ${n} ${n === 1 ? "ronde" : "rondjes"}:`,
+    shareRoundLabel: (n: number) => `Rondje ${n}`,
+    shareFetchedBy: (naam: string) => `${naam} haalde`,
     copiedNote: "Afrekening gekopieerd — plak ze in jullie groepschat.",
     namesMissing: (n: number) => `${n} ${n === 1 ? "persoon heeft" : "personen hebben"} nog geen naam. Vul die aan via ⚙️ Groep, anders staat er straks "Plaats 3" op de afrekening.`,
     someUnassigned: (n: number) => `🔴 ${n} ${n === 1 ? "drankje" : "drankjes"} nog zonder naam`,
@@ -1232,7 +1239,7 @@ const T = {
     orderedLabel: "Besteld",
     barlistBtn: "handig barlijstje",
     potClamped: (b: string) => `De pot kon maar ${b} dekken — de rest van het rondje telt zonder pot.`,
-    thanksClosed: "🍻 Bedankt en tot de volgende! Je avond blijft bewaard bij Opgeslagen groepen.",
+    thanksClosed: "🍻 Bedankt en tot de volgende! Je groepje staat 7 dagen bij Opgeslagen groepen.",
     cancelledBy: (naam: string) => `✕ ${naam} annuleerde het rondje.`,
     runnerDoneBtn: "🍻 Rondje afronden en halen",
     runnerDoneNote: (naam: string) => `✓ Bestelling bevestigd — ${naam} gaat halen. Proost!`,
@@ -1347,8 +1354,11 @@ const T = {
     youGetStill: "Jij krijgt nog",
     provisionalGuest: (seq: number) => `Rondje ${seq} heeft nog geen bedrag. De cijfers hieronder kunnen dus nog wijzigen.`,
     provisionalGuestMine: (seq: number) => `Rondje ${seq} heeft nog geen bedrag — jij haalde dat rondje.`,
-    nightClosedTitle: "De avond is afgesloten",
+    nightClosedTitle: "Alles is verrekend",
     nightClosedBody: "Alle bedragen staan vast. Hieronder zie je wie wat aan wie betaalt.",
+    // De gast hoort dezelfde termijn als de beheerder, en krijgt dezelfde uitweg:
+    // deel de afrekening en je houdt ze zelf bij.
+    guestKeepNote: "Dit groepje staat 7 dagen bij Opgeslagen groepen. Wil je de afrekening houden, deel ze dan nu.",
     seeFinalBtn: "Bekijk de eindafrekening",
     finalWord: "definitief",
     reopenNight: "Heropenen om nog te wijzigen",
@@ -1691,13 +1701,16 @@ const T = {
     filterAll: "Tous",
     moreGroups: (n: number) => `plus de groupes (${n}) ▾`,
     lessGroups: "▴ en voir moins",
-    extendMsg: (naam: string, datum: string) => `Garder "${naam}" 30 jours de plus ? La soirée restera jusqu’au ${datum}.`,
+    extendMsg: (naam: string, datum: string) => `Garder "${naam}" 30 jours de plus ? Le groupe restera jusqu’au ${datum}.`,
     extendYes: "+30 jours",
     unpinMsg: (naam: string) => `"${naam}" est gardé pour une durée indéterminée. Détacher ? Il disparaîtra alors après un temps.`,
-    closeEveBtn: "🌙 Clôturer la soirée",
-    eveClosedTitle: "🌙 Soirée clôturée ✓",
-    eveClosedSub: "Tout est bien enregistré — tu retrouves cette soirée dans Groupes enregistrés.",
+    closeEveBtn: "Clôturer le groupe",
+    eveClosedTitle: "🍻 Tout est réglé ✓",
+    eveClosedSub: "Ton groupe reste 7 jours dans Groupes enregistrés. Tu veux le garder plus longtemps ? Partage le décompte maintenant.",
     shareBillBtn: "📤 Partager le décompte",
+    shareRoundsHead: (n: number) => `Les ${n} ${n === 1 ? "tournée" : "tournées"} :`,
+    shareRoundLabel: (n: number) => `Tournée ${n}`,
+    shareFetchedBy: (naam: string) => `${naam} a payé`,
     copiedNote: "Décompte copié — colle-le dans votre chat de groupe.",
     namesMissing: (n: number) => `${n} personne${n === 1 ? "" : "s"} sans nom. Complète via ⚙️ Groupe, sinon le décompte affichera « Place 3 ».`,
     someUnassigned: (n: number) => `🔴 ${n} boisson${n === 1 ? "" : "s"} sans nom`,
@@ -2119,7 +2132,7 @@ const T = {
     orderedLabel: "Command\u00e9",
     barlistBtn: "liste bar pratique",
     potClamped: (b: string) => `La cagnotte n'a pu couvrir que ${b} — le reste de la tournée compte hors cagnotte.`,
-    thanksClosed: "🍻 Merci et à la prochaine ! Ta soirée reste dans Groupes enregistrés.",
+    thanksClosed: "🍻 Merci et à la prochaine ! Ton groupe reste 7 jours dans Groupes enregistrés.",
     cancelledBy: (naam: string) => `✕ ${naam} a annulé la tournée.`,
     runnerDoneBtn: "🍻 Clôturer la tournée et aller la chercher",
     runnerDoneNote: (naam: string) => `✓ Commande confirmée — ${naam} va la chercher. Santé !`,
@@ -2233,8 +2246,9 @@ const T = {
     youGetStill: "Tu récupères",
     provisionalGuest: (seq: number) => `La tournée ${seq} n'a pas encore de montant. Les chiffres peuvent encore changer.`,
     provisionalGuestMine: (seq: number) => `La tournée ${seq} n'a pas encore de montant — c'est toi qui l'as ramenée.`,
-    nightClosedTitle: "La soirée est clôturée",
+    nightClosedTitle: "Tout est réglé",
     nightClosedBody: "Tous les montants sont fixés. Voici qui doit quoi à qui.",
+    guestKeepNote: "Ce groupe reste 7 jours dans Groupes enregistrés. Tu veux garder le décompte ? Partage-le maintenant.",
     seeFinalBtn: "Voir le décompte final",
     finalWord: "définitif",
     reopenNight: "Rouvrir pour modifier",
@@ -5729,12 +5743,32 @@ export default function PartyTest() {
   }
   // De eindafrekening als deelbaar tekstje: per persoon het eerlijke bedrag, plus wie
   // aan wie overschrijft. Via het deelmenu van de telefoon; op desktop naar het klembord.
+  // Wat je deelt, is ook wat je overhoudt: het groepje zelf verdwijnt na zeven dagen.
+  // Daarom staat het rondjesoverzicht er nu bij — anders blijft er van een lange avond
+  // niets over dan "Lisa → Wim: €6,25", en weet niemand later nog waar het over ging.
   const deelAfrekening = async () => {
     const regels: string[] = [`🍻 ${groupName.trim() || L.autoName()}`]
     people.forEach((pp) => { const b = consumption(pp.id) + cupOwn(pp.id) + cardLossPer; regels.push(`• ${pp.name}: ${euro(Math.round(b * 100) / 100)}`) })
     if (settlement.tx.length > 0) {
       regels.push("")
       settlement.tx.forEach((t) => regels.push(`${t.from} → ${t.to}: ${euro(t.amount)}`))
+    }
+    // De rondjes, in volgorde: wie haalde, wat het kostte, en wat erin zat. Wie niets
+    // aanduidde krijgt geen lege regel — dan staat er alleen het rondje.
+    const echte = rounds.filter((r) => (r.amount || 0) > 0.005 || drinks.some((d) => drinkTotalRound(r, d.id) > 0))
+    if (echte.length > 0) {
+      regels.push(""); regels.push(L.shareRoundsHead(echte.length))
+      echte.forEach((r, i) => {
+        const haler = people.find((pp) => pp.id === r.startedBy)?.name
+        const kop = [`${L.shareRoundLabel(r.seq || i + 1)}`, haler ? L.shareFetchedBy(haler) : null, euro(Math.round((r.amount || 0) * 100) / 100)]
+          .filter(Boolean).join(" · ")
+        regels.push(kop)
+        const inhoud = drinks
+          .map((d) => ({ naam: d.name, n: drinkTotalRound(r, d.id) }))
+          .filter((x) => x.n > 0)
+          .map((x) => `${x.n}× ${x.naam}`)
+        if (inhoud.length > 0) regels.push(`   ${inhoud.join(", ")}`)
+      })
     }
     regels.push(""); regels.push("— Rundo")
     const tekst = regels.join("\n")
@@ -9255,6 +9289,14 @@ export default function PartyTest() {
                     <div style={{ fontSize: 16, fontWeight: 800, color: "#1f6b3a" }}>🍻 {L.nightClosedTitle}</div>
                     <div style={{ fontSize: 13.5, color: "#4a5560", lineHeight: 1.45, margin: "3px 0 10px" }}>{L.nightClosedBody}</div>
                     <button onClick={() => setGuestSettlePage(true)} style={{ ...S.btnP, padding: "10px 14px", fontSize: 15.5 }}>{L.seeFinalBtn}</button>
+                    {/* De gast hoorde nergens hoe lang dit blijft staan: zijn groepje
+                        verdween na zeven dagen zonder uitleg. Nu staat de termijn er, met
+                        dezelfde uitweg als de beheerder heeft — de afrekening delen. */}
+                    <div style={{ borderTop: "1px solid rgba(31,138,76,0.25)", marginTop: 11, paddingTop: 10 }}>
+                      <div style={{ fontSize: 13, color: "#4a5560", lineHeight: 1.45, marginBottom: 8 }}>{L.guestKeepNote}</div>
+                      <button onClick={() => { void deelAfrekening() }}
+                        style={{ ...S.btn, width: "100%", padding: "9px 12px", fontSize: 14.5, fontWeight: 800, background: "#fff", color: "#1f6b3a", border: "1.5px solid rgba(31,138,76,0.5)" }}>{L.shareBillBtn}</button>
+                    </div>
                   </div>
                 )}
                 {/* De afrekening is een eigen pagina, geen uitklapblok: je opent ze één keer
