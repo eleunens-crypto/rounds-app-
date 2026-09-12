@@ -109,12 +109,13 @@ function WisIcoon({ size = 18 }: { size?: number }) {
 }
 
 const DAG_MS = 24 * 60 * 60 * 1000
-// Veertien dagen, en voor een afgesloten rekening geteld vanaf het afsluiten — niet
-// vanaf het aanmaken. Anders verkórt afsluiten de levensduur: sloot je op dag zes af,
-// dan was de rekening de dag erna weg. De bonfoto gaat er veel vroeger uit: die weegt
-// honderd keer meer dan alle rijen samen en je hebt hem na het afsluiten niet meer nodig.
-const BEWAAR_AFGESLOTEN = 14 * DAG_MS
-const BEWAAR_OPEN = 14 * DAG_MS
+// Zeven dagen, en voor een afgesloten rekening geteld vanaf het afsluiten — niet vanaf
+// het aanmaken. Anders verkórt afsluiten de levensduur: sloot je op dag zes af, dan was
+// de rekening de dag erna weg. De bonfoto volgt dezelfde termijn, dus zolang de rekening
+// bestaat kan je haar bon er nog bij halen. Die foto weegt honderd keer meer dan alle
+// rijen samen, en dat is ook waarom het bij zeven dagen blijft en niet meer.
+const BEWAAR_AFGESLOTEN = 7 * DAG_MS
+const BEWAAR_OPEN = 7 * DAG_MS
 
 // Beheerder is een rol, geen probleem — dus geen rood. Een cursieve schreefletter naast
 // de schreefloze naam leest als een handgeschreven aantekening: het valt op zonder te
@@ -603,7 +604,7 @@ const STRINGS = {
     togetherWhat: (n: number) => n === 2
       ? "Deze twee betalen samen: ze nemen één plaats in aan tafel en krijgen op het einde één bedrag te zien, niet elk apart."
       : `Deze ${n} betalen samen: ze nemen één plaats in aan tafel en krijgen op het einde één bedrag te zien.`,
-    retentionNote: "Elke rekening blijft 14 dagen staan en verdwijnt dan vanzelf. De bonfoto gaat er na 7 dagen uit.",
+    retentionNote: "Elke rekening blijft 7 dagen staan, met de bonfoto erbij, en verdwijnt dan vanzelf.",
     searchGroups: "Zoek een rekening…",
     daysLeft: (n: number) => n <= 0 ? "vandaag weg" : n === 1 ? "nog 1 dag" : `nog ${n} dagen`,
     noSearchHit: "Geen rekening gevonden.",
@@ -1030,13 +1031,13 @@ const STRINGS = {
     settleSaveBtn: "🔒 Sluit af en bewaar",
     settleAskTitle: "Ben je zeker?",
     settleAskBody: "Is alles verrekend en heeft iedereen betaald? Daarna verandert er niets meer aan deze rekening.",
-    settleAskKeep: "Je groepje blijft daarna 14 dagen op het startscherm staan, onder \u201cJouw groepen\u201d.",
+    settleAskKeep: "Je groepje blijft daarna 7 dagen op het startscherm staan, onder \u201cJouw groepen\u201d.",
     settleAskYes: "Ja, sluit af en bewaar",
     settleDoneTitle: "Alles verrekend",
     settleDoneKeepTitle: "📂 Bewaard",
     // Kort en hetzelfde voor beheerder en gast: waar het staat, en niets over codes of
     // links — daar hoef je niets voor te doen.
-    settleDoneKeep: "Je groepje staat 14 dagen op het startscherm, onder \u201cJouw groepen\u201d. Daarna wordt het automatisch gewist.",
+    settleDoneKeep: "Je groepje staat 7 dagen op het startscherm, onder \u201cJouw groepen\u201d. Daarna wordt het automatisch gewist.",
     settleShareHint: "Wil je het langer houden, deel het dan nu.",
     settleShareBtn: "Deel het overzicht",
     settleShareCopied: "Overzicht gekopieerd — plak het waar je wil",
@@ -1305,7 +1306,7 @@ const STRINGS = {
     togetherWhat: (n: number) => n === 2
       ? "Ces deux-là paient ensemble : ils occupent une seule place à table et verront un seul montant à la fin, pas chacun le sien."
       : `Ces ${n} paient ensemble : ils occupent une seule place à table et verront un seul montant à la fin.`,
-    retentionNote: "Chaque addition reste 14 jours, puis disparaît d\u2019elle-même. La photo du ticket part après 7 jours.",
+    retentionNote: "Chaque addition reste 7 jours, photo du ticket incluse, puis disparaît d\u2019elle-même.",
     searchGroups: "Chercher une addition…",
     daysLeft: (n: number) => n <= 0 ? "part aujourd’hui" : n === 1 ? "encore 1 jour" : `encore ${n} jours`,
     noSearchHit: "Aucune addition trouvée.",
@@ -1729,11 +1730,11 @@ const STRINGS = {
     settleSaveBtn: "🔒 Clôturer et garder",
     settleAskTitle: "Tu es sûr ?",
     settleAskBody: "Tout est réglé et tout le monde a payé ? Ensuite, plus rien ne change sur cette addition.",
-    settleAskKeep: "Ton groupe reste ensuite 14 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb.",
+    settleAskKeep: "Ton groupe reste ensuite 7 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb.",
     settleAskYes: "Oui, clôturer et garder",
     settleDoneTitle: "Tout est réglé",
     settleDoneKeepTitle: "📂 Gardé",
-    settleDoneKeep: "Ton groupe reste 14 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb. Ensuite il est effacé automatiquement.",
+    settleDoneKeep: "Ton groupe reste 7 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb. Ensuite il est effacé automatiquement.",
     settleShareHint: "Tu veux le garder plus longtemps ? Partage-le maintenant.",
     settleShareBtn: "Partager le récapitulatif",
     settleShareCopied: "Récapitulatif copié — colle-le où tu veux",
