@@ -13,7 +13,7 @@ import { useLang, LanguageToggle, getLang } from "@/lib/i18n"
 // `pinned` stond alleen in SavedGroup, terwijl select("*") hem hier ook meebrengt.
 // Hij betekent nu twee dingen die samenvallen: de groep blijft bewaard (de opruiming
 // slaat hem over) én de beheerder verklaarde alles verrekend.
-type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; disputed_by?: string | null; pinned?: boolean | null; created_at?: string }
+type Group = { id: string; name: string; invite_code: string; owner_id: string; receipt_url?: string | null; party_size?: number | null; receipt_total?: number | null; finalized?: boolean | null; finalized_at?: string | null; disputed_by?: string | null; pinned?: boolean | null; created_at?: string }
 type Participant = { id: string; name: string; group_id: string; self_joined?: boolean; seats?: number | null; created_at?: string }
 type BillItem = {
   id: string
@@ -96,28 +96,8 @@ function getLastGroup(): string | null {
   if (typeof window === "undefined") return null
   return localStorage.getItem(LAST_GROUP_KEY)
 }
+type SavedGroup = { id: string; name: string; invite_code: string; role: "admin" | "gast"; savedAt: number; created_at?: string; finalized?: boolean | null; finalized_at?: string | null; pinned?: boolean | null }
 
-type SavedGroup = { id: string; name: string; invite_code: string; role: "admin" | "gast"; savedAt: number; created_at?: string; finalized?: boolean | null; pinned?: boolean | null }
-// Bewaarbeleid. Een tafelrekening is één avond, dus created_at is een prima maatstaf —
-// daarvoor is geen extra kolom nodig. De bonfoto verdwijnt véél eerder dan de rekening
-// zelf: zodra alles is afgerekend heeft die scan zijn werk gedaan, en één foto weegt
-// ongeveer even zwaar als tien complete rekeningen.
-// Dezelfde getekende iconen als in Party: gelijk op elk toestel, en ze nemen de kleur van
-// de knop over. De streep bij "niet bewaard" krijgt een witte lijn eronder, anders
-// verdwijnt hij half in de gevulde vorm.
-function BewaarIcoon({ aan, size = 19 }: { aan: boolean; size?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: "block" }}>
-      <path d="M4.5 6A1.5 1.5 0 0 1 6 4.5h9.6L19.5 8.4V18a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 18z" fill="currentColor" />
-      <path d="M9.2 5.4v3.2h5.6V5.4z" fill="#fff" />
-      <path d="M8.4 13.4h7.2v5.2H8.4z" fill="#fff" />
-      {!aan && (<>
-        <path d="M3.4 20.6L20.6 3.4" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" />
-        <path d="M3.4 20.6L20.6 3.4" stroke="#4a6e73" strokeWidth="1.7" strokeLinecap="round" />
-      </>)}
-    </svg>
-  )
-}
 function WisIcoon({ size = 18 }: { size?: number }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block" }}>
@@ -129,10 +109,13 @@ function WisIcoon({ size = 18 }: { size?: number }) {
 }
 
 const DAG_MS = 24 * 60 * 60 * 1000
-const BEWAAR_AFGESLOTEN = 7 * DAG_MS
+// Veertien dagen, en voor een afgesloten rekening geteld vanaf het afsluiten — niet
+// vanaf het aanmaken. Anders verkórt afsluiten de levensduur: sloot je op dag zes af,
+// dan was de rekening de dag erna weg. De bonfoto gaat er veel vroeger uit: die weegt
+// honderd keer meer dan alle rijen samen en je hebt hem na het afsluiten niet meer nodig.
+const BEWAAR_AFGESLOTEN = 14 * DAG_MS
 const BEWAAR_OPEN = 14 * DAG_MS
 const BEWAAR_FOTO = 7 * DAG_MS
-const MAX_PINS = 3
 
 // Beheerder is een rol, geen probleem — dus geen rood. Een cursieve schreefletter naast
 // de schreefloze naam leest als een handgeschreven aantekening: het valt op zonder te
@@ -621,14 +604,8 @@ const STRINGS = {
     togetherWhat: (n: number) => n === 2
       ? "Deze twee betalen samen: ze nemen één plaats in aan tafel en krijgen op het einde één bedrag te zien, niet elk apart."
       : `Deze ${n} betalen samen: ze nemen één plaats in aan tafel en krijgen op het einde één bedrag te zien.`,
-    pinTitle: "Bewaren — wordt niet automatisch opgeruimd",
-    unpinTitle: "Niet meer bewaren",
-    pinFailed: "Vastzetten mislukt.",
-    maxPins: (n: number) => `Je kan maximaal ${n} rekeningen vastzetten. Maak er eerst een los.`,
-    retentionNote: "Bewaarde rekeningen blijven staan. De rest verdwijnt na 7 dagen — net als de bonfoto.",
+    retentionNote: "Elke rekening blijft 14 dagen staan en verdwijnt dan vanzelf. De bonfoto gaat er na 7 dagen uit.",
     searchGroups: "Zoek een rekening…",
-    groupsSaved: "Bewaard",
-    groupsRecent: "Recent · verdwijnt vanzelf",
     daysLeft: (n: number) => n <= 0 ? "vandaag weg" : n === 1 ? "nog 1 dag" : `nog ${n} dagen`,
     noSearchHit: "Geen rekening gevonden.",
     wipeAll: "Alles wissen",
@@ -1054,13 +1031,22 @@ const STRINGS = {
     settleSaveBtn: "🔒 Sluit af en bewaar",
     settleAskTitle: "Ben je zeker?",
     settleAskBody: "Is alles verrekend en heeft iedereen betaald? Daarna verandert er niets meer aan deze rekening.",
-    settleAskKeep: "Je groepje blijft daarna bewaard op het startscherm, onder \u201cJouw groepen\u201d.",
+    settleAskKeep: "Je groepje blijft daarna 14 dagen op het startscherm staan, onder \u201cJouw groepen\u201d.",
     settleAskYes: "Ja, sluit af en bewaar",
     settleDoneTitle: "Alles verrekend",
     settleDoneKeepTitle: "📂 Bewaard",
     // Kort en hetzelfde voor beheerder en gast: waar het staat, en niets over codes of
     // links — daar hoef je niets voor te doen.
-    settleDoneKeep: "Je groepje staat bewaard op het startscherm, onder \u201cJouw groepen\u201d.",
+    settleDoneKeep: "Je groepje staat 14 dagen op het startscherm, onder \u201cJouw groepen\u201d. Daarna wordt het automatisch gewist.",
+    settleShareHint: "Wil je het langer houden, deel het dan nu.",
+    settleShareBtn: "Deel het overzicht",
+    settleShareCopied: "Overzicht gekopieerd — plak het waar je wil",
+    settleShareFailed: "Kopiëren lukte niet. Probeer het opnieuw.",
+    // Kop van de tekst die je deelt, plus de regel per persoon en de sluitregel.
+    shareHead: (naam: string) => `${naam || "Rekening"} — verdeling`,
+    shareLine: (naam: string, bedrag: string) => `${naam}: €${bedrag}`,
+    shareTotal: (bedrag: string) => `Samen: €${bedrag}`,
+    shareFoot: "Verdeeld met Rundo Resto",
     tryRundoTitle: "Probeer ook Rundo eens!",
     settleGuestTitle: "De rekening is verrekend",
     settleGuestBody: "De beheerder heeft alles afgerond. Je bedrag hieronder blijft staan zoals het is.",
@@ -1320,14 +1306,8 @@ const STRINGS = {
     togetherWhat: (n: number) => n === 2
       ? "Ces deux-là paient ensemble : ils occupent une seule place à table et verront un seul montant à la fin, pas chacun le sien."
       : `Ces ${n} paient ensemble : ils occupent une seule place à table et verront un seul montant à la fin.`,
-    pinTitle: "Enregistrer — ne sera pas supprimé automatiquement",
-    unpinTitle: "Ne plus enregistrer",
-    pinFailed: "Épinglage échoué.",
-    maxPins: (n: number) => `Tu peux épingler ${n} additions au maximum. Détaches-en une d’abord.`,
-    retentionNote: "Les additions enregistrées restent. Le reste disparaît après 7 jours — comme la photo du ticket.",
+    retentionNote: "Chaque addition reste 14 jours, puis disparaît d\u2019elle-même. La photo du ticket part après 7 jours.",
     searchGroups: "Chercher une addition…",
-    groupsSaved: "Enregistré",
-    groupsRecent: "Récent · disparaît tout seul",
     daysLeft: (n: number) => n <= 0 ? "part aujourd’hui" : n === 1 ? "encore 1 jour" : `encore ${n} jours`,
     noSearchHit: "Aucune addition trouvée.",
     wipeAll: "Tout effacer",
@@ -1750,11 +1730,19 @@ const STRINGS = {
     settleSaveBtn: "🔒 Clôturer et garder",
     settleAskTitle: "Tu es sûr ?",
     settleAskBody: "Tout est réglé et tout le monde a payé ? Ensuite, plus rien ne change sur cette addition.",
-    settleAskKeep: "Ton groupe reste ensuite gardé sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb.",
+    settleAskKeep: "Ton groupe reste ensuite 14 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb.",
     settleAskYes: "Oui, clôturer et garder",
     settleDoneTitle: "Tout est réglé",
     settleDoneKeepTitle: "📂 Gardé",
-    settleDoneKeep: "Ton groupe est gardé sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb.",
+    settleDoneKeep: "Ton groupe reste 14 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb. Ensuite il est effacé automatiquement.",
+    settleShareHint: "Tu veux le garder plus longtemps ? Partage-le maintenant.",
+    settleShareBtn: "Partager le récapitulatif",
+    settleShareCopied: "Récapitulatif copié — colle-le où tu veux",
+    settleShareFailed: "La copie n\u2019a pas fonctionné. Réessaie.",
+    shareHead: (naam: string) => `${naam || "Addition"} — répartition`,
+    shareLine: (naam: string, bedrag: string) => `${naam} : €${bedrag}`,
+    shareTotal: (bedrag: string) => `Ensemble : €${bedrag}`,
+    shareFoot: "Partagé avec Rundo Resto",
     tryRundoTitle: "Essaie aussi Rundo !",
     settleGuestTitle: "L\u2019addition est réglée",
     settleGuestBody: "L\u2019hôte a tout clôturé. Ton montant ci-dessous reste tel quel.",
@@ -2101,7 +2089,7 @@ export default function RundoTable() {
   const laadMijnGroepen = useCallback(async () => {
     const dev = getOrCreateOwnerId()
     const lokaal = getMyGroups()
-    const kolommen = "id,name,invite_code,finalized,pinned,created_at,receipt_url"
+    const kolommen = "id,name,invite_code,finalized,finalized_at,pinned,created_at,receipt_url"
     const { data: eigen } = await supabase.from("table_groups").select(kolommen).eq("owner_id", dev)
     const gastIds = lokaal.filter((x) => x.role === "gast").map((x) => x.id)
       .filter((id) => !(eigen || []).some((g: { id: string }) => g.id === id))
@@ -2112,10 +2100,18 @@ export default function RundoTable() {
     }
 
     const nu = Date.now()
-    const ouderdom = (g: Record<string, unknown>) => nu - new Date((g.created_at as string) || 0).getTime()
+    // Een afgesloten rekening telt vanaf het afsluiten, een open vanaf het aanmaken.
+    // Ontbreekt finalized_at (oude rijen van voor die kolom), dan valt hij terug op
+    // created_at — dan gedraagt hij zich als vroeger in plaats van nooit te verdwijnen.
+    const ouderdom = (g: Record<string, unknown>) => {
+      const anker = (g.finalized ? (g.finalized_at as string) : "") || (g.created_at as string) || 0
+      return nu - new Date(anker).getTime()
+    }
 
-    // Opruimen — alleen wat van jou is, en nooit wat je vastzette.
-    const wissen = (eigen || []).filter((g: Record<string, unknown>) => !g.pinned &&
+    // Opruimen — alleen wat van jou is. Vastzetten bestaat niet meer: bewaren gebeurt
+    // vanzelf, en na de termijn gaat alles weg. Anders zou een afgeronde rekening voor
+    // altijd blijven staan, want "afgerond" gebruikt dezelfde kolom als het oude pinnen.
+    const wissen = (eigen || []).filter((g: Record<string, unknown>) =>
       ouderdom(g) > (g.finalized ? BEWAAR_AFGESLOTEN : BEWAAR_OPEN))
     for (const g of wissen) { await wisGroepVolledig(g.id as string); removeMyGroup(g.id as string) }
 
@@ -2130,12 +2126,12 @@ export default function RundoTable() {
     const maak = (g: Record<string, unknown>, role: "admin" | "gast"): SavedGroup => ({
       id: g.id as string, name: (g.name as string) || "", invite_code: (g.invite_code as string) || "",
       role, savedAt: new Date((g.created_at as string) || 0).getTime(),
-      created_at: g.created_at as string, finalized: g.finalized as boolean, pinned: g.pinned as boolean,
+      created_at: g.created_at as string, finalized: g.finalized as boolean, finalized_at: g.finalized_at as string, pinned: g.pinned as boolean,
     })
     const lijst = [
       ...(eigen || []).filter((g: Record<string, unknown>) => !wissen.some((w: Record<string, unknown>) => w.id === g.id)).map((g: Record<string, unknown>) => maak(g, "admin")),
       ...gasten.map((g) => maak(g, "gast")),
-    ].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.savedAt - a.savedAt)
+    ].sort((a, b) => b.savedAt - a.savedAt)
     setMyGroups(lijst)
   }, [])
 
@@ -2530,16 +2526,7 @@ export default function RundoTable() {
 
   // Vastzetten beschermt tegen de automatische opruiming. Beperkt tot MAX_PINS, anders
   // zet je uit gewoonte alles vast en ruimt er nooit meer iets op.
-  const togglePin = async (g: SavedGroup) => {
-    if (g.role !== "admin") return
-    if (!g.pinned && myGroups.filter((x) => x.pinned).length >= MAX_PINS) { setToast(L.maxPins(MAX_PINS)); return }
-    const { error } = await supabase.from("table_groups").update({ pinned: !g.pinned }).eq("id", g.id)
-    if (error) { setToast(L.pinFailed); return }
-    setMyGroups((prev) => prev.map((x) => x.id === g.id ? { ...x, pinned: !x.pinned } : x))
-  }
-
-  // Alles wissen in één keer. Bewaarde rekeningen zitten er niet bij, en een mislukking
-  // op één rekening mag de rest niet tegenhouden.
+  // Alles wissen in één keer. Een mislukking op één rekening mag de rest niet tegenhouden.
   const wisAlleGroepen = async (lijst: SavedGroup[]) => {
     let mislukt = 0
     for (const g of lijst) {
@@ -2767,6 +2754,21 @@ export default function RundoTable() {
       try { localStorage.removeItem(sleutel) } catch { /* geen opslag */ }
     }
   }, [isAdmin, meId, group])
+
+  // Delen van het overzicht. Het systeemdeelvenster gebruiken we hier niet: bij de
+  // uitnodiging bleek dat het bericht te vaak ergens anders belandde of niet aankwam.
+  // Kopiëren en zelf plakken is voorspelbaar, en werkt in elke app.
+  const deelOverzicht = async () => {
+    if (!group) return
+    const regels = participants.map((p) => L.shareLine(naamVan(p), personTotal(p.id).settled.toFixed(2).replace(".", ",")))
+    const samen = participants.reduce((a, p) => a + personTotal(p.id).settled, 0)
+    const tekst = [L.shareHead(group.name), "", ...regels, "", L.shareTotal(samen.toFixed(2).replace(".", ",")), "", L.shareFoot].join("\n")
+    try {
+      if (!navigator.clipboard) { setToast(L.settleShareFailed); return }
+      await navigator.clipboard.writeText(tekst)
+      setToast(L.settleShareCopied)
+    } catch { setToast(L.settleShareFailed) }
+  }
 
   const flagDispute = async (name: string, on: boolean, comment = "") => {
     if (!group) return
@@ -4280,14 +4282,15 @@ export default function RundoTable() {
               {showSaved && (() => {
                 const zoek = groepZoek.trim().toLowerCase()
                 const past = (g: SavedGroup) => !zoek || (g.name || "").toLowerCase().includes(zoek)
-                const bewaard = myGroups.filter((g) => g.pinned && past(g))
-                const recent = myGroups.filter((g) => !g.pinned && past(g))
-                const wisbaar = myGroups.filter((g) => g.role === "admin" && !g.pinned)
-                const bewaardTotaal = myGroups.filter((g) => g.pinned).length
+                // Eén lijst. Vroeger stond hier "bewaard" boven "recent", maar bewaren is
+                // geen keuze meer — alles blijft even lang staan, dus een tweedeling zou
+                // een verschil suggereren dat er niet is.
+                const zichtbaar = myGroups.filter(past)
+                const wisbaar = myGroups.filter((g) => g.role === "admin")
                 const dagenOver = (g: SavedGroup) => {
-                  const basis = new Date(g.created_at ?? g.savedAt).getTime()
+                  const anker = (g.finalized && g.finalized_at) || g.created_at || g.savedAt
                   const grens = g.finalized ? BEWAAR_AFGESLOTEN : BEWAAR_OPEN
-                  return Math.ceil((grens - (Date.now() - basis)) / DAG_MS)
+                  return Math.ceil((grens - (Date.now() - new Date(anker).getTime())) / DAG_MS)
                 }
                 const rij = (g: SavedGroup) => (
                   <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -4295,13 +4298,9 @@ export default function RundoTable() {
                       <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
                       <span style={{ fontSize: 15.5, fontWeight: 700, color: g.role === "admin" ? "#0f7d90" : "#8aa3a6" }}>
                         {g.role === "admin" ? L.roleAdmin : L.roleGuest}{fmtDate(g.created_at ?? g.savedAt, lang) ? ` · ${fmtDate(g.created_at ?? g.savedAt, lang)}` : ""}
-                        {g.role === "admin" && !g.pinned && <span style={{ color: "#c0392b" }}> · {L.daysLeft(dagenOver(g))}</span>}
+                        {g.role === "admin" && <span style={{ color: "#8aa3a6" }}> · {L.daysLeft(dagenOver(g))}</span>}
                       </span>
                     </button>
-                    {g.role === "admin" && (
-                      <button onClick={() => togglePin(g)} title={g.pinned ? L.unpinTitle : L.pinTitle}
-                        style={{ ...S.iconBtn, flexShrink: 0, color: g.pinned ? "#0f7488" : "#7d999d", background: g.pinned ? "rgba(20,153,176,0.12)" : "#fff", border: g.pinned ? "1px solid rgba(20,153,176,0.45)" : "1px solid rgba(18,58,66,0.2)" }}><BewaarIcoon aan={!!g.pinned} /></button>
-                    )}
                     <button onClick={() => forgetSavedGroup(g.id)} title={L.deletePermanently}
                       style={{ ...S.iconBtn, flexShrink: 0, color: "#4a6e73" }}><WisIcoon /></button>
                   </div>
@@ -4316,29 +4315,15 @@ export default function RundoTable() {
                       {groepZoek && <span onClick={() => setGroepZoek("")} style={{ cursor: "pointer", fontSize: 15, color: "#8aa3a6", padding: "0 2px" }}>✕</span>}
                     </div>
                   )}
-                  {bewaard.length > 0 && (
-                    <div style={{ marginBottom: recent.length > 0 ? 12 : 0 }}>
-                      {/* Zelfde diskette als op de rijknoppen, zodat kop en knop
-                          zichtbaar over hetzelfde gaan — net als de bewaard-pill in Party. */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 800, color: "#0f7488", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}><BewaarIcoon aan size={13} /> {L.groupsSaved}</div>
-                      {bewaard.map(rij)}
-                    </div>
-                  )}
-                  {recent.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: "#8aa3a6", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>{L.groupsRecent}</div>
-                      {recent.map(rij)}
-                    </div>
-                  )}
-                  {bewaard.length + recent.length === 0 && (
+                  {zichtbaar.length > 0 && <div>{zichtbaar.map(rij)}</div>}
+                  {zichtbaar.length === 0 && (
                     <div style={{ fontSize: 15, color: "#8aa3a6", textAlign: "center", padding: "14px 0" }}>{L.noSearchHit}</div>
                   )}
-                  {/* Opruimen in één keer. Bewaarde rekeningen blijven staan — anders is die
-                      bewaarknop zinloos — en de bevestiging zegt hoeveel er weggaat. */}
+                  {/* Opruimen in één keer. Alles mag mee, want er is niets meer vastgezet. */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderTop: "1px solid rgba(18,58,66,0.08)", marginTop: 12, paddingTop: 11 }}>
                     <span style={{ fontSize: 14, color: "#8aa3a6", lineHeight: 1.45, minWidth: 0 }}>{L.retentionNote}</span>
                     {wisbaar.length > 0 && (
-                      <button onClick={() => askConfirm(L.wipeAllBody(wisbaar.length, bewaardTotaal), L.wipeAllYes(wisbaar.length), () => { void wisAlleGroepen(wisbaar) }, { title: L.wipeAllTitle, danger: true })}
+                      <button onClick={() => askConfirm(L.wipeAllBody(wisbaar.length, 0), L.wipeAllYes(wisbaar.length), () => { void wisAlleGroepen(wisbaar) }, { title: L.wipeAllTitle, danger: true })}
                         style={{ flexShrink: 0, border: "1px solid rgba(224,107,94,0.4)", color: "#c0392b", background: "#fff", borderRadius: 10, padding: "7px 11px", fontSize: 13.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.wipeAll}</button>
                     )}
                   </div>
@@ -6432,6 +6417,13 @@ export default function RundoTable() {
             <div style={{ background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "11px 13px" }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#0f7488", marginBottom: 4 }}>{L.settleDoneKeepTitle}</div>
               <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45 }}>{L.settleDoneKeep}</div>
+              {/* De uitweg voor wie het lánger wil houden: de verdeling gaat als tekst mee
+                  naar zijn eigen gesprek, en niet naar onze databank. */}
+              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45, marginTop: 7 }}>{L.settleShareHint}</div>
+              <button onClick={() => void deelOverzicht()}
+                style={{ ...S.btn, width: "100%", marginTop: 9, padding: "11px 0", fontSize: 15.5, fontWeight: 800, background: "#fff", color: "#0f7488", border: "1.5px solid rgba(20,153,176,0.45)" }}>
+                🔗 {L.settleShareBtn}
+              </button>
             </div>
             <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "16px 0 -4px" }}>{L.tryRundoTitle}</div>
             <div style={{ marginTop: 4 }}>{renderPartyVerwijzing()}</div>
@@ -6468,6 +6460,13 @@ export default function RundoTable() {
             <div style={{ background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "11px 13px" }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#0f7488", marginBottom: 4 }}>{L.settleDoneKeepTitle}</div>
               <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45 }}>{L.settleDoneKeep}</div>
+              {/* De uitweg voor wie het lánger wil houden: de verdeling gaat als tekst mee
+                  naar zijn eigen gesprek, en niet naar onze databank. */}
+              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45, marginTop: 7 }}>{L.settleShareHint}</div>
+              <button onClick={() => void deelOverzicht()}
+                style={{ ...S.btn, width: "100%", marginTop: 9, padding: "11px 0", fontSize: 15.5, fontWeight: 800, background: "#fff", color: "#0f7488", border: "1.5px solid rgba(20,153,176,0.45)" }}>
+                🔗 {L.settleShareBtn}
+              </button>
             </div>
             {/* De verwijzing kreeg een kopje: zonder dat leest dat zwarte blok als een
                 advertentie die er plots staat. Nu is het een uitnodiging. */}
