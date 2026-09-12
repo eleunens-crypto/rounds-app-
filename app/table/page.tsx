@@ -1044,6 +1044,11 @@ const STRINGS = {
     stickyTipNone: "Nog geen fooi",
     stickyTipSet: (b: string) => `Fooi €${b}`,
     stickyTipEdit: "wijzig",
+    showDetailsBtn: "Toon details",
+    closedBarTitle: "Rekening afgesloten",
+    reopenShort: "🔓 heropen",
+    disputeCtaTitle: "Klopt er iets niet?",
+    disputeCtaSub: "Tik hier en laat de beheerder weten wat er scheelt",
     statusBusy: "● bezig",
     statusNothing: "nog niets",
     todoTitle: "⚠️ Nog te regelen — wijs snel toe",
@@ -1729,6 +1734,11 @@ const STRINGS = {
     stickyTipNone: "Pas de pourboire",
     stickyTipSet: (b: string) => `Pourboire €${b}`,
     stickyTipEdit: "modifier",
+    showDetailsBtn: "Afficher les détails",
+    closedBarTitle: "Addition clôturée",
+    reopenShort: "🔓 rouvrir",
+    disputeCtaTitle: "Quelque chose ne va pas ?",
+    disputeCtaSub: "Touche ici et préviens l'hôte de ce qui ne colle pas",
     statusBusy: "● en cours",
     statusNothing: "rien encore",
     todoTitle: "⚠️ Encore à régler — attribue vite",
@@ -2703,7 +2713,9 @@ export default function RundoTable() {
     }
     await loadAll(group.id)
     setToast(on ? L.billClosedToast : L.billReopenedToast)
-    if (on) setAdminFinalPopup(true)
+    // Dichtgeklapt openen: je ziet eerst de namen met hun bedrag, en klapt zelf open
+    // wat je wil nakijken.
+    if (on) { setExpandedPeople(new Set()); setAdminFinalPopup(true) }
   }
 
   const flagDispute = async (name: string, on: boolean, comment = "") => {
@@ -5578,6 +5590,27 @@ export default function RundoTable() {
       )}
 
       {/* ─── Aantikken & bewerken (admin op overzicht-tab óf gast-hoofdscherm) ─── */}
+      {/* Afgesloten rekening: één balk die meeloopt terwijl je scrolt, met de melding én
+          het heropenen erin. Vroeger stonden die twee als losse blokken onderaan de
+          pagina — bij een lange rekening moest je er dus naartoe scrollen, en de melding
+          stond ver van waar je keek. Eén balk betekent ook: nergens twee keer hetzelfde. */}
+      {isAdmin && adminTab === "overview" && group.finalized && (
+        <div style={{ position: "sticky", top: 0, zIndex: 25, display: "flex", alignItems: "center", gap: 10,
+          margin: "0 0 12px", padding: "12px 13px", borderRadius: 14,
+          background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff",
+          boxShadow: "0 6px 18px -8px rgba(31,138,76,0.8)" }}>
+          <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>✓</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>{L.closedBarTitle}</span>
+            <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, opacity: 0.9, marginTop: 1 }}>€{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span>
+          </span>
+          <button onClick={() => finalizeBill(false)}
+            style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 12, padding: "9px 13px", color: "#fff", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap" }}>
+            {L.reopenShort}
+          </button>
+        </div>
+      )}
+
       {((isAdmin && adminTab === "overview") || !isAdmin) && (
         <>
           <ClaimScreen
@@ -5823,28 +5856,16 @@ export default function RundoTable() {
             </div>
           )}
 
-          {group.finalized && (
-            // Dit venster verscheen alleen op het moment van afsluiten en was daarna
-            // onbereikbaar, terwijl het het handigste overzicht is dat de app heeft.
-            <button onClick={() => setAdminFinalPopup(true)}
-              style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 16.5, fontWeight: 800, marginBottom: 9, background: "#fff", color: "#0f7d90", border: "1.5px solid rgba(20,153,176,0.45)" }}>
-              {L.perPersonOverview}
-            </button>
-          )}
-          {group.finalized ? (
-            <button onClick={() => finalizeBill(false)} style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, background: "linear-gradient(135deg,#f39c12,#e67e22)", border: "none", color: "#fff", boxShadow: "0 6px 16px -6px rgba(230,126,34,0.6)" }}>
-              {L.reopenBillTip}
-            </button>
-          ) : (
+          {/* De knop "overzicht per persoon" stond hier omdat het venster anders
+              onbereikbaar was. Dat overzicht staat nu gewoon op de pagina, en de melding
+              plus het heropenen zitten in de balk bovenaan die meeloopt. Alles wat hier
+              stond, staat dus al ergens — en dubbel is verwarrend. */}
+          {group.finalized ? null : (
             <button id="afsluit-knop" onClick={probeerAfsluiten} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
               {L.finalizeBtn}
             </button>
           )}
-          {group.finalized ? (
-            <div style={{ background: "rgba(39,174,96,0.10)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 12, padding: "11px 12px", marginTop: 9, marginBottom: 4, fontSize: 15.5, color: "#1f8a4c", lineHeight: 1.5, textAlign: "center" }}>
-              {L.finalizedNote}
-            </div>
-          ) : (
+          {group.finalized ? null : (
             <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 6, marginBottom: 4 }}>{L.notFinalizedNote}</div>
           )}
           <div style={{ textAlign: "center", marginTop: 10 }}>
@@ -6350,12 +6371,6 @@ export default function RundoTable() {
               <h3 style={{ fontSize: 21, fontWeight: 800, color: "#1f8a4c", margin: "0 0 4px" }}>{L.billClosedTitle}</h3>
               <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: 0 }}>{L.billClosedBody}</p>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-              <button onClick={() => setExpandedPeople((cur) => cur.size >= participants.length && participants.length > 0 ? new Set() : new Set(participants.map((p) => p.id)))}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14.5, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.4)", borderRadius: 10, padding: "8px 13px", cursor: "pointer" }}>
-                {(expandedPeople.size >= participants.length && participants.length > 0) ? `${L.hideDetails} ▴` : `${L.showDetails} ▾`}
-              </button>
-            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {participants.map((p) => {
                 const pt = personTotal(p.id)
@@ -6391,7 +6406,15 @@ export default function RundoTable() {
               <span style={{ fontSize: 17.5, fontWeight: 800, color: "#123a42" }}>{L.totalTogether}</span>
               <span style={{ fontSize: 20, fontWeight: 800, color: "#1f8a4c" }}>€{participants.reduce((a, p) => a + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
-            <button onClick={() => setAdminFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "12px 0", fontWeight: 800 }}>{L.closeWord}</button>
+            {/* "Sluiten" zei wat de knop met het venster doet; dit zegt wat je erna ziet.
+                Hij brengt je naar het overzicht per persoon op de pagina zelf, met iedereen
+                opengeklapt en de toewijslijst dicht. */}
+            <button onClick={() => {
+              setAdminFinalPopup(false)
+              setKlapToewijzenSignaal((n) => n + 1)
+              setExpandedPeople(new Set(participants.map((p) => p.id)))
+              if (typeof document !== "undefined") setTimeout(() => document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80)
+            }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.showDetailsBtn}</button>
               <div style={{ marginTop: 12 }}>{renderPartyVerwijzing()}</div>
           </div>
         </div>
@@ -7424,7 +7447,9 @@ function ClaimScreen(props: {
   const toonKnop = (open: boolean) => (
     <span style={{ flexShrink: 0, border: "1.5px solid rgba(20,153,176,0.4)", color: "#0f7d90", borderRadius: 9, padding: "6px 11px", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{open ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
   )
-  useEffect(() => { if (finalized) { setGastItemsOpen(false); setGastBevestigdOpen(false) } }, [finalized])
+  // Bij een afgesloten rekening is de verdeling van de tafel het enige dat nog telt:
+  // die staat dus open, en de twee blokken van tijdens het bestellen gaan dicht.
+  useEffect(() => { if (finalized) { setGastItemsOpen(false); setGastBevestigdOpen(false); setGastVerdelingOpen(true) } }, [finalized])
   // Twee momenten waarop een gast uitleg nodig heeft: net na zijn bevestiging (wat nu?)
   // en zodra de rekening dichtgaat (dit is je bedrag). De eerste kan hij altijd opnieuw
   // oproepen via het ⓘ naast de knop; de tweede verschijnt één keer vanzelf.
@@ -7433,38 +7458,25 @@ function ClaimScreen(props: {
   // Dezelfde balk boven én onder het scherm: waar je ook staat in je lijstje, je ziet dat
   // het definitief is én hoeveel het is, zonder iets te moeten openen. De twee links leiden
   // naar twee verschillende dingen: jouw eigen detail, en de verdeling van de hele tafel.
-  const afgeslotenBalk = (plek: "boven" | "onder") => {
+  // Eén balk, bovenaan, die meeloopt terwijl je scrolt: "afgesloten" en je bedrag
+  // blijven in beeld, en een tik erop geeft je details. De tweede balk onderaan met
+  // "Mijn deel" en "Iedereen" is weg — die zei hetzelfde nog een keer, en de verdeling
+  // van de tafel staat nu gewoon open op de pagina.
+  const afgeslotenBalk = () => {
     if (!finalized || isAdmin || !meId) return null
     const mijn = personTotal(meId)
-      // Boven een dunne strook die meescrollt: "afgesloten" en je bedrag blijven zo in
-      // beeld zonder een blok van 130 pixels mee te slepen. De knoppen staan één keer,
-      // in de volledige balk onderaan.
-      if (plek === "boven") {
-        return (
-          <div style={{ position: "sticky", top: 0, zIndex: 5, width: "100%", marginBottom: 12, display: "flex", alignItems: "center", gap: 10,
-            padding: "13px 14px", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -8px rgba(31,138,76,0.8)" }}>
-            <span style={{ fontSize: 15.5, fontWeight: 800, flexShrink: 0 }}>{L.closedShort}</span>
-            <span style={{ flex: 1, minWidth: 0 }} />
-            <button onClick={() => setShowFinalPopup(true)}
-              style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer",
-                background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 12, padding: "7px 12px", color: "#fff" }}>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>{L.yourShareWord}</span>
-              <span style={{ fontSize: 23, fontWeight: 800, whiteSpace: "nowrap", letterSpacing: -0.3 }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
-              <span style={{ fontSize: 14, opacity: 0.85 }}>›</span>
-            </button>
-          </div>
-        )
-      }
     return (
-      <div style={{ width: "100%", margin: "14px 0 0", padding: "13px 14px", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -6px rgba(31,138,76,0.55)" }}>
-        {/* Kop en bedrag staan al in de strook bovenaan die meescrollt; hier bleven ze
-            alleen maar herhalen. De balk houdt zijn twee knoppen. */}
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => setShowFinalPopup(true)}
-            style={{ flex: 1, minWidth: 0, cursor: "pointer", border: "none", background: "#fff", color: "#1f8a4c", borderRadius: 11, padding: "13px 6px", fontSize: 15.5, fontWeight: 800 }}>{L.myDetailsBtn}</button>
-          <button onClick={() => { setGastVerdelingOpen(true); setOpenGuestRows(new Set(participants.map((q) => q.id))); if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60) }}
-            style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "rgba(255,255,255,0.2)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 11, padding: "13px 6px", fontSize: 15.5, fontWeight: 800 }}>{L.everyoneBtn}</button>
-        </div>
+      <div style={{ position: "sticky", top: 0, zIndex: 5, width: "100%", marginBottom: 12, display: "flex", alignItems: "center", gap: 10,
+        padding: "13px 14px", borderRadius: 14, background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 18px -8px rgba(31,138,76,0.8)" }}>
+        <span style={{ fontSize: 15.5, fontWeight: 800, flexShrink: 0 }}>{L.closedShort}</span>
+        <span style={{ flex: 1, minWidth: 0 }} />
+        <button onClick={() => setShowFinalPopup(true)}
+          style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer",
+            background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 12, padding: "7px 12px", color: "#fff" }}>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>{L.yourShareWord}</span>
+          <span style={{ fontSize: 23, fontWeight: 800, whiteSpace: "nowrap", letterSpacing: -0.3 }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
+          <span style={{ fontSize: 14, opacity: 0.85 }}>›</span>
+        </button>
       </div>
     )
   }
@@ -7829,7 +7841,7 @@ function ClaimScreen(props: {
 
   return (
     <div>
-      {afgeslotenBalk("boven")}
+      {afgeslotenBalk()}
       {/* Zelfde vorm als de groene strook bij een afgesloten rekening, maar oranje: één
           plek bovenaan die zegt in welke stand de rekening staat, kleur zegt welke. */}
       {!finalized && reviewing && (
@@ -8040,6 +8052,10 @@ function ClaimScreen(props: {
       <div style={{ ...S.card, background: "linear-gradient(135deg,#fbfaff,#f1f2fb)", border: finalized ? "1px solid rgba(90,108,166,0.18)" : "1.5px solid rgba(20,153,176,0.35)" }}>
         {/* Tijdens het bestellen heet dit "dit ga ik bevestigen"; achteraf "wat ik
             bevestigde", dichtgeklapt maar nog op te vragen. */}
+        {/* Is de rekening afgesloten, dan hoort dit blok er niet meer: wat je bevestigde
+            is dan gewoon de verdeling, en die staat verderop voluit. Je eigen bedrag zit
+            in de groene balk bovenaan, één tik van het detail. */}
+        {!finalized && (<>
         <div onClick={() => setGastBevestigdOpen((v) => !v)}
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: gastBevestigdOpen ? 10 : 0 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
@@ -8079,35 +8095,15 @@ function ClaimScreen(props: {
           </div>
         )}
         </>)}
-        {/* Blok 3 — alleen wanneer de rekening dicht is. Hier staan de toeslagen wél bij,
-            want dit is het bedrag dat telt. */}
+        </>)}
+        {/* Is de rekening afgesloten, dan blijft hier alleen de definitieve verdeling van
+            de tafel staan. De eigen regels die hier stonden waren een derde keer hetzelfde:
+            ze staan in het venster achter de groene balk, en in de verdeling eronder. */}
         {finalized && (
-          <div id="gast-eindverdeling" style={{ marginTop: 16, paddingTop: 14, borderTop: "2px solid rgba(39,174,96,0.3)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 10 }}>
-              {blokBol(3, true)}
-              <span style={{ fontSize: 16.5, fontWeight: 800, color: "#1f8a4c" }}>3 · {L.finalSplitTitle}</span>
-            </div>
-            {personItems(meId).map((r, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "4px 0", borderBottom: "1px solid rgba(18,58,66,0.06)", fontSize: 16, color: "#2b4f56" }}>
-                <span style={{ minWidth: 0, display: "flex", alignItems: "baseline", gap: 5 }}>
-                  {/* De naam mag over twee regels lopen — afkappen zou woorden opeten die je op
-                      een bon net nodig hebt om het gerecht te herkennen. Het label staat als
-                      eigen kind ernaast met flexShrink 0, dus dat wordt nooit weggeduwd. */}
-                  <span style={{ minWidth: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.35 }}>{r.qty > 1 ? `${r.qty}× ` : ""}{r.name}</span>
-                  {r.viaAdmin && <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#a06b00" }}>{L.viaAdminTag}</span>}
-                </span>
-                <span style={{ flexShrink: 0, fontWeight: 700, color: "#123a42" }}>€{r.amount.toFixed(2).replace(".", ",")}</span>
-              </div>
-            ))}
-            {!finalized && (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "#fff", border: "2px solid rgba(20,153,176,0.45)", borderRadius: 14, padding: "13px 15px", margin: "11px 0 14px", boxShadow: "0 4px 14px -8px rgba(20,153,176,0.6)" }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7488", minWidth: 0 }}>{L.yourShareWord}</span>
-              <span style={{ fontSize: 32, fontWeight: 800, color: "#123a42", flexShrink: 0, letterSpacing: -0.5 }}>€{t.settled.toFixed(2).replace(".", ",")}</span>
-            </div>
-            )}
-            <div style={{ paddingTop: 12, borderTop: "1px solid rgba(90,108,166,0.18)" }}>
-            {/* De verdeling van de hele tafel is naslagwerk — dicht dus, tenzij je ze wil
-                nakijken. De knop "Iedereen" in de groene balk klapt precies dit open. */}
+          <div id="gast-eindverdeling">
+            <div>
+            {/* Bij een afgesloten rekening is dit de definitieve verdeling, en staat ze
+                open. Toeslagen en fooi zitten erin, want dit is het bedrag dat telt. */}
             <div onClick={() => {
                 // Het blok én alle persoonsrijen samen: anders stond er "verberg alles" terwijl
                 // er nog een rij openstond, of "toon alles" terwijl je niets zag.
@@ -8117,8 +8113,8 @@ function ClaimScreen(props: {
               }}
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-                {blokBol(4, false)}
-                <span style={{ fontSize: 17.5, fontWeight: 800, color: "#4a6e73", lineHeight: 1.25 }}>👥 {L.everyoneSplitTitle}</span>
+                {blokBol(3, true)}
+                <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1f8a4c", lineHeight: 1.25 }}>👥 {L.finalSplitTitle}</span>
               </span>
               {toonKnop(gastVerdelingOpen)}
             </div>
@@ -8276,13 +8272,17 @@ function ClaimScreen(props: {
                 <span style={{ fontSize: 28, fontWeight: 800, color: "#123a42" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>
               </div>
               {/* "Sluiten" zei wat de knop met het venster doet; dit zegt wat je erna ziet —
-                  de verdeling van de hele tafel staat eronder op de pagina. */}
-              <button onClick={() => setShowFinalPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.whoPaysWhatBtn}</button>
+                  de definitieve verdeling van de hele tafel, open, op de pagina eronder. */}
+              <button onClick={() => {
+                setShowFinalPopup(false)
+                setGastVerdelingOpen(true)
+                setOpenGuestRows(new Set(participants.map((q) => q.id)))
+                if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80)
+              }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.showDetailsBtn}</button>
             </div>
           </div>
         )}
       </div>
-      {afgeslotenBalk("onder")}
     {finalized && !isAdmin && (
       <div style={{ marginTop: 14 }}>
           {disputeOpen ? (
@@ -8311,11 +8311,19 @@ function ClaimScreen(props: {
               </div>
             </div>
           ) : (
-            <div style={{ textAlign: "center" }}>
-              <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "10px 18px", fontSize: 16.5, fontWeight: 700, background: "#fff", border: "1px solid rgba(18,58,66,0.18)", color: "#4a6e73" }}>
-                {L.somethingWrong}
-              </button>
-            </div>
+            // Dit was een bescheiden knopje tussen de rest — precies het ding dat een gast
+            // moet vinden wanneer er iets misloopt. Nu een kaart over de volle breedte: het
+            // icoon, de vraag, wat je ermee doet, en een pijl die zegt dat er iets opengaat.
+            <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }}
+              style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit",
+                background: "rgba(224,133,122,0.1)", border: "1.5px solid rgba(224,133,122,0.5)", borderRadius: 14, padding: "15px 15px" }}>
+              <span style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "50%", background: "rgba(224,133,122,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤔</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#b5503f", lineHeight: 1.25 }}>{L.disputeCtaTitle}</span>
+                <span style={{ display: "block", fontSize: 15.5, color: "#8a6a64", lineHeight: 1.35, marginTop: 2 }}>{L.disputeCtaSub}</span>
+              </span>
+              <span style={{ flexShrink: 0, fontSize: 22, fontWeight: 800, color: "#b5503f" }}>›</span>
+            </button>
           )}
         </div>
       )}
