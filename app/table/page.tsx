@@ -1055,12 +1055,14 @@ const STRINGS = {
     settleSaveBtn: "🔒 Sluit af en bewaar",
     settleAskTitle: "Ben je zeker?",
     settleAskBody: "Is alles verrekend en heeft iedereen betaald? Daarna verandert er niets meer aan deze rekening.",
-    settleAskKeep: "Je groepje blijft bewaard zolang je het bewaard laat staan — je vindt het terug op het startscherm onder \u201cJouw groepen\u201d.",
+    settleAskKeep: "Je groepje blijft daarna bewaard op het startscherm, onder \u201cJouw groepen\u201d.",
     settleAskYes: "Ja, sluit af en bewaar",
     settleDoneTitle: "Alles verrekend",
     settleDoneKeepTitle: "📂 Bewaard",
-    settleDoneKeepAdmin: "Je vindt dit groepje terug op het startscherm onder \u201cJouw groepen\u201d. Zolang het bewaard staat, ruimt niets het op.",
-    settleDoneKeepGuest: "Hou de link of de code bij, dan kan je deze verdeling later nog bekijken. Op je startscherm staat dit groepje ook onder \u201cJouw groepen\u201d.",
+    // Kort en hetzelfde voor beheerder en gast: waar het staat, en niets over codes of
+    // links — daar hoef je niets voor te doen.
+    settleDoneKeep: "Je groepje staat bewaard op het startscherm, onder \u201cJouw groepen\u201d.",
+    tryRundoTitle: "Probeer ook Rundo eens!",
     settleGuestTitle: "De rekening is verrekend",
     settleGuestBody: "De beheerder heeft alles afgerond. Je bedrag hieronder blijft staan zoals het is.",
     settleSavedToast: "Afgesloten en bewaard",
@@ -1759,12 +1761,12 @@ const STRINGS = {
     settleSaveBtn: "🔒 Clôturer et garder",
     settleAskTitle: "Tu es sûr ?",
     settleAskBody: "Tout est réglé et tout le monde a payé ? Ensuite, plus rien ne change sur cette addition.",
-    settleAskKeep: "Ton groupe reste gardé aussi longtemps que tu le laisses enregistré — tu le retrouves sur l\u2019écran d\u2019accueil sous \u00ab Tes groupes \u00bb.",
+    settleAskKeep: "Ton groupe reste ensuite gardé sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb.",
     settleAskYes: "Oui, clôturer et garder",
     settleDoneTitle: "Tout est réglé",
     settleDoneKeepTitle: "📂 Gardé",
-    settleDoneKeepAdmin: "Tu retrouves ce groupe sur l\u2019écran d\u2019accueil sous \u00ab Tes groupes \u00bb. Tant qu\u2019il est gardé, rien ne l\u2019efface.",
-    settleDoneKeepGuest: "Garde le lien ou le code, tu pourras revoir cette répartition plus tard. Ce groupe est aussi sur ton écran d\u2019accueil sous \u00ab Tes groupes \u00bb.",
+    settleDoneKeep: "Ton groupe est gardé sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb.",
+    tryRundoTitle: "Essaie aussi Rundo !",
     settleGuestTitle: "L\u2019addition est réglée",
     settleGuestBody: "L\u2019hôte a tout clôturé. Ton montant ci-dessous reste tel quel.",
     settleSavedToast: "Clôturée et gardée",
@@ -5953,7 +5955,7 @@ export default function RundoTable() {
               <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "rgba(39,174,96,0.16)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>✓</span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#1f8a4c" }}>{L.settleDoneTitle}</span>
-                <span style={{ display: "block", fontSize: 15, color: "#4a6e73", lineHeight: 1.4, marginTop: 2 }}>{L.settleDoneKeepAdmin}</span>
+                <span style={{ display: "block", fontSize: 15, color: "#4a6e73", lineHeight: 1.4, marginTop: 2 }}>{L.settleDoneKeep}</span>
               </span>
             </div>
           ) : (
@@ -6449,8 +6451,9 @@ export default function RundoTable() {
             </div>
             <div style={{ background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "11px 13px" }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#0f7488", marginBottom: 4 }}>{L.settleDoneKeepTitle}</div>
-              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45 }}>{L.settleDoneKeepGuest}</div>
+              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45 }}>{L.settleDoneKeep}</div>
             </div>
+            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "16px 0 -4px" }}>{L.tryRundoTitle}</div>
             <div style={{ marginTop: 4 }}>{renderPartyVerwijzing()}</div>
             <button onClick={() => setSettleGastPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.settleOk}</button>
           </div>
@@ -6484,8 +6487,11 @@ export default function RundoTable() {
             </div>
             <div style={{ background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "11px 13px" }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#0f7488", marginBottom: 4 }}>{L.settleDoneKeepTitle}</div>
-              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45 }}>{L.settleDoneKeepAdmin}</div>
+              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45 }}>{L.settleDoneKeep}</div>
             </div>
+            {/* De verwijzing kreeg een kopje: zonder dat leest dat zwarte blok als een
+                advertentie die er plots staat. Nu is het een uitnodiging. */}
+            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "16px 0 -4px" }}>{L.tryRundoTitle}</div>
             <div style={{ marginTop: 4 }}>{renderPartyVerwijzing()}</div>
             <button onClick={() => setSettleKlaar(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.settleOk}</button>
           </div>
@@ -8467,13 +8473,16 @@ function ClaimScreen(props: {
             // icoon, de vraag, wat je ermee doet, en een pijl die zegt dat er iets opengaat.
             <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }}
               style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit",
-                background: "rgba(224,133,122,0.1)", border: "1.5px solid rgba(224,133,122,0.5)", borderRadius: 14, padding: "15px 15px" }}>
-              <span style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "50%", background: "rgba(224,133,122,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤔</span>
+                // Rood leest als "er is iets fout gegaan", en er is niets fout: dit is
+                // gewoon de weg terug als je iets ziet dat niet klopt. Dus de rustige tint
+                // van de app, met een grote tikzone in plaats van een schreeuwende kleur.
+                background: "rgba(18,58,66,0.035)", border: "1.5px solid rgba(18,58,66,0.14)", borderRadius: 14, padding: "15px 15px" }}>
+              <span style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "50%", background: "rgba(20,153,176,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤔</span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#b5503f", lineHeight: 1.25 }}>{L.disputeCtaTitle}</span>
-                <span style={{ display: "block", fontSize: 15.5, color: "#8a6a64", lineHeight: 1.35, marginTop: 2 }}>{L.disputeCtaSub}</span>
+                <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#2b4f56", lineHeight: 1.25 }}>{L.disputeCtaTitle}</span>
+                <span style={{ display: "block", fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.35, marginTop: 2 }}>{L.disputeCtaSub}</span>
               </span>
-              <span style={{ flexShrink: 0, fontSize: 22, fontWeight: 800, color: "#b5503f" }}>›</span>
+              <span style={{ flexShrink: 0, fontSize: 22, fontWeight: 800, color: "#8aa3a6" }}>›</span>
             </button>
           )}
         </div>
