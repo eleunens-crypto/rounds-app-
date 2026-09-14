@@ -6303,7 +6303,8 @@ export default function PartyTest() {
     setCupsChecked(false); setCupsTouched(false); setCart({}); setCartAnon({}); setRepeated(false)
     // Nooit met een venster beginnen: je landt gewoon op de drankjes.
     setWalkIdx(null); setShowAssignAll(false)
-    setModusGekozen(false)
+    // Geen keuze meer te maken: elk rondje begint in de samen-stand.
+    setPerPersoon(false); setModusGekozen(true)
     setView("order")
     naarRondjeKop()
   }
@@ -8512,7 +8513,10 @@ export default function PartyTest() {
   const alleenJij = !settle && modusGekozen && perPersoon && people.length < 2
   // Zolang de noteerwijze niet gekozen is, ligt de lijst stil: anders tik je drankjes
   // aan die stilzwijgend bij "voor iedereen" belanden.
-  const nogKiezen = !settle && !modusGekozen
+  // In "Neem zelf op" tik je altijd voor de hele groep aan. De keuze "voor iedereen of
+  // per persoon" bestaat daar niet meer, dus er valt ook niets te kiezen vóór de
+  // drankjes bruikbaar worden — vroeger stond die lijst gedimd te wachten.
+  const nogKiezen = false
   // Zoekveld met microfoon: bij uitgebreid opnemen ingebouwd bovenin de drankjeskaart
   // (inKaart), bij de andere modi op zijn vertrouwde plek onder de lijst.
   // De strook staat los van het zoekblok. Ze plakte namelijk vast binnen dat blok, en
@@ -10446,120 +10450,12 @@ export default function PartyTest() {
                 die duidt normaal zelf aan. Aantikken kan wel, voor als er iets misloopt. */}
             {/* Samen turven of per persoon aantikken — wisselen mag altijd, en wat al
                 op naam staat blijft gewoon staan. Alles in één kader. */}
-            {!settle && (() => {
-              const kleur = voorWieKleur
-              return (<>
-              <div style={{ background: "#fff", border: perPersoon ? `2.5px solid ${donkerder(kleur, 0.82)}` : `1.5px solid ${RAND}`, borderRadius: 13, padding: 9, marginBottom: 16 }}>
-                {/* Eén baan met twee standen: alleen de gekozen helft krijgt een vlak, de
-                    andere ligt er zichtbaar naast. Twee losse pillen lazen als twee acties
-                    die je allebei kon aantikken — dit is duidelijk één keuze. */}
-                {/* De vraag hing als klein kapitaaltje boven de baan en werd daardoor
-                    gelezen als rubriekje. Nu is ze de titel van het kader eromheen: gewone
-                    zinsgrootte, over de rand heen, met lucht tussen haar en de knoppen. */}
-                <div style={{ position: "relative", border: "1px solid rgba(29,41,66,0.18)", borderRadius: 11, padding: "18px 0 0", marginTop: 12, marginBottom: 9 }}>
-                  <span style={{ position: "absolute", top: -11, left: 12, background: "#fff", padding: "0 7px", fontSize: 17, fontWeight: 700, color: "#1d2942", whiteSpace: "nowrap" }}>{L.howNoteQ}</span>
-                  {/* Twee gelijkwaardige knoppen in plaats van een baan met twee standen: een
-                      baan suggereert altijd dat er al één aan staat. Zolang je niets koos
-                      staan ze allebei kaal en blijft de drankjeslijst gedimd. */}
-                  <div style={{ display: "flex", background: "#e7ebf3", borderTop: "1px solid rgba(29,41,66,0.14)", borderRadius: "0 0 10px 10px", padding: 4, gap: 4 }}>
-                    {[false, true].map((mode) => {
-                      const aan = modusGekozen && perPersoon === mode
-                      return (
-                        <button key={String(mode)} onClick={() => { setPerPersoon(mode); setModusGekozen(true); naarRondjeKop() }}
-                          style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 999, padding: "10px 0", fontSize: 15.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                            background: aan ? "#fdf3d8" : "#fff",
-                            border: aan ? "2px solid #e0a020" : "2px solid rgba(29,41,66,0.18)",
-                            color: aan ? "#6b5b28" : "#1d2942" }}>
-                          {aan && <span style={{ fontSize: 14 }}>✓</span>}
-                          {mode ? L.perPersonWord : L.tikSamenWord}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-                {!modusGekozen ? (
-                  <>
-                    {/* Bewust géén kader of vlak: met achtergrond en rand las dit als een derde
-                        knop onder de twee echte knoppen. Nu dragen de amberen tekst en de twee
-                        wippende vingers de aandacht, zonder iets te suggereren wat tikbaar is. */}
-                    <style>{`@keyframes rundoWijs{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-                      .rundo-wijs{display:inline-block;animation:rundoWijs 1.1s ease-in-out infinite}
-                      .rundo-wijs2{animation-delay:.12s}
-                      @media (prefers-reduced-motion: reduce){.rundo-wijs{animation:none}}`}</style>
-                    <div style={{ display: "flex", gap: 9, alignItems: "center", justifyContent: "center", marginTop: 10, padding: "4px 2px" }}>
-                      <span className="rundo-wijs" style={{ fontSize: 20, flexShrink: 0 }}>{"\u261D\uFE0F"}</span>
-                      <span style={{ fontSize: 16, color: "#8a5e0f", fontWeight: 900, lineHeight: 1.35, textAlign: "center" }}>{L.chooseFirst}</span>
-                      <span className="rundo-wijs rundo-wijs2" style={{ fontSize: 20, flexShrink: 0 }}>{"\u261D\uFE0F"}</span>
-                    </div>
-                  </>
-                ) : (
-                <div ref={hintBlok} style={{ position: "relative", scrollMarginTop: 8, display: "flex", gap: 10, alignItems: "center", justifyContent: "center", marginTop: 11, background: "#eef1f6", border: "1.5px solid rgba(224,138,0,0.6)", borderRadius: 12, padding: "11px 13px" }}>
-                  {/* De grijze vulling blijft, de amberen rand en het tandje maken duidelijk
-                      dat deze regel bij de zojuist gekozen knop hoort. Links of rechts naar
-                      gelang de keuze; een amberen vúlling zou botsen met de knop erboven. */}
-                  <span style={{ position: "absolute", top: -8, left: perPersoon ? "75%" : "25%", width: 14, height: 14, transform: "translateX(-50%) rotate(45deg)", background: "#eef1f6", borderLeft: "1.5px solid rgba(224,138,0,0.6)", borderTop: "1.5px solid rgba(224,138,0,0.6)" }} />
-                  {/* Eén poppetje tegenover meerdere: hetzelfde onderscheid als de knop
-                      erboven. Er stond hier een vingertje bij per persoon, en dat is een
-                      ander soort teken — een aanwijzing in plaats van een wie. */}
-                  <span style={{ fontSize: 21, flexShrink: 0 }}>{perPersoon ? "\u{1F464}" : "\u{1F465}"}</span>
-                  <span style={{ fontSize: 16.5, color: "#1d2942", fontWeight: 700, lineHeight: 1.35, textAlign: "center", whiteSpace: "pre-line" }}>{perPersoon ? (alleenJij ? `${L.needTwoLine}\n` : "") + L.hintPerPerson : L.hintTogether}</span>
-                </div>
-                )}
-
-
-                {perPersoon && (<>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: VLAK1, borderRadius: 10, padding: "6px 7px", marginBottom: 9 }}>
-                    <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, color: "#3a4459", fontSize: 14.5, fontWeight: 800 }}>
-                      <span onClick={() => { if (people.length > 1) removeLastPerson() }}
-                        style={{ width: 28, height: 28, borderRadius: "50%", background: "#fff", border: "1px solid rgba(29,41,66,0.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 18, cursor: "pointer", opacity: people.length > 1 ? 1 : 0.4 }}>−</span>
-                      <b style={{ fontSize: 18, color: RAND }}>{people.length}</b>
-                      <span style={{ color: "#6b7484", fontSize: 13.5 }}>{L.persWordLow}</span>
-                      <span onClick={() => { void addPerson() }}
-                        style={{ width: 28, height: 28, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 18, cursor: "pointer" }}>＋</span>
-                    </span>
-                    <button onClick={() => { setPersGeteld(true); setAlleenPers(true); setPersSnap(people.map((pp) => ({ id: pp.id, name: pp.name }))); setNaamPlichtNa(null); setNaamPlicht(true) }}
-                      style={{ flexShrink: 0, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5, border: "none", borderLeft: "1px solid rgba(29,41,66,0.2)", background: "transparent", color: RAND, padding: "3px 4px 3px 10px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.editNamesBtn}</button>
-                  </div>
-                {(() => {
-                  if (people.length < 2 || roundItems === 0) return null
-                  const klaar = people.filter((pp) => drinks.some((d) => (cart[d.id]?.[pp.id] ?? 0) > 0)).length
-                  return <div ref={telRij} style={{ scrollMarginTop: 8, fontSize: 13, fontWeight: 700, color: "#8a5e0f", marginBottom: 8 }}>{L.someHaveDrinks(klaar, people.length)}</div>
-                })()}
-                  {/* Namen breken over meerdere regels in plaats van zijwaarts te scrollen:
-                      zo staat niemand verborgen en is er geen veeggebaar om te ontdekken. */}
-                  <div ref={namenRij} style={{ scrollMarginTop: 8, display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
-                    {people.map((pp, i) => {
-                      const aan = voorWie === pp.id
-                      const k = gastKleur(i)
-                      const viaLink = !!pp.claimedBy && pp.id !== meId
-                      return (
-                        <button key={pp.id} onClick={() => {
-                          if (viaLink) { setConfirmDlg({ msg: L.tapForQrGuest(pp.name), yes: L.tapForQrYes, no: L.cancel, onYes: () => { setConfirmDlg(null); setVoorWieRaw(pp.id) } }); return }
-                          setVoorWieRaw(pp.id)
-                        }}
-                          style={{ borderRadius: 999, padding: aan ? "9px 16px" : "9px 15px", fontSize: aan ? 16.5 : 16, cursor: "pointer", fontFamily: "inherit",
-                            fontWeight: 800,
-                            background: aan ? k : "transparent",
-                            border: `1.5px solid ${k}`,
-                            color: aan ? "#2a1f06" : donkerder(k) }}>
-                          {pp.id === meId ? "♛ " : viaLink ? "📱 " : ""}{pp.id === meId && !pp.named ? L.jijNaam : pp.name}
-                        {(() => { const n = drinks.reduce((a, d) => a + (cart[d.id]?.[pp.id] ?? 0), 0); return n > 0 ? (
-                          <span style={{ marginLeft: 6, borderRadius: 999, minWidth: 20, height: 20, padding: "0 5px", fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", background: aan ? "rgba(42,31,6,0.85)" : donkerder(k), color: aan ? k : "#fff" }}>{n}</span>
-                        ) : null })()}
-                          {pp.id === meId && pp.named && (
-                            <span style={{ marginLeft: 5, borderRadius: 999, padding: "1px 6px", fontSize: 9.5, background: aan ? "rgba(42,31,6,0.18)" : `${k}33`, color: aan ? "#2a1f06" : donkerder(k) }}>{L.youTag}</span>
-                          )}
-                        </button>
-                      )
-                    })}
-                        {people.length <= 1 && (
-                          <span style={{ fontSize: 14.5, fontWeight: 700, color: "#6b7484" }}>{L.aloneHint}</span>
-                        )}
-                  </div>
-                </>)}
-              </div>
-              </>)
-            })()}
+            {/* Hier stond het kader "Hoe noteer je dit rondje? — voor iedereen / per
+                persoon", met daaronder de regel die je aanspoorde te kiezen. Zolang je
+                niets gekozen had, stond de hele drankjeslijst gedimd te wachten. In
+                "Neem zelf op" is het altijd voor iedereen, dus die vraag is er niet
+                meer en kan je meteen aantikken. Per persoon verdelen gebeurt achteraf,
+                via "Toch eerlijk splitten?" op het rondjesoverzicht. */}
             {settle && fromQuick && people.length > 0 && (
               <div style={settle ? { ...S.card, padding: "11px 12px", marginBottom: 8 } : { marginTop: -17, marginBottom: 18, background: "#fff", border: `2.5px solid ${donkerder(voorWieKleur, 0.82)}`, borderTop: "none", borderRadius: "0 0 13px 13px", padding: "0 11px 13px" }}>
                 <div style={{ fontSize: 14.5, fontWeight: 800, color: voorWie && voorWie !== meId ? "#8a5e0f" : "#6b7484", marginBottom: 7 }}>
