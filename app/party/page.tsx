@@ -1055,7 +1055,7 @@ const T = {
 
     // ── eigen drankje
     ownDrinkTitle: "⭐ Eigen drankje",
-    ownDrinkIntro: "Staat er iets niet in de lijst? Voeg het toe voor dit feest. Iedereen in de groep ziet het meteen.",
+    ownDrinkIntro: "Staat er iets niet in de lijst? Voeg het hier toe!",
     nameLabel: "Naam",
     namePh: "bv. Trappist van Jos",
     priceLabel: "Richtprijs",
@@ -1154,11 +1154,21 @@ const T = {
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
     modeTitle: "Deel QR in groep",
     modeTitle2: "…en split eerlijk!",
-    showAllDrinks: (n: number) => `alles tonen (${n}) ▾`,
-    showLessDrinks: "minder tonen ▴",
+    showAllDrinks: (n: number) => `Toon details (${n}) ▾`,
+    showLessDrinks: "Verberg details ▴",
     lastRoundPill: "laatste",
     fairSplitCta: "⚖️ Toch eerlijk splitten?",
     fairSplitCtaSub: "Verdeel wat je betaalde over de groep.",
+    fairStep2Title: "Wat kostte elk rondje?",
+    fairStep2Next: "Verder naar wie wat dronk →",
+    backToBarList: "📋 Terug naar het barlijstje",
+    addTyped: (naam: string) => `＋ "${naam}" toevoegen`,
+    addTypedSub: "Je zet er zelf een prijs bij.",
+    editDrinkTitle: (naam: string) => `✏️ ${naam} aanpassen`,
+    editDrinkSave: "Bewaren",
+    editDrinkOrdered: (n: number) => `Er ${n === 1 ? "is" : "zijn"} er al ${n} besteld. De nieuwe prijs telt voor ${n === 1 ? "dat ene" : "alle " + n}.`,
+    editDrinkDone: "Aangepast.",
+    editWord: "Aanpassen",
     modeTitleSub2: "Betaalt eerlijk volgens wat hij of zij dronk",
     modeQuick: "Ik bestel voor de groep",
     modeQuickSub: "Jij tikt zelf alle drankjes aan.",
@@ -1958,7 +1968,7 @@ const T = {
 
     // ── eigen drankje
     ownDrinkTitle: "⭐ Boisson personnalisée",
-    ownDrinkIntro: "Il manque quelque chose ? Ajoute-le pour cette fête. Tout le groupe le voit immédiatement.",
+    ownDrinkIntro: "Il manque quelque chose ? Ajoute-le ici !",
     nameLabel: "Nom",
     namePh: "p.ex. Trappiste de Jos",
     priceLabel: "Prix indicatif",
@@ -2058,11 +2068,21 @@ const T = {
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
     modeTitle: "Partage le QR",
     modeTitle2: "…et partage équitablement !",
-    showAllDrinks: (n: number) => `tout afficher (${n}) ▾`,
-    showLessDrinks: "afficher moins ▴",
+    showAllDrinks: (n: number) => `Voir les détails (${n}) ▾`,
+    showLessDrinks: "Masquer les détails ▴",
     lastRoundPill: "dernière",
     fairSplitCta: "⚖️ Partager équitablement ?",
     fairSplitCtaSub: "Répartis ce que tu as payé sur le groupe.",
+    fairStep2Title: "Combien coûtait chaque tournée ?",
+    fairStep2Next: "Vers qui a bu quoi →",
+    backToBarList: "📋 Retour à la commande",
+    addTyped: (naam: string) => `＋ Ajouter « ${naam} »`,
+    addTypedSub: "Tu y mets toi-même un prix.",
+    editDrinkTitle: (naam: string) => `✏️ Modifier ${naam}`,
+    editDrinkSave: "Enregistrer",
+    editDrinkOrdered: (n: number) => `${n} déjà commandé${n === 1 ? "" : "s"}. Le nouveau prix compte pour ${n === 1 ? "celui-là" : "tous les " + n}.`,
+    editDrinkDone: "Modifié.",
+    editWord: "Modifier",
     modeTitleSub2: "Paie équitablement selon ce qu’il ou elle a bu",
     modeQuick: "Je commande pour le groupe",
     modeQuickSub: "Tu coches toutes les boissons toi-même.",
@@ -2533,6 +2553,10 @@ export default function PartyTest() {
   // Afwijkende coin-prijzen voor dit feest. Ook jsonb op de groep-rij, dus gratis mee.
   const [coinPrices, setCoinPrices] = useState<Record<string, number>>({})
   const [showAddDrink, setShowAddDrink] = useState(false)
+  // Welk eigen drankje ben je aan het aanpassen? null = je maakt een nieuw drankje.
+  // De sleutel blijft ongewijzigd, dus bestellingen blijven naar dezelfde rij wijzen
+  // en de verdeling herrekent vanzelf met de nieuwe prijs.
+  const [editDrinkKey, setEditDrinkKey] = useState<string | null>(null)
   const [ndName, setNdName] = useState("")
   const [ndPrice, setNdPrice] = useState("")
   const [inviteCode, setInviteCode] = useState<string>("")
@@ -5510,6 +5534,21 @@ export default function PartyTest() {
     loadParty(groupId)
   }
 
+  const saveCustomDrink = async () => {
+    const naam = ndName.trim()
+    if (!naam) { setNotice(L.nameYourDrink); return }
+    const prijs = parseFloat(ndPrice.replace(",", "."))
+    if (!(prijs > 0)) { setNotice(L.needPrice); return }
+    if (!groupId || !editDrinkKey) return
+    const { error } = await supabase.rpc("party_update_drink", {
+      p_group: groupId, p_key: editDrinkKey, p_name: naam, p_price: prijs,
+    })
+    if (error) { setNotice("Aanpassen mislukt: " + error.message); return }
+    setNdName(""); setNdPrice(""); setEditDrinkKey(null); setShowAddDrink(false)
+    setNotice(L.editDrinkDone)
+    loadParty(groupId)
+  }
+
   const removeCustomDrink = async (key: string, naam: string) => {
     if (!groupId) return
     const { error } = await supabase.rpc("party_remove_drink", { p_group: groupId, p_key: key })
@@ -5524,23 +5563,32 @@ export default function PartyTest() {
   }
 
   const renderAddDrink = () => {
-    if (!showAddDrink) return null
+    if (!showAddDrink && !editDrinkKey) return null
     const mijne = customDrinks.filter((c) => c.by === me.current)
     return (
       <div style={S.overlay} onClick={() => setShowAddDrink(false)}>
         <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
-            <h3 style={{ ...S.h3, margin: 0 }}>{L.ownDrinkTitle}</h3>
-            <button onClick={() => setShowAddDrink(false)} style={{ border: "none", background: "none", fontSize: 21, cursor: "pointer", color: "#6b7484" }}>✕</button>
+            <h3 style={{ ...S.h3, margin: 0 }}>{editDrinkKey ? L.editDrinkTitle(ndName.trim() || "") : L.ownDrinkTitle}</h3>
+            <button onClick={() => { setShowAddDrink(false); setEditDrinkKey(null) }} style={{ border: "none", background: "none", fontSize: 21, cursor: "pointer", color: "#6b7484" }}>✕</button>
           </div>
 
           <div style={{ fontSize: 15.5, color: "#6b7484", marginBottom: 12, lineHeight: 1.5 }}>
-            {L.ownDrinkIntro}
+            {editDrinkKey ? (() => {
+              // Al besteld? Dan zeggen we erbij hoeveel, zodat je weet dat de nieuwe prijs
+              // ook voor die exemplaren geldt.
+              const n = rounds.reduce((a, r) => a + drinkTotalRound(r, editDrinkKey), 0)
+              return n > 0 ? L.editDrinkOrdered(n) : L.ownDrinkIntro
+            })() : L.ownDrinkIntro}
           </div>
 
           <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 5 }}>{L.nameLabel}</div>
+          {/* Kwam je hier vanuit een zoekopdracht zonder resultaat, dan staat je naam er
+              al in. De groene rand zegt dat dit veld klaar is, zodat je meteen naar de
+              prijs kijkt in plaats van te twijfelen of je nog iets moet typen. */}
           <input value={ndName} onChange={(e) => setNdName(e.target.value)} placeholder={L.namePh}
-            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 18, textAlign: "left", marginBottom: 12 }} />
+            style={{ ...S.input, width: "100%", boxSizing: "border-box", fontSize: 18, textAlign: "left", marginBottom: 12,
+              ...(ndName.trim() ? { borderColor: "rgba(31,138,76,0.55)", background: "#f6fbf7", fontWeight: 700 } : {}) }} />
 
 
           <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 5 }}>{L.priceLabel}</div>
@@ -5554,12 +5602,15 @@ export default function PartyTest() {
           </div>
 
 
-          <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && ndPrice ? 1 : 0.5 }} onClick={addCustomDrink}>
-            {L.addBtn}
+          <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && ndPrice ? 1 : 0.5 }}
+            onClick={() => { if (editDrinkKey) void saveCustomDrink(); else void addCustomDrink() }}>
+            {editDrinkKey ? L.editDrinkSave : L.addBtn}
           </button>
-          <div style={{ fontSize: 14.5, color: "#6b7484", textAlign: "center", marginTop: 8 }}>
-            {L.remaining(Math.max(0, MAX_EIGEN_PERSOON - eigenVanMij), MAX_EIGEN_PERSOON)}
-          </div>
+          {!editDrinkKey && (
+            <div style={{ fontSize: 14.5, color: "#6b7484", textAlign: "center", marginTop: 8 }}>
+              {L.remaining(Math.max(0, MAX_EIGEN_PERSOON - eigenVanMij), MAX_EIGEN_PERSOON)}
+            </div>
+          )}
 
           {mijne.length > 0 && (
             <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
@@ -5570,6 +5621,11 @@ export default function PartyTest() {
                   <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 11px", borderRadius: 10, background: VLAK1, border: "1px solid rgba(29,41,66,0.12)" }}>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 700, color: "#1d2942", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>⭐ {c.name}</span>
                     <span style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 700, flexShrink: 0 }}>{euro(Number(c.price))}</span>
+                    {/* Aanpassen werkt ook als er al van gedronken is: de sleutel blijft
+                        dezelfde, dus de bestellingen blijven staan en de verdeling rekent
+                        gewoon met de nieuwe prijs. Verwijderen kan dan nog steeds niet. */}
+                    <button onClick={() => { setEditDrinkKey(c.key); setNdName(c.name); setNdPrice(String(c.price).replace(".", ",")) }} aria-label={L.editWord}
+                      style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 9, background: "#fff", border: "1px solid rgba(29,41,66,0.25)", color: "#4a5567", fontSize: 17, cursor: "pointer" }}>✏️</button>
                     <button onClick={() => removeCustomDrink(c.key, c.name)} aria-label={L.removeWord}
                       style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 9, background: "#fff", border: "1px solid rgba(224,104,92,0.4)", color: "#c0554a", fontSize: 18, cursor: "pointer" }}>🗑️</button>
                   </div>
@@ -5997,7 +6053,16 @@ export default function PartyTest() {
     setOpenRound(rounds.length - 1)
     // Stap 1 leidt altijd naar stap 2 zélf, niet naar een tussenscherm met een knop
     // naar stap 3. Ook als alles al toegewezen is: dan zie je gewoon dat het klaar is
-    // en ga je van daar verder. Zo is de volgorde in beide richtingen dezelfde.
+    // Drie stappen in de volgorde waarin je ze aan tafel doorloopt: wie was erbij, wat
+    // kostte elk rondje en wie betaalde, en pas dan wie wat dronk. Vroeger sprong je van
+    // de namen meteen naar het toewijzen, en kwamen de bedragen er achteraf bij — maar
+    // zonder bedragen kan je de verdeling niet zien, dus stonden ze in de weg.
+    // Staan alle bedragen al ingevuld, dan is stap 2 niets meer te doen: dan meteen door.
+    const bedragenOk = rounds.length === 0 || rounds.some((r) => (r.amount || 0) > 0.005)
+    if (fromQuick && !bedragenOk) {
+      setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview")
+      return
+    }
     if (fromQuick && rounds.length > 0) { setAssignAllMode(true); setAssignIdx(0) }
     setView("hub")
   }
@@ -8726,7 +8791,11 @@ export default function PartyTest() {
         )}
       </div>
       )}
-          {!settle && !kaal && (
+          {/* De rij met de groepsnaam en de personenteller stond hier boven élk scherm.
+              De naam vraag je pas bij het afsluiten en het aantal pas bij het splitten,
+              dus hier beloofden ze iets wat je onderweg niet nodig hebt. In QR blijft de
+              rij staan: daar weet je graag met hoeveel je bent. */}
+          {false && !kaal && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: `1.5px solid ${RAND}33`, marginBottom: 10 }}>
               <span onClick={() => { if (onboarding || groepDicht) return; openGroepVenster(true) }}
                 style={{ flex: "1 1 auto", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: onboarding ? "default" : "pointer", fontSize: 20, fontWeight: 800, color: isAutoNaam(groupName) ? "#9aa3b2" : "#1d2942" }}>
@@ -9492,7 +9561,7 @@ export default function PartyTest() {
           <div style={{ position: "relative" }}>
             {!zoekt && fullList && (
               <div style={{ position: "absolute", left: "50%", top: -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: VLAK2, border: `2px solid ${RAND}`, color: RAND, boxShadow: "0 3px 12px -3px rgba(29,41,66,0.3)" }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -9545,15 +9614,15 @@ export default function PartyTest() {
             </div>
             {/* "Meer/minder" hangt centraal, half over de onderrand van de lijst. */}
             {!zoekt && !fullList && catDrinks.length > lijst.length && (
-              <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
+              <div style={{ position: "absolute", left: "50%", bottom: -24, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
+                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: VLAK2, border: `2px solid ${RAND}`, color: RAND, boxShadow: "0 3px 12px -3px rgba(29,41,66,0.3)" }}>
                   + {catDrinks.length - lijst.length} meer ▾
                 </span>
               </div>
             )}
             {!zoekt && fullList && (
-              <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
+              <div style={{ position: "absolute", left: "50%", bottom: -24, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: VLAK2, border: `2px solid ${RAND}`, color: RAND, boxShadow: "0 3px 12px -3px rgba(29,41,66,0.3)" }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -10556,7 +10625,11 @@ export default function PartyTest() {
             Geen favorieten in {CAT_LABEL[activeCat]}. <span style={{ color: "#c98a00", fontWeight: 800, cursor: "pointer" }} onClick={() => setFullList(true)}>{L.showAll}</span>
           </div>
         ) : (
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", marginBottom: (!zoekt && (catDrinks.length > catVisible.length || fullList)) ? 30 : 0 }}>
+            {/* De marge hierboven maakt ruimte voor de "+ n meer"-pil, die over de
+                onderrand van de kaart hangt. Zonder die lucht raakte hij de knop eronder,
+                en die had bovendien dezelfde kleur. De pil is nu wit met een amberen rand,
+                zodat hij ook niet meer op een startknop lijkt. */}
             {qrBalk && (
               <div style={{ position: "sticky", top: 0, zIndex: 4, display: "flex", alignItems: "center", gap: 10, background: "#0a4f5b", borderRadius: "18px 18px 0 0", padding: "8px 10px 8px 15px", fontSize: 15, fontWeight: 700, color: "#9fd0d9" }}>
                 <span style={{ flexShrink: 0 }}>{L.tapForStrip}</span>
@@ -10565,7 +10638,7 @@ export default function PartyTest() {
             )}
             {!zoekt && fullList && settle && (
               <div style={{ position: "absolute", left: "50%", top: qrBalk ? 26 : -13, transform: "translateX(-50%)", whiteSpace: "nowrap", zIndex: 2 }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: VLAK2, border: `2px solid ${RAND}`, color: RAND, boxShadow: "0 3px 12px -3px rgba(29,41,66,0.3)" }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -10583,7 +10656,7 @@ export default function PartyTest() {
                     {renderZoekBlok(true)}
                     {!zoekt && fullList && (
                       <span onClick={() => setFullList(false)}
-                        style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", bottom: -19, zIndex: 3, display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
+                        style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", bottom: -19, zIndex: 3, display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", background: VLAK2, border: `2px solid ${RAND}`, color: RAND, boxShadow: "0 3px 12px -3px rgba(29,41,66,0.3)" }}>
                         {L.lessGroups}
                       </span>
                     )}
@@ -10592,11 +10665,20 @@ export default function PartyTest() {
               {/* Niets gevonden: de melding hoort in de kaart, want het zoekveld erboven is
                   precies wat je nodig hebt om verder te kunnen. "Geen favorieten in Bier"
                   klopte ook niet — zoeken gaat over alle categorieën heen. */}
+              {/* Niets gevonden betekent bijna altijd: dit drankje staat er nog niet. Dan
+                  is "zoekopdracht wissen" het verkeerde aanbod — je wil het toevoegen, en de
+                  naam heb je net al getypt. Die gaat dus mee, zodat je niets hoeft te
+                  herhalen. Wissen kan er nog steeds onder, maar kleiner. */}
               {zoekt && catVisible.length === 0 && (
-                <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "16px 10px 6px", fontSize: 16, color: "#6b7484" }}>
+                <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "14px 10px 6px", fontSize: 16, color: "#6b7484" }}>
                   {L.nothingFound}
+                  <div onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
+                    style={{ marginTop: 11, padding: "13px 12px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${RAND}`, color: "#1d2942", cursor: "pointer" }}>
+                    <div style={{ fontSize: 16.5, fontWeight: 800, color: RAND }}>{L.addTyped(drinkSearch.trim())}</div>
+                    <div style={{ fontSize: 14, color: "#8b93a3", marginTop: 3 }}>{L.addTypedSub}</div>
+                  </div>
                   <div onClick={() => setDrinkSearch("")}
-                    style={{ marginTop: 10, display: "inline-block", background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 999, padding: "8px 16px", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{L.clearSearch}</div>
+                    style={{ marginTop: 9, display: "inline-block", color: "#8b93a3", fontSize: 14.5, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 3, cursor: "pointer" }}>{L.clearSearch}</div>
                 </div>
               )}
               {catVisible.map((d) => {
@@ -10619,22 +10701,26 @@ export default function PartyTest() {
               {!zoekt && (
                 <div onClick={() => { if (alleenJij || nogKiezen) return; setShowAddDrink(true); setNdName("") }}
                   style={{ opacity: (alleenJij || nogKiezen) ? 0.4 : 1, pointerEvents: (alleenJij || nogKiezen) ? "none" : "auto", padding: "10px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.75)"}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", color: themaNaam ? "#2c3752" : "#4a5567" }}>
-                  <div style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, background: settle ? MODUS_FAIR.vlak : themaNaam ? MODUS_NAAM.vlak : "#fdf3d8", border: `1.5px solid ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.6)"}`, color: settle ? MODUS_FAIR.rand : themaNaam ? "#3b486a" : "#8a5e0f" }}>＋</div>
-                  <div style={{ fontSize: 16.5, fontWeight: 600, lineHeight: 1.25, marginTop: 6 }}>{L.newDrinkTile}</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#8b93a3", marginTop: 3 }}>{L.notOnList}</div>
+                  {/* Eén regel in plaats van een icoon met twee regels eronder: de tegel was
+                      twee keer zo hoog als een drankje en trok daardoor meer aandacht dan de
+                      drankjes zelf. */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, background: settle ? MODUS_FAIR.vlak : themaNaam ? MODUS_NAAM.vlak : "#fdf3d8", border: `1.5px solid ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.6)"}`, color: settle ? MODUS_FAIR.rand : themaNaam ? "#3b486a" : "#8a5e0f" }}>＋</span>
+                    <span style={{ fontSize: 15.5, fontWeight: 700, lineHeight: 1.2, textAlign: "left" }}>{L.newDrinkTile}</span>
+                  </div>
                 </div>
               )}
             </div>
             {!zoekt && !fullList && catDrinks.length > catVisible.length && (
-              <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
+              <div style={{ position: "absolute", left: "50%", bottom: -24, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
+                <span onClick={() => setFullList(true)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: VLAK2, border: `2px solid ${RAND}`, color: RAND, boxShadow: "0 3px 12px -3px rgba(29,41,66,0.3)" }}>
                   + {catDrinks.length - catVisible.length} meer ▾
                 </span>
               </div>
             )}
             {!zoekt && fullList && (
-              <div style={{ position: "absolute", left: "50%", bottom: -13, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
-                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 600, cursor: "pointer", background: RAND, border: "none", color: RANDTEKST, boxShadow: `0 2px 8px -2px ${RAND}80` }}>
+              <div style={{ position: "absolute", left: "50%", bottom: -24, transform: "translateX(-50%)", whiteSpace: "nowrap" }}>
+                <span onClick={() => setFullList(false)} style={{ display: "inline-block", padding: "8px 17px", borderRadius: 20, fontSize: 15, fontWeight: 800, cursor: "pointer", background: VLAK2, border: `2px solid ${RAND}`, color: RAND, boxShadow: "0 3px 12px -3px rgba(29,41,66,0.3)" }}>
                   ▴ minder tonen
                 </span>
               </div>
@@ -12086,8 +12172,14 @@ export default function PartyTest() {
                         <span style={{ fontSize: 14, fontWeight: 800, color: "#c0554a", background: "rgba(224,104,92,0.12)", borderRadius: 12, padding: "4px 10px", whiteSpace: "nowrap" }}>{L.notSavedYet}</span>
                       ) : (
                         <>
-                          <span style={{ fontSize: 17.5, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#a7b0bf" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
-                          <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+                          {/* Zonder bedrag stond hier "€ —". Dat leest als een fout, terwijl
+                              een bedrag in deze modus gewoon optioneel is: dan staat er niets. */}
+                          {((r.amount || 0) > 0 || settle) && (
+                            <span style={{ fontSize: 17.5, fontWeight: 800, color: (r.amount || 0) > 0 ? "#c98a00" : "#a7b0bf" }}>{(r.amount || 0) > 0 ? euro(r.amount) : "€ —"}</span>
+                          )}
+                          {/* Het ronde pijltje is weg: het balkje onderaan het rondje doet
+                              hetzelfde, zegt het in woorden en is veel makkelijker te raken. */}
+                          {settle && <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: RAND, color: RANDTEKST, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>}
                         </>
                       )}
                     </div>
@@ -12262,7 +12354,11 @@ export default function PartyTest() {
                     {/* Wat er nog moet gebeuren staat ná de drankjes: eerst zie je wat er
                         besteld is, dan pas wat er nog ontbreekt. Dichtgeklapt toont de kaart
                         hier niets van — dan is het een rustige regel met nummer en bedrag. */}
-                  {!settle && editRoundId !== r.id && isOpen(r) && (() => {
+                  {/* Het amberen blok "nog nodig voor eerlijk afrekenen" stond hier onder de
+                      drankjes. In "Neem zelf op" ontbreekt er niets: toewijzen bestaat niet
+                      en bedragen zijn optioneel. Wie wil verdelen, krijgt die vragen in de
+                      drie stappen van "Toch eerlijk splitten?". */}
+                  {false && editRoundId !== r.id && isOpen(r) && (() => {
                     const nogToe = Object.values(r.anon || {}).reduce((a, b) => a + (b || 0), 0)
                     if (!geenBedrag && nogToe === 0) return null
                     const regel = (tekst: string, knopTekst: string, doe: () => void) => (
@@ -12283,7 +12379,10 @@ export default function PartyTest() {
                     {/* De losse regel "personen in dit rondje" staat nu als
                         "gedeeld door X" naast de betalerspillen verderop. */}
 
-                    {bewerk && dr && (
+                    {/* Het bedrag hoort bij het verdelen, en dat gebeurt in "Neem zelf op"
+                        pas achteraf. Bij het aanpassen van een rondje gaat het hier alleen
+                        over de drankjes zelf. */}
+                    {settle && bewerk && dr && (
                       <div style={{ ...S.row, justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: "1px solid rgba(29,41,66,0.12)" }}>
                         <span style={{ fontSize: 17, fontWeight: 800, color: "#6b7484" }}>💶 {L.paidLabel}</span>
                         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -12407,9 +12506,13 @@ export default function PartyTest() {
               // Vanaf de eindbalans komen aanvullen? Dan ook daarheen terug — de
               // balans rekent meteen met de nieuwe bedragen.
               if (overviewBackTo === "final") { setFillMode(false); setView("final"); return }
-              if (opNaam === true && !settle) { setFillMode(false); goQuickSettle() }
-              else { setFillMode(false); setView("quickSettle") }
-            }}>{L.backToSettle}</button>
+              // Kwam je hier als stap 2 van "Toch eerlijk splitten?", dan volgt stap 3:
+              // wie dronk wat. Anders blijft het de gewone weg naar het afrekenscherm.
+              if (fromQuick && rounds.length > 0) {
+                setFillMode(false); setAssignAllMode(true); setAssignIdx(0); setView("hub"); return
+              }
+              setFillMode(false); setView("quickSettle")
+            }}>{fromQuick && rounds.length > 0 ? L.fairStep2Next : L.backToSettle}</button>
         ) : (
           <>
             {/* Gelijkwaardig: doorgaan of stoppen. Goud voor het rondje, inktblauw voor
@@ -12449,6 +12552,16 @@ export default function PartyTest() {
                     background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
               )}
             </div>
+            {/* Eén tik terug naar het laatste rondje, om nog iets bij te tikken. Zonder
+                deze weg moest je een nieuw rondje starten of van scherm naar scherm zoeken. */}
+            {!settle && rounds.length > 0 && laatsteRondjeKlaar() && (
+              <button onClick={() => editOrder()}
+                style={{ width: "100%", marginTop: 10, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
+                  borderRadius: 12, padding: "12px 10px", fontSize: 16, fontWeight: 800,
+                  background: "#fff", color: "#1d2942", border: "1px solid rgba(29,41,66,0.28)" }}>
+                {L.backToBarList}
+              </button>
+            )}
             {/* De enige plek waar het verdelen nog begint. In "Neem zelf op" vraagt de app
                 onderweg niets meer — geen bedragen, geen namen, geen toewijzing — dus hier
                 staat wat je nodig hebt als je het tóch wil verdelen. De streepjesrand zegt
