@@ -584,6 +584,9 @@ function parseSpraak(tekst: string, lijst: { id: string; name: string }[]): { id
 const T = {
   nl: {
     cancelRoundConfirm: (n: number) => `Rondje ${n} annuleren? Alle gekozen drankjes van dit rondje gaan verloren. Dit kan niet ongedaan gemaakt worden.`,
+    // Een rondje waarin nog niets is aangetikt: er gaat niets verloren, maar je verlaat
+    // wel het scherm. Daarom vragen we het toch, met een rustigere zin.
+    cancelEmptyRoundConfirm: (n: number) => `Rondje ${n} annuleren? Je tikte hier nog niets aan, dus er gaat niets verloren.`,
     invitedFor: "Je bent uitgenodigd voor",
     whoAreYou: "Wie ben jij?",
     tapYourName: "Tik op je naam.",
@@ -631,6 +634,7 @@ const T = {
     sameAgainTake: "Overnemen",
     sameAgainEdit: "daarna nog aanpasbaar",
     leaveNoNameTitle: "Dit groepje bewaren?",
+    stayHere: "Nee, ik blijf hier",
     leaveAutoSub: "We noemen hem naar de datum, tenzij je zelf iets typt.",
     leaveRoundLine: (n: number, d: number) => `Rondje ${n} · ${d} drankje${d === 1 ? "" : "s"}`,
     closeNeedName: "Geef je groep een naam om ze te bewaren in je lijst.",
@@ -1520,6 +1524,7 @@ const T = {
   },
   fr: {
     cancelRoundConfirm: (n: number) => `Annuler la tournée ${n} ? Toutes les boissons choisies seront perdues. C'est irréversible.`,
+    cancelEmptyRoundConfirm: (n: number) => `Annuler la tournée ${n} ? Tu n'as encore rien coché, donc rien ne se perd.`,
     invitedFor: "Tu es invité pour",
     whoAreYou: "Qui es-tu ?",
     tapYourName: "Touche ton nom.",
@@ -1567,6 +1572,7 @@ const T = {
     sameAgainTake: "Reprendre",
     sameAgainEdit: "modifiable ensuite",
     leaveNoNameTitle: "Garder cette soir\u00e9e\u00a0?",
+    stayHere: "Non, je reste ici",
     leaveAutoSub: "On la nomme d\u2019apr\u00e8s la date, sauf si tu tapes autre chose.",
     leaveRoundLine: (n: number, d: number) => `Tourn\u00e9e ${n} \u00b7 ${d} boisson${d === 1 ? "" : "s"}`,
     closeNeedName: "Donne un nom \u00e0 ton groupe pour le garder dans ta liste.",
@@ -5303,6 +5309,11 @@ export default function PartyTest() {
     if (view === "order" && !settle && rounds.length > 0) { setOpenRound(rounds.length - 1); setView("hub"); return }
     if (view === "settings") { setView(settingsBackTo === "order" ? "order" : "hub"); return }
     if (view === "roundsOverview") { setView(overviewBackTo === "order" ? "order" : overviewBackTo); return }
+    // Deze twee ontbraken: vanaf het introscherm of stap 1 van het splitten viel je door
+    // naar goStart() — het startscherm met de keuzekaders, midden in je avond. Eén stap
+    // terug hoort hier het rondjesoverzicht te zijn.
+    if (view === "fairIntro") { setOverviewBackTo("hub"); setView("roundsOverview"); return }
+    if (view === "fairSetup" && fromQuick) { stopSplitten(); return }
     if (view === "final" && opNaam === true) { terugNaarUitgebreid(); setOverviewBackTo("hub"); setView("roundsOverview"); return }
     if (view === "confirmed" || view === "quickSettle" || view === "payers" || view === "final") { setView("hub"); return }
     goStart()
@@ -6366,7 +6377,8 @@ export default function PartyTest() {
     setOpenRound(null); setHaalInfo(null); setLastRoundHandled(true); setOverviewBackTo("hub"); setView("roundsOverview")
   }
   const cancelOrder = () => setConfirmDlg({
-    msg: L.cancelRoundConfirm(roundNr),
+    // Leeg rondje? Dan een rustigere zin, want er gaat niets verloren.
+    msg: roundItems > 0 ? L.cancelRoundConfirm(roundNr) : L.cancelEmptyRoundConfirm(roundNr),
     yes: L.yesCancel,
     onYes: () => {
       setConfirmDlg(null)
@@ -6383,6 +6395,10 @@ export default function PartyTest() {
       setRoundNr(rounds.length + 1)
       setLastRoundHandled(true)
       setNotice(L.roundCancelledNote(roundNr))
+      // Zijn er al andere rondjes, dan is het overzicht de logische plek. Is dit het
+      // eerste en enige, dan zou dat een leeg scherm zijn — dan blijf je hier met een
+      // vers rondje. Vroeger belandde je in dat geval wél op dat lege overzicht.
+      if (rounds.length > 0) { setOverviewBackTo("hub"); setView("roundsOverview"); return }
       setActiveCat(catsPresent[0])
       setView("order")
       naarRondjeKop()
@@ -8366,7 +8382,14 @@ export default function PartyTest() {
                 + Object.values(r0.anon || {}).reduce((x: number, q) => x + Number(q || 0), 0), 0)
               const bewaar = () => { const nm = verlaatVeld.trim(); if (!nm) return nm; setGroupName(nm); persistSettings({ name: nm }); return nm }
               return (<>
-                <div style={{ background: "linear-gradient(135deg,#e0725c,#c0554a)", color: "#fff", padding: "13px 16px", fontSize: 18, fontWeight: 800, lineHeight: 1.3 }}>⚠️ {L.leaveNoNameTitle}</div>
+                {/* Het kruisje doet hetzelfde als "Nee, ik blijf hier": weg met dit venster,
+                    blijf waar je was. Twee wegen naar dezelfde uitkomst, want de een zoekt
+                    rechtsboven en de ander onderaan. */}
+                <div style={{ background: "linear-gradient(135deg,#e0725c,#c0554a)", color: "#fff", padding: "13px 16px", fontSize: 18, fontWeight: 800, lineHeight: 1.3, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <span>⚠️ {L.leaveNoNameTitle}</span>
+                  <span onClick={() => { setVerlaatNaam(null); setVerlaatVeld("") }}
+                    aria-label={L.stayHere} style={{ flexShrink: 0, cursor: "pointer", fontSize: 20, lineHeight: 1, opacity: 0.85, padding: "0 2px" }}>✕</span>
+                </div>
                 <div style={{ padding: "14px 16px 16px" }}>
                 {(rounds.length > 0 || potContribTotal > 0.005) && (
                   <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 11, padding: "10px 12px", marginTop: 10, fontSize: 15, color: "#b0402f", fontWeight: 700, lineHeight: 1.7 }}>
@@ -8387,6 +8410,14 @@ export default function PartyTest() {
                   onClick={() => { if (!bewaar()) return; const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.saveAndLeave}</button>
                 {/* Weggaan zonder bewaren blijft mogelijk, maar als kleine link: het is de
                     uitzondering, niet een van drie gelijkwaardige keuzes. */}
+                {/* Er was geen weg terug: je kon bewaren en weggaan, of weggaan zonder
+                    bewaren, maar niet gewoon blijven. Terwijl dit venster vaak opent omdat
+                    je per ongeluk één stap te ver terugtikte. */}
+                <button onClick={() => { setVerlaatNaam(null); setVerlaatVeld("") }}
+                  style={{ width: "100%", marginTop: 10, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "12px",
+                    fontSize: 16, fontWeight: 800, background: "#fff", color: "#1d2942", border: "1.5px solid rgba(29,41,66,0.25)" }}>
+                  {L.stayHere}
+                </button>
                 <div onClick={() => { const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}
                   style={{ textAlign: "center", marginTop: 13, fontSize: 13.5, fontWeight: 700, color: "#8b93a3", textDecoration: "underline", cursor: "pointer" }}>{L.leaveNoSaveBtn}</div>
                 </div>
@@ -11019,7 +11050,10 @@ export default function PartyTest() {
         {settle
           ? (roundItems > 0 && !(startedBy && meId && startedBy !== meId) && <button style={{ ...S.btn, width: "100%", marginTop: 10, color: "#c0554a", borderColor: "rgba(224,104,92,0.4)" }} onClick={cancelOrder}>{L.cancelRound}</button>)
           : <button style={{ width: "100%", boxSizing: "border-box", marginTop: 11, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(29,41,66,0.28)", borderRadius: 12, fontSize: 17, fontWeight: 800, color: "#b0402f", padding: "12px 8px" }}
-              onClick={() => { if (roundItems === 0) { setOverviewBackTo("hub"); setView("roundsOverview"); return } cancelOrder() }}>{L.cancelRoundShort}</button>}
+              // Ook bij een leeg rondje eerst vragen: je verliest niets, maar je verlaat wel
+              // het scherm, en vroeger belandde je zonder waarschuwing op een leeg overzicht
+              // als dit je eerste rondje was.
+              onClick={cancelOrder}>{L.cancelRoundShort}</button>}
         {roundItems > 0 && <div style={{ height: 66 }} />}
 
 
