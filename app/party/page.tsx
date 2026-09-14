@@ -5875,10 +5875,10 @@ export default function PartyTest() {
     // Losse rondjes zonder bedrag (overgeslagen — getrakteerd) tellen als €0 en houden
     // de overstap niet meer tegen; alleen als álle rondjes leeg zijn valt er niets te
     // verdelen. De eindbalans toont voor €0-rondjes een eigen regel met aanvul-knop.
-    // Staan er nog geen bedragen? Dan is dat gewoon de eerste stap van het verdelen, niet
-    // een fout. Vroeger kwam hier een melding en bleef je op hetzelfde scherm staan.
-    const leeg = rounds.filter((r) => (r.amount || 0) <= 0.005).length
-    if (leeg === rounds.length) { setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview"); return }
+    // Vroeger sprong je hier naar de invulstand van het rondjesoverzicht als er nog geen
+    // bedragen stonden. Vanaf het overzicht zelf lijkt het dan alsof er niets gebeurt: je
+    // blijft op hetzelfde scherm staan. De flow begint nu altijd bij stap 1 — wie was
+    // erbij — en de bedragen komen daarna aan bod.
     // Staat alles al ingevuld van een vorige keer — echte namen voor wie meedronk,
     // alle drankjes toegewezen én elk rondje met bedrag heeft een betaler of
     // pot-aandeel — dan valt er niets meer te vragen: meteen door naar de eindbalans.
@@ -8415,7 +8415,9 @@ export default function PartyTest() {
   // op het bestelscherm verhuist hij naar de rondje-titelregel.
   // "Pot leggen +" zolang de pot leeg is — zelfde vorm en plek als de saldobadge,
   // zodat er bij de eerste inleg niets verspringt.
-  const potLegBadge = () => (
+  // In "Neem zelf op" staat er geen pot meer in de kop: er valt daar niets te verdelen,
+  // dus een inleg betekent er niets. De pot hoort bij het splitten achteraf.
+  const potLegBadge = () => settle ? (
       <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "7px 14px 7px 10px", borderRadius: 999, fontSize: 15, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "rgba(255,255,255,0.1)", border: "1.5px dashed rgba(255,255,255,0.42)" }}>
       <svg width="23" height="23" viewBox="0 0 40 40" style={{ display: "block" }}>
       <path d="M16 13 L14 7 Q20 5 26 7 L24 13 Z" fill="#d99616" stroke="#b9821a" strokeWidth="1.2" strokeLinejoin="round" />
@@ -8425,7 +8427,7 @@ export default function PartyTest() {
       <span style={{ color: "#c3cbd8" }}>{L.potLayBtn}</span>
       <span style={{ color: "#F5B301", fontWeight: 800 }}>+</span>
       </span>
-  )
+  ) : null
 
   const potKnopje = () => (
     <span onClick={() => setShowPot(true)} style={{ cursor: "pointer", padding: "9px 15px 9px 11px", borderRadius: 999, fontSize: 16, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background: "#f2f6fc", border: `1.5px solid ${RAND}` }}>
@@ -12069,6 +12071,9 @@ export default function PartyTest() {
                         const pil = (tekst: string, kleur: string, vlak: string) => (
                           <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap", color: kleur, background: vlak }}>{tekst}</span>
                         )
+                        // In "Neem zelf op" valt er niets toe te wijzen en zijn bedragen
+                        // optioneel, dus geen enkele statuspil: er ontbreekt niets.
+                        if (!settle) return null
                         if (nogToe === 0 && !geenBedrag) return pil(L.completePill, "#1f8a4c", "rgba(31,138,76,0.12)")
                         return (<>
                           {nogToe > 0 && pil(L.noNamePill(nogToe), "#b0402f", "rgba(224,104,92,0.14)")}
