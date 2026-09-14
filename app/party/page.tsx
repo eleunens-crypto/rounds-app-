@@ -9697,13 +9697,16 @@ export default function PartyTest() {
           @keyframes rundoLoop{from{width:0}to{width:100%}}
           input::placeholder,textarea::placeholder{color:#a7b0bf;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
         <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: "#0E1A2E", padding: "13px 14px" }}>
+        {/* Drie vakken naast elkaar in plaats van een zwevende taalknop. Die stond
+            absoluut gepositioneerd rechts, terwijl de titel in het midden stond te
+            groeien: op 320 en 360 pixels — de breedte van de meeste telefoons — liep de
+            titel dus ónder de knop door. Op een laptop viel dat niet op, want daar is
+            er ruimte genoeg. Nu duwen de drie elkaar netjes opzij. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 9, background: "#0E1A2E", padding: "13px 12px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/rundo-merk.png" alt="" height={36} style={{ width: "auto", flexShrink: 0, display: "block" }} />
-          <span style={{ fontSize: 20, fontWeight: 500, color: "#fff" }}>{L.chooseHow}</span>
-          {/* De taal kies je hier, vóór je een modus start: verderop draagt de kop van de
-              beheerder de pot op die plek, en dan is er geen ruimte meer voor NL/FR. */}
-          <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }}><LanguageToggle compact /></span>
+          <img src="/rundo-merk.png" alt="" height={34} style={{ width: "auto", flexShrink: 0, display: "block" }} />
+          <span style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 19, fontWeight: 500, color: "#fff", lineHeight: 1.2 }}>{L.chooseHow}</span>
+          <span style={{ flexShrink: 0 }}><LanguageToggle compact /></span>
         </div>
 
         <div style={{ padding: "14px 13px" }}>
@@ -9725,7 +9728,10 @@ export default function PartyTest() {
                   </span>
                 </span>
                 <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf}</span>
-                <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: MODUS_SNEL.rand, lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf2}</span>
+                {/* De langste kop van de twee. Op een scherm van 320 pixels breekt hij bij
+                    22px over twee regels; met deze formule krimpt hij daar mee tot hij past,
+                    en blijft hij op een gewone telefoon gewoon 22. */}
+                <span style={{ display: "block", fontSize: "min(22px, calc((100vw - 80px) / 12.2))", fontWeight: 800, color: MODUS_SNEL.rand, lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf2}</span>
                 <span style={{ display: "block", textAlign: "left", marginTop: 12, paddingLeft: 6 }}>
                   {[L.youNote1, L.youNote2].map((t, i2) => (
                     <span key={i2} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i2 < 1 ? 5 : 0 }}>
@@ -9777,7 +9783,7 @@ export default function PartyTest() {
                   </span>
                 </span>
                 <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.modeTitle}</span>
-                <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: MODUS_FAIR.rand, lineHeight: 1.18, letterSpacing: -0.3 }}>{L.modeTitle2}</span>
+                <span style={{ display: "block", fontSize: "min(22px, calc((100vw - 80px) / 12.2))", fontWeight: 800, color: MODUS_FAIR.rand, lineHeight: 1.18, letterSpacing: -0.3 }}>{L.modeTitle2}</span>
                 <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
                   {[L.modeFairSub, L.modeFairSub2, L.modeFairSub3].map((t, i) => (
                     <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i < 2 ? 5 : 0 }}>
