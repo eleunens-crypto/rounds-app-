@@ -1153,12 +1153,17 @@ const T = {
     walkFor: (n: string) => `Wat wil ${n}?`,
     claimSeatFirst: "Neem eerst een plaats voor je een rondje start.",
     modeTitle: "Deel QR in groep",
+    modeTitle2: "…en split eerlijk!",
+    showAllDrinks: (n: number) => `alles tonen (${n}) ▾`,
+    showLessDrinks: "minder tonen ▴",
+    lastRoundPill: "laatste",
     modeTitleSub2: "Betaalt eerlijk volgens wat hij of zij dronk",
     modeQuick: "Ik bestel voor de groep",
     modeQuickSub: "Jij tikt zelf alle drankjes aan.",
     orWord: "of",
-    modeFairSub: "Iedereen scant QR met eigen gsm",
-    modeFairSub2: "Duidt aan wat hij of zij drinkt",
+    modeFairSub: "iedereen tikt eigen drankje aan",
+    modeFairSub2: "handig barlijstje",
+    modeFairSub3: "rekening eerlijk verdeeld",
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
     modeSwitchLater: "Kies je snel noteren, dan kan je op het einde alsnog eerlijk per persoon verdelen.",
     chooseHow: "Kies hoe je wil bestellen",
@@ -1170,10 +1175,14 @@ const T = {
     restoStep3: "tik aan wat je nam",
     restoStep4: "eerlijk verdeeld!",
     tryItBtn: "Probeer het eens",
+    // De kop zegt nu ook wie er betaalt, want dat is het echte verschil tussen de twee
+    // modi. "Neem zelf op" liet in het midden of jij dan ook de toog betaalt.
     youNoteSelf: "Neem zelf op",
-    youNote1: "Jij tikt alle drankjes zelf aan",
-    youNote2: "Handig barlijstje",
-    youNote3: "Snel of eerlijk verdelen — jij kiest",
+    // Tweede kopregel, even groot als de titel maar in de kleur van de modus. Zegt wat
+    // er met het geld gebeurt — dat is het echte verschil tussen de twee modi.
+    youNoteSelf2: "…jij betaalt of schiet voor",
+    youNote1: "jij tikt alle drankjes aan",
+    youNote2: "handig barlijstje",
     modeSnelTitle: "Zelf noteren",
     modeNaamShort: "Ik neem zelf op",
     showToFriend: "📱 QR-code van de groep",
@@ -2046,12 +2055,17 @@ const T = {
     walkFor: (n: string) => `Que veut ${n} ?`,
     claimSeatFirst: "Prends d'abord une place avant de lancer une tournée.",
     modeTitle: "Partage le QR",
+    modeTitle2: "…et partage équitablement !",
+    showAllDrinks: (n: number) => `tout afficher (${n}) ▾`,
+    showLessDrinks: "afficher moins ▴",
+    lastRoundPill: "dernière",
     modeTitleSub2: "Paie équitablement selon ce qu’il ou elle a bu",
     modeQuick: "Je commande pour le groupe",
     modeQuickSub: "Tu coches toutes les boissons toi-même.",
     orWord: "ou",
-    modeFairSub: "Chacun scanne le QR sur son téléphone",
-    modeFairSub2: "Coche ce qu’il ou elle boit",
+    modeFairSub: "chacun coche ses propres boissons",
+    modeFairSub2: "liste pratique pour le bar",
+    modeFairSub3: "addition partagée équitablement",
     modeFairLine: "Payer équitablement selon ce que tu as bu",
     modeSwitchLater: "Si tu notes en vitesse, tu peux encore r\u00e9partir \u00e9quitablement \u00e0 la fin.",
     chooseHow: "Choisissez comment commander",
@@ -2064,9 +2078,9 @@ const T = {
     restoStep4: "partag\u00e9 \u00e9quitablement\u00a0!",
     tryItBtn: "Essaie-le",
     youNoteSelf: "Note toi-même",
-    youNote1: "Tu coches toutes les boissons",
-    youNote2: "Liste pratique pour le bar",
-    youNote3: "Vite ou équitable — à toi de choisir",
+    youNoteSelf2: "…tu paies ou tu avances",
+    youNote1: "tu coches toutes les boissons",
+    youNote2: "liste pratique pour le bar",
     modeSnelTitle: "Je note moi-m\u00eame",
     modeNaamShort: "Je note pour tous",
     showToFriend: "📱 QR-code du groupe",
@@ -9692,9 +9706,10 @@ export default function PartyTest() {
                   </span>
                 </span>
                 <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf}</span>
+                <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: MODUS_SNEL.rand, lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf2}</span>
                 <span style={{ display: "block", textAlign: "left", marginTop: 12, paddingLeft: 6 }}>
-                  {[L.youNote1, L.youNote2, L.youNote3].map((t, i2) => (
-                    <span key={i2} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i2 < 2 ? 5 : 0 }}>
+                  {[L.youNote1, L.youNote2].map((t, i2) => (
+                    <span key={i2} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i2 < 1 ? 5 : 0 }}>
                       <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 17 }}>✓</span>
                       <span style={{ fontSize: 18, color: "#4a5567", lineHeight: 1.4 }}>{t}</span>
                     </span>
@@ -9743,8 +9758,9 @@ export default function PartyTest() {
                   </span>
                 </span>
                 <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.modeTitle}</span>
+                <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: MODUS_FAIR.rand, lineHeight: 1.18, letterSpacing: -0.3 }}>{L.modeTitle2}</span>
                 <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
-                  {[L.modeFairSub, L.modeFairSub2, L.modeTitleSub2].map((t, i) => (
+                  {[L.modeFairSub, L.modeFairSub2, L.modeFairSub3].map((t, i) => (
                     <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i < 2 ? 5 : 0 }}>
                       <span style={{ flexShrink: 0, color: MODUS_FAIR.rand, fontWeight: 800, fontSize: 17 }}>✓</span>
                       <span style={{ fontSize: 18, color: "#4a5567", lineHeight: 1.4 }}>{t}</span>
@@ -12112,6 +12128,11 @@ export default function PartyTest() {
                   <div style={{ ...S.row, justifyContent: "space-between", gap: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, minWidth: 0 }}>
                       <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1d2942", whiteSpace: "nowrap" }}>{editRoundId === r.id ? L.editRoundHead(nr) : `${L.roundWord} ${nr}`}</span>
+                      {/* Het laatste rondje staat onderaan de lijst; dit label maakt het
+                          vindbaar zonder de volgorde van de avond om te keren. */}
+                      {editRoundId !== r.id && r.id === laatsteId && (
+                        <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, borderRadius: 12, padding: "3px 9px", whiteSpace: "nowrap", color: "#fff", background: "#1f8a4c" }}>{L.lastRoundPill}</span>
+                      )}
                       {/* Twee losse pillen zeggen wát er mist; één teller zou je toch weer laten
                           openklappen. Rood voor namen, amber voor het bedrag — dezelfde kleuren
                           als het kader binnenin. */}
@@ -12141,6 +12162,23 @@ export default function PartyTest() {
                   {/* Betaald-melding net onder de titel — leesbaar, geen invulveld meer. */}
                   {/* Altijd gevuld: het aantal drankjes stond vroeger in de titel, maar daar
                       is nu plaats nodig voor de statuspillen. */}
+                  {/* Twee regels met wat erin zat. Meer dan dat past niet, en het balkje
+                      onderaan zegt hoeveel er nog achter zit — zonder dat balkje zag je
+                      alleen afgekapte tekst en wist je niet of er nog iets volgde. */}
+                  {!open && (() => {
+                    const lijst = drinks
+                      .map((d) => ({ naam: d.name, n: drinkTotalRound(r, d.id) }))
+                      .filter((x) => x.n > 0)
+                      .sort((a, b) => b.n - a.n)
+                      .map((x) => `${x.n}× ${x.naam}`)
+                    if (lijst.length === 0) return null
+                    return (
+                      <div style={{ fontSize: 15, color: "#8b93a3", marginTop: 3, lineHeight: 1.35,
+                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                        {lijst.join(", ")}
+                      </div>
+                    )
+                  })()}
                   <div style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 600, marginTop: 4 }}>
                     {L.drinksCount(items)}
                     {(r.amount || 0) > 0.005 && <> · {L.paidNote(euro(r.amount))}</>}
@@ -12155,6 +12193,16 @@ export default function PartyTest() {
                       style={{ width: "100%", marginTop: 10, background: "#fff", border: "1.5px solid rgba(224,138,0,0.6)", color: "#a8720a", fontSize: 13.5, fontWeight: 800, padding: 10, borderRadius: 10, cursor: "pointer", fontFamily: "inherit" }}>{L.fillAmountBtn}</button>
                   )}
                 </div>
+                {/* Het balkje over de volle breedte: veel makkelijker te raken dan het
+                    pijltje rechtsboven, en het zegt in woorden hoeveel er achter zit. */}
+                {editRoundId !== r.id && items > 0 && (
+                  <div onClick={() => toggle(r.id)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                      borderTop: "1px dashed rgba(29,41,66,0.16)", padding: "8px 0", fontSize: 14.5, fontWeight: 800,
+                      color: "#8a5e0f", background: "#fffdf6" }}>
+                    {open ? L.showLessDrinks : L.showAllDrinks(items)}
+                  </div>
+                )}
                 {open && (() => {
                   const idx = rounds.indexOf(r)
                   const bewerk = editRoundId === r.id && editDraft !== null
