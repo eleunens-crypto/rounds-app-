@@ -4352,9 +4352,11 @@ export default function PartyTest() {
     const vorigeGid = laatsteGeladenGid.current
     laatsteGeladenGid.current = gid
     const fqVlag = !!(g as { fq?: boolean } | null)?.fq
-    if (g && g.settle !== false) setOpNaam(false)
-    else if (vorigeGid !== null && vorigeGid !== gid) setOpNaam(uitgebreidData && !fqVlag ? true : false)
-    else if (uitgebreidData && !fqVlag) setOpNaam(true)
+    // Vroeger werd "uitgebreid opnemen" hier uit de data afgeleid — had een groep twee
+    // of meer namen, dan sprong hij aan. Die modus bestaat niet meer, en de afleiding
+    // was ook de oorzaak van het plakken aan de volgende groep.
+    setOpNaam(false)
+    void uitgebreidData; void fqVlag
     if (vorigeGid !== null && vorigeGid !== gid) setFromQuick(false)
     if (fqVlag) setFromQuick(true)
     setGroepDatum((g as { last_active?: string } | null)?.last_active ?? null)
@@ -4956,10 +4958,12 @@ export default function PartyTest() {
   const startWithMode = async (fallbackNaam?: string, modus?: boolean) => {
     // De keuze snel-of-op-naam staat al op het keuzescherm; het losse venster erna is
     // daardoor overbodig geworden.
-    // Eén zelf-noteer-modus: namen zijn overal optioneel, dus het onderscheid
-    // snel/uitgebreid bestaat niet meer. modus === false = zelf noteren, true = QR.
-    if (modus === false) { setOpNaam(true); setNamenSetup(false) }
-    else if (modus === true) { setOpNaam(false); setNamenSetup(false) }
+    // "Neem zelf op" tikt voortaan voor de hele groep tegelijk: geen namen, geen
+    // toewijzing per persoon, geen waarschuwingen daarover. Wie tóch per persoon wil
+    // verdelen, doet dat achteraf via "Toch eerlijk splitten?" op het rondjesoverzicht.
+    // Daardoor staat opNaam in deze modus altijd uit; hij bestond alleen nog om die
+    // per-persoon-schermen aan te zetten.
+    if (modus === false || modus === true) { setOpNaam(false); setNamenSetup(false) }
     const keuze = modus ?? bpSettle
     if (keuze === null || keuze === undefined) return
     const wilSettle = keuze === true
@@ -5814,9 +5818,10 @@ export default function PartyTest() {
     // Snel opnemen met enkel lege rondjes: op €0 valt er niets te verdelen én niets te
     // kiezen. In plaats van een afrekenscherm vol nullen: zeggen wat er moet gebeuren en
     // meteen de invul-stand van het rondjesoverzicht openen, met de knop per leeg rondje.
-    if (!opNaam && !rounds.some((r) => (r.amount || 0) > 0.005)) {
-      setNotice(L.fillAmountsFirst)
-      setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview")
+    // Lege bedragen houden je niet meer tegen: in "Neem zelf op" zijn ze optioneel, en
+    // wie wil verdelen vult ze in bij stap 2 van "Toch eerlijk splitten?".
+    if (!settle && !rounds.some((r) => (r.amount || 0) > 0.005)) {
+      setOverviewBackTo("hub"); setView("roundsOverview")
       return
     }
     // Uitgebreid opnemen belooft "ieder betaalt wat hij dronk"; dat kan niet zolang er
@@ -6223,9 +6228,17 @@ export default function PartyTest() {
     setPaidConfirmed(true)
   }
   const closeRound = () => {
-    const st = paymentState()
-    if (!st.valid) { setNotice(st.reason || L.confirmPaymentFirst); return }
-    if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return } setOpenRound(null); setHaalInfo(null); setLastRoundHandled(true); setOverviewBackTo("hub"); setView("roundsOverview") }
+    // In "Neem zelf op" hoort een rondje afsluiten niets te vragen: jij betaalt aan de
+    // toog en klapt gewoon door naar het overzicht. Bedragen, wie betaalde en de pot
+    // horen bij het verdelen, en dat gebeurt achteraf via "Toch eerlijk splitten?".
+    // In QR blijft de controle staan: daar rekent iedereen op zijn eigen deel.
+    if (settle) {
+      const st = paymentState()
+      if (!st.valid) { setNotice(st.reason || L.confirmPaymentFirst); return }
+      if (!paidConfirmed) { setNotice(L.confirmPaymentFirst); return }
+    }
+    setOpenRound(null); setHaalInfo(null); setLastRoundHandled(true); setOverviewBackTo("hub"); setView("roundsOverview")
+  }
   const cancelOrder = () => setConfirmDlg({
     msg: L.cancelRoundConfirm(roundNr),
     yes: L.yesCancel,
@@ -11058,7 +11071,9 @@ export default function PartyTest() {
             {settle && fromQuick ? <span style={{ fontSize: 17, color: "#e08a00", fontWeight: 800 }}>{L.someoneCanGo}</span> : <span />}
             <span style={{ fontSize: 17.5, fontWeight: 800, flexShrink: 0 }}>{L.total}: {items}</span>
           </div>
-          {last && (() => { const un = drinks.reduce((a, d) => a + (last.anon[d.id] ?? 0), 0); return un > 0 ? (
+          {/* Toewijzen bestaat alleen in QR. In "Neem zelf op" tik je voor de hele groep
+              tegelijk, dus dan is er niets "nog niet toegewezen". */}
+          {settle && last && (() => { const un = drinks.reduce((a, d) => a + (last.anon[d.id] ?? 0), 0); return un > 0 ? (
             <div onClick={() => { editOrder(); setAssignNaamEdit(false); setShowAssignAll(true) }} style={{ marginTop: 8, background: "#fffdf4", border: "1px solid rgba(240,165,0,0.45)", borderRadius: 10, padding: "9px 11px", fontSize: 15.5, fontWeight: 800, color: "#8a5e0f", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               <span>🍺 {L.notAssignedYet(un)}</span>
               <span style={{ flexShrink: 0, border: "1.5px solid rgba(240,165,0,0.6)", borderRadius: 9, padding: "5px 10px", fontSize: 14 }}>{L.assign}</span>
@@ -11066,6 +11081,10 @@ export default function PartyTest() {
           ) : null })()}
         </div>
 
+        {/* Het hele betaalblok — bedrag, wie betaalde, de pot — hoort bij verdelen, en dat
+            gebeurt in "Neem zelf op" pas achteraf via "Toch eerlijk splitten?". Hier sluit
+            je gewoon af en ga je naar het overzicht. */}
+        {settle && (
         <div style={S.card}>
           {settle && (
             <div style={{ marginBottom: 12 }}>
@@ -11167,8 +11186,9 @@ export default function PartyTest() {
             <div style={{ fontSize: 16, color: "#9aa3b2", textAlign: "center", padding: "6px 0 2px" }}>{L.fillAmountFirst}</div>
           )}
         </div>
+        )}
 
-        {paidConfirmed && st.valid && <button style={S.btnP} onClick={closeRound}>{L.closeRound}</button>}
+        {(!settle || (paidConfirmed && st.valid)) && <button style={S.btnP} onClick={closeRound}>{L.closeRound}</button>}
         {/* Sta je nog met vijf glazen in je handen? Dan mag het bedrag wachten. Het rondje
             blijft zichtbaar in het overzicht met een streepjesrand tot het ingevuld is. */}
         {settle && !paidConfirmed && (
