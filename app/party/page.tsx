@@ -10554,7 +10554,18 @@ export default function PartyTest() {
     // favorieten zit.
     const zoekt = normText(drinkSearch).length > 0
     const catDrinks = zoekt ? drinks.filter((d) => drinkMatches(d.name, drinkSearch)) : drinks.filter((d) => d.cat === activeCat)
-    const catVisible = zoekt ? catDrinks : catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
+    // Hoeveel drankjes je ziet hing af van het aantal favorieten in die categorie: vier
+    // bij Bier, acht bij Frisdrank. Dat was nooit zo bedoeld, het is gewoon hoe de lijst
+    // is ingevuld. Nu vullen we aan tot er zes tegels staan — drie volle rijen van twee —
+    // waarbij "Eigen drankje?" de laatste plek mag innemen. Heeft een categorie er meer,
+    // dan blijven die gewoon allemaal staan.
+    const catVisible = (() => {
+      if (zoekt) return catDrinks
+      const basis = catDrinks.filter((d) => fullList || d.fav || drinkTotal(d.id) > 0)
+      if (fullList || basis.length >= 5) return basis
+      const rest = catDrinks.filter((d) => !basis.includes(d))
+      return [...basis, ...rest.slice(0, 5 - basis.length)]
+    })()
     // Voor wie tik je aan: als balk bovenin de drankjeskaart. Alleen als er echt iemand
     // gekozen is — bij "zonder namen" bestaat voorWie niet.
     const voorWieIdx = people.findIndex((pp) => pp.id === voorWie)
