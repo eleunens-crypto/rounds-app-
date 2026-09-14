@@ -7336,13 +7336,19 @@ export default function PartyTest() {
         return (
           <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={() => { if (!barNaRondje) sluitBar() }}>
             <div style={{ maxWidth: 430, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: "0.01em", color: "#1d2942" }}>🔍 {L.barlistTitle}</div>
+              {/* De titel zit in de donkere balk, net als het rondjenummer op het
+                  bestelscherm: dat scheelt de hoogte van een aparte kopregel. De groepsnaam
+                  en de aantallen schuiven eronder in kleinere letters. */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 14, padding: "10px 12px", marginBottom: 8 }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <span style={{ fontSize: 19, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🔍 {L.barlistTitle}</span>
+                  <span style={{ flexShrink: 0, background: "rgba(245,179,1,0.2)", border: "1px solid rgba(245,179,1,0.55)", color: "#F5B301", borderRadius: 999, padding: "3px 10px", fontSize: 13.5, fontWeight: 800 }}>{som}</span>
+                </span>
                 {barNaRondje
-                  ? <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 800, color: "#c98a00", whiteSpace: "nowrap" }}>{L.barlistPieces(som)}</span>
-                  : <button onClick={sluitBar} style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, border: "none", background: RAND, color: RANDTEKST, height: 50, padding: "0 20px", borderRadius: 999, fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>✕ {L.closeWord}</button>}
+                  ? null
+                  : <button onClick={sluitBar} style={{ marginLeft: "auto", flexShrink: 0, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", height: 38, padding: "0 15px", borderRadius: 999, fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>}
               </div>
-              <div style={{ fontSize: 15, color: "#6b7484", fontWeight: 700, margin: "2px 0 12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length} {L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"} · {L.drinksCount(som)}</div>
+              <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "0 2px 11px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length} {L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"}</div>
               {/* Bij meerdere rondjes een rij nummers om te wisselen; het laatste staat al
                   open. Bij één rondje valt de rij vanzelf weg en is dit gewoon het
                   barlijstje. Niet tijdens het bestellen: dan kijk je naar wat je nú aantikt. */}
