@@ -1157,6 +1157,8 @@ const T = {
     showAllDrinks: (n: number) => `alles tonen (${n}) ▾`,
     showLessDrinks: "minder tonen ▴",
     lastRoundPill: "laatste",
+    fairSplitCta: "⚖️ Toch eerlijk splitten?",
+    fairSplitCtaSub: "Verdeel wat je betaalde over de groep.",
     modeTitleSub2: "Betaalt eerlijk volgens wat hij of zij dronk",
     modeQuick: "Ik bestel voor de groep",
     modeQuickSub: "Jij tikt zelf alle drankjes aan.",
@@ -2059,6 +2061,8 @@ const T = {
     showAllDrinks: (n: number) => `tout afficher (${n}) ▾`,
     showLessDrinks: "afficher moins ▴",
     lastRoundPill: "dernière",
+    fairSplitCta: "⚖️ Partager équitablement ?",
+    fairSplitCtaSub: "Répartis ce que tu as payé sur le groupe.",
     modeTitleSub2: "Paie équitablement selon ce qu’il ou elle a bu",
     modeQuick: "Je commande pour le groupe",
     modeQuickSub: "Tu coches toutes les boissons toi-même.",
@@ -5871,8 +5875,10 @@ export default function PartyTest() {
     // Losse rondjes zonder bedrag (overgeslagen — getrakteerd) tellen als €0 en houden
     // de overstap niet meer tegen; alleen als álle rondjes leeg zijn valt er niets te
     // verdelen. De eindbalans toont voor €0-rondjes een eigen regel met aanvul-knop.
+    // Staan er nog geen bedragen? Dan is dat gewoon de eerste stap van het verdelen, niet
+    // een fout. Vroeger kwam hier een melding en bleef je op hetzelfde scherm staan.
     const leeg = rounds.filter((r) => (r.amount || 0) <= 0.005).length
-    if (leeg === rounds.length) { setNotice(L.fillAmountsFirst); setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview"); return }
+    if (leeg === rounds.length) { setFillMode(true); setOverviewBackTo("hub"); setView("roundsOverview"); return }
     // Staat alles al ingevuld van een vorige keer — echte namen voor wie meedronk,
     // alle drankjes toegewezen én elk rondje met bedrag heeft een betaler of
     // pot-aandeel — dan valt er niets meer te vragen: meteen door naar de eindbalans.
@@ -12536,7 +12542,19 @@ export default function PartyTest() {
                     background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
               )}
             </div>
-            {/* De afrekenknop stond hier ook onderaan; één keer bovenaan volstaat. */}
+            {/* De enige plek waar het verdelen nog begint. In "Neem zelf op" vraagt de app
+                onderweg niets meer — geen bedragen, geen namen, geen toewijzing — dus hier
+                staat wat je nodig hebt als je het tóch wil verdelen. De streepjesrand zegt
+                dat dit iets anders is dan de gewone weg: jij betaalde, en dit is optioneel. */}
+            {!settle && rounds.length > 0 && (
+              <button onClick={() => { setSettleChoice("fair"); goToFairSplit() }}
+                style={{ width: "100%", marginTop: 14, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
+                  borderRadius: 14, padding: "14px 10px", border: "2px dashed rgba(13,124,140,0.55)",
+                  background: "#f2fafb", color: "#0d7c8c", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                <span style={{ fontSize: 17, fontWeight: 800 }}>{L.fairSplitCta}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#4a5567" }}>{L.fairSplitCtaSub}</span>
+              </button>
+            )}
             </div>
           </>
         )}
