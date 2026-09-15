@@ -983,8 +983,8 @@ const T = {
     // ── overzicht
     roundsOverview: "📋 Rondjesoverzicht",
     overview: "📋 Overzicht",
-    repeatRound: "🔁 Zelfde opnieuw",
-    repeatRoundSub: "aanpasbaar",
+    repeatRound: "🔁 Zelfde rondje opnieuw",
+    repeatRoundSub: "eerst nakijken en aanpassen",
     proposalTitle: "🗳️ Weer hetzelfde rondje?",
     proposalWaiting: "Iedereen antwoordt op zijn scherm. Jij sluit af wanneer je wil.",
     ansSame: "✅ hetzelfde",
@@ -1179,7 +1179,8 @@ const T = {
     closeAllRounds: "alles dichtklappen ▴",
     fairSplitTitleNew: "⚖️ Eerlijk splitten",
     fairIntroTitle: "Eerlijk splitten",
-    fairIntroLead: "Je nam alles samen op. Om te verdelen hebben we nog drie dingen nodig.",
+    fairIntroLead: "Verdeel eerlijk volgens wie wat dronk!",
+    fairIntroHow: "Hoe? 3 korte stappen",
     fairIntroStep1: "Wie was erbij?",
     fairIntroStep1Sub: "Het aantal volstaat. Namen mogen, maar hoeven niet.",
     fairIntroStep2: "Wie dronk wat?",
@@ -1300,8 +1301,10 @@ const T = {
     barlistPieces: (n: number) => `${n} ${n === 1 ? "stuk" : "stuks"}`,
     barlistAdjust: "Aanpassen",
     barlistDone: "Klaar",
-    repeatListSub: (n: number) => `Zelfde als rondje ${n} \u00b7 pas aan met \u2212 en +`,
+    repeatListSub: (n: number) => `Zelfde als rondje ${n}. Pas aan met \u2212, + of \u2715.`,
     repeatOrderBtn: "Bestel opnieuw",
+    repeatListTitle: "Rondje opnieuw",
+    repeatThisRound: (n: number) => `🔁 Rondje ${n} opnieuw bestellen`,
     repeatEditBtn: "Pas bestelling aan",
     repeatEmpty: "Zet minstens \u00e9\u00e9n drankje op de lijst.",
     fairAssignTitle: "Wie dronk wat?",
@@ -1928,8 +1931,8 @@ const T = {
     // ── overzicht
     roundsOverview: "📋 Aperçu des tournées",
     overview: "📋 Aperçu",
-    repeatRound: "🔁 La même",
-    repeatRoundSub: "modifiable",
+    repeatRound: "🔁 Même tournée",
+    repeatRoundSub: "vérifier et ajuster d\u2019abord",
     proposalTitle: "🗳️ La même tournée ?",
     proposalWaiting: "Chacun répond sur son écran. Tu clôtures quand tu veux.",
     ansSame: "✅ pareil",
@@ -2125,7 +2128,8 @@ const T = {
     closeAllRounds: "tout replier ▴",
     fairSplitTitleNew: "⚖️ Partager équitablement",
     fairIntroTitle: "Partager équitablement",
-    fairIntroLead: "Tu as tout noté ensemble. Pour répartir, il nous faut encore trois choses.",
+    fairIntroLead: "Partage \u00e9quitablement selon qui a bu quoi\u00a0!",
+    fairIntroHow: "Comment\u00a0? 3 \u00e9tapes rapides",
     fairIntroStep1: "Qui était là ?",
     fairIntroStep1Sub: "Le nombre suffit. Les noms sont facultatifs.",
     fairIntroStep2: "Qui a bu quoi ?",
@@ -2242,8 +2246,10 @@ const T = {
     barlistPieces: (n: number) => `${n} pi\u00e8ce${n === 1 ? "" : "s"}`,
     barlistAdjust: "Modifier",
     barlistDone: "Termin\u00e9",
-    repeatListSub: (n: number) => `Comme la tourn\u00e9e ${n} \u00b7 ajuste avec \u2212 et +`,
+    repeatListSub: (n: number) => `Comme la tourn\u00e9e ${n}. Ajuste avec \u2212, + ou \u2715.`,
     repeatOrderBtn: "Recommander",
+    repeatListTitle: "Tourn\u00e9e \u00e0 refaire",
+    repeatThisRound: (n: number) => `🔁 Recommander la tourn\u00e9e ${n}`,
     repeatEditBtn: "Modifier la commande",
     repeatEmpty: "Mets au moins une boisson sur la liste.",
     fairAssignTitle: "Qui a bu quoi\u00a0?",
@@ -2497,6 +2503,9 @@ export default function PartyTest() {
   // bestelscherm. herhaalBezig houdt de knoppen dof zolang het rondje wordt weggeschreven.
   const [herhaalLijst, setHerhaalLijst] = useState<Record<string, number> | null>(null)
   const [herhaalBezig, setHerhaalBezig] = useState(false)
+  // Welk rondje je herhaalt (index in rounds). Standaard het laatste; in het venster
+  // en vanuit het barlijstje kies je ook een vorig.
+  const [herhaalBron, setHerhaalBron] = useState<number | null>(null)
   // Stap 2 van het splitten: welke rondjes je zelf dichtklapte. Standaard staat alles
   // open; een rondje klapt niet vanzelf dicht terwijl je er nog in tikt.
   const [stap2Dicht, setStap2Dicht] = useState<Set<string>>(new Set())
@@ -6749,13 +6758,16 @@ export default function PartyTest() {
     }
   }
 
-  // Het aanpasbare barlijstje openen, met de aantallen van het vorige rondje.
-  const openHerhaal = () => {
+  // Het aanpasbare lijstje openen, met de aantallen van het gekozen rondje (standaard
+  // het laatste).
+  const openHerhaal = (bron?: number) => {
     if (blokTenzijQR()) return
-    const last = rounds[rounds.length - 1]
-    if (!last) { setNotice(L.nothingToRepeat); return }
+    const idx = bron !== undefined && rounds[bron] ? bron : rounds.length - 1
+    const r = rounds[idx]
+    if (!r) { setNotice(L.nothingToRepeat); return }
     const t: Record<string, number> = {}
-    drinksOf(last).forEach(({ d, n }) => { t[d.id] = n })
+    drinksOf(r).forEach(({ d, n }) => { t[d.id] = n })
+    setHerhaalBron(idx)
     setHerhaalLijst(t)
   }
 
@@ -6764,12 +6776,13 @@ export default function PartyTest() {
   // ander rondje: het barlijstje met "Aanpassen" en "Klaar", en via Klaar het overzicht.
   const bestelOpnieuw = async (totalen: Record<string, number>) => {
     const last = rounds[rounds.length - 1]
-    if (!last || !groupId || herhaalBezig) return
+    const bron = (herhaalBron !== null && rounds[herhaalBron]) || last
+    if (!last || !bron || !groupId || herhaalBezig) return
     const som = Object.values(totalen).reduce((a, b) => a + (b || 0), 0)
     if (som <= 0) { setNotice(L.repeatEmpty); return }
     setHerhaalBezig(true)
     try {
-      const basis = vorigeBestelling(last)
+      const basis = vorigeBestelling(bron)
       const { orders, anon } = naarTotalen(basis.orders, basis.anon, totalen)
       const rid = await ensureRound(meId ?? null)
       if (!rid) return
@@ -6787,7 +6800,7 @@ export default function PartyTest() {
       await loadParty(groupId)
       const snap: Record<string, number> = {}
       Object.entries(totalen).forEach(([did, n]) => { if ((n || 0) > 0) snap[did] = n })
-      setHerhaalLijst(null)
+      setHerhaalLijst(null); setHerhaalBron(null)
       setLastRoundHandled(false)
       setRoundNr(rounds.length + 1)
       setBarNaRondje(snap); setShowBarlijst(true)
@@ -6799,9 +6812,9 @@ export default function PartyTest() {
 
   // totalen: de aantallen uit het aanpasbare barlijstje. Zonder totalen gewoon het
   // vorige rondje zoals het was (zo start QR het nog).
-  const repeatRound = (totalen?: Record<string, number>) => {
+  const repeatRound = (totalen?: Record<string, number>, bronIdx?: number) => {
     if (blokTenzijQR()) return
-    const last = rounds[rounds.length - 1]
+    const last = bronIdx !== undefined && rounds[bronIdx] ? rounds[bronIdx] : rounds[rounds.length - 1]
     if (!last) { setNotice(L.nothingToRepeat); return }
     setDrinkSearch("")
     setFullList(false)
@@ -7527,6 +7540,22 @@ export default function PartyTest() {
             {/* Sticky, niet fixed: bij een kort lijstje staan de knoppen er meteen onder
                 in plaats van een half scherm lager, en bij een lang rondje plakken ze
                 alsnog onderaan zodat je niet eerst terug moet scrollen. */}
+            {/* Kijk je naar een afgerond rondje (niet net na het bestellen, en niet tijdens
+                een lopend rondje), dan kan je het van hieruit opnieuw bestellen. Dat opent
+                hetzelfde aanpasbare lijstje als "Zelfde rondje opnieuw". */}
+            {!barNaRondje && !settle && rounds.length > 0 && laatsteRondjeKlaar() && drinks.reduce((a, d) => a + drinkTotal(d.id), 0) === 0 && (() => {
+              const actief = barRondjeIdx !== null && rounds[barRondjeIdx] ? barRondjeIdx : rounds.length - 1
+              return (
+                <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 14 }}>
+                    <button onClick={() => { sluitBar(); openHerhaal(actief) }}
+                      style={{ width: "100%", background: RAND, border: "none", color: RANDTEKST, borderRadius: 13, padding: "13px 6px", fontSize: 16.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                      {L.repeatThisRound(actief + 1)}
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
             {barNaRondje && (
               <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 9, paddingTop: 14 }}>
@@ -7542,13 +7571,18 @@ export default function PartyTest() {
         // Zelfde vorm als het barlijstje na een rondje, maar met plus en min: dit is wat
         // je aan de toog gaat vragen, en daar hoort het aan te passen. Een drankje op nul
         // blijft in de lijst staan, zodat je het met + terugzet.
-        const last = rounds[rounds.length - 1]
+        const bronIdx = herhaalBron !== null && rounds[herhaalBron] ? herhaalBron : rounds.length - 1
         const lijst = drinks.filter((d) => herhaalLijst[d.id] !== undefined)
           .map((d) => ({ d, n: herhaalLijst[d.id] || 0 }))
         // Een drankje op nul blijft staan; met ✕ haal je het echt weg.
         const som = lijst.reduce((a, x) => a + x.n, 0)
         const zet = (did: string, delta: number) => setHerhaalLijst((c) => c ? { ...c, [did]: Math.max(0, (c[did] || 0) + delta) } : c)
-        const sluit = () => { if (!herhaalBezig) setHerhaalLijst(null) }
+        const sluit = () => { if (!herhaalBezig) { setHerhaalLijst(null); setHerhaalBron(null) } }
+        const kiesBron = (i: number) => {
+          const t: Record<string, number> = {}
+          if (rounds[i]) drinksOf(rounds[i]).forEach(({ d, n }) => { t[d.id] = n })
+          setHerhaalBron(i); setHerhaalLijst(t)
+        }
         const rondKnop: React.CSSProperties = { width: 40, height: 40, borderRadius: "50%", flexShrink: 0, cursor: "pointer", fontFamily: "inherit",
           display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, lineHeight: 1 }
         return (
@@ -7557,12 +7591,26 @@ export default function PartyTest() {
               <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 14, padding: "10px 12px", marginBottom: 8 }}>
                 <span style={{ fontSize: 21, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🍻 Rundo</span>
                 <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                  <span style={{ fontSize: 19, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🔍 {L.barlistTitle}</span>
+                  <span style={{ fontSize: 19, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🔁 {L.repeatListTitle}</span>
                   <span style={{ flexShrink: 0, background: "rgba(245,179,1,0.2)", border: "1px solid rgba(245,179,1,0.55)", color: "#F5B301", borderRadius: 999, padding: "4px 11px", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{L.drinksCount(som)}</span>
                 </span>
                 <button aria-label="✕" onClick={sluit} style={{ flexShrink: 0, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", height: 38, padding: "0 15px", borderRadius: 999, fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
               </div>
-              <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "0 2px 11px" }}>{L.repeatListSub(last ? rounds.length : 0)}</div>
+              <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "0 2px 9px" }}>{L.repeatListSub(bronIdx + 1)}</div>
+              {/* Een ander rondje herhalen: tik zijn nummer. De lijst neemt dan de aantallen
+                  van dat rondje over; wat je al aanpaste, vervalt. */}
+              {rounds.length > 1 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, overflowX: "auto", marginBottom: 12 }}>
+                  <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#8b93a3", marginRight: 2 }}>{L.roundWord}</span>
+                  {rounds.map((_, i) => (
+                    <span key={i} role="button" onClick={() => { if (!herhaalBezig && i !== bronIdx) kiesBron(i) }}
+                      style={{ flexShrink: 0, minWidth: 44, textAlign: "center", cursor: "pointer", borderRadius: 10, padding: "8px 12px",
+                        fontSize: 16, fontWeight: 800, whiteSpace: "nowrap",
+                        background: i === bronIdx ? RAND : "#fff", color: i === bronIdx ? "#fff" : "#4a5567",
+                        border: `1px solid ${i === bronIdx ? RAND : "rgba(29,41,66,0.25)"}` }}>{i + 1}</span>
+                  ))}
+                </div>
+              )}
               <div style={{ ...S.card, padding: "6px 16px", background: "#fcfdfe" }}>
                 {lijst.map(({ d, n }, i) => (
                   <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
@@ -7584,7 +7632,7 @@ export default function PartyTest() {
             <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 9, paddingTop: 14 }}>
                 <button disabled={herhaalBezig}
-                  onClick={() => { const t = herhaalLijst; setHerhaalLijst(null); repeatRound(t) }}
+                  onClick={() => { const t = herhaalLijst; setHerhaalLijst(null); setHerhaalBron(null); repeatRound(t, bronIdx) }}
                   style={{ flex: 1, background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit", opacity: herhaalBezig ? 0.5 : 1 }}>{L.repeatEditBtn}</button>
                 <button disabled={herhaalBezig || som <= 0}
                   onClick={() => { void bestelOpnieuw(herhaalLijst) }}
@@ -9141,7 +9189,7 @@ export default function PartyTest() {
               splitten" op het rondjesoverzicht. Deze plek wordt de weg naar de drankjes,
               naast "Rondjes". Tijdens het splitten staat hij er niet: dat traject heeft
               zijn eigen terug- en annuleerknoppen. */}
-          {!settle && !fromQuick && rounds.length >= 1 && (
+          {!settle && !fromQuick && rounds.length >= 1 && view !== "roundsOverview" && (
             <button style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
               border: `1.5px solid ${RAND}`,
               background: view === "order" ? RAND : "#fff",
@@ -9159,6 +9207,13 @@ export default function PartyTest() {
               background: view === "roundsOverview" ? RAND : "#fff",
               color: view === "roundsOverview" ? RANDTEKST : RAND }}
               onClick={() => { if (view === "payers" || view === "fairAssign" || view === "fairSetup") { setConfirmDlg({ msg: L.leaveSettleMsg, yes: L.leaveSettleYes, onYes: () => { setConfirmDlg(null); setOverviewBackTo("hub"); setView("roundsOverview") } }); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
+          )}
+          {/* Op het rondjesoverzicht zelf: Barlijstje naast Rondjes. Het opent het lijstje van
+              het laatste rondje; met de nummerrij kies je een vorig. */}
+          {!settle && !fromQuick && view === "roundsOverview" && rounds.length > 0 && laatsteRondjeKlaar() && (
+            <button style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
+              border: `1.5px solid ${RAND}`, background: "#fff", color: RAND }}
+              onClick={() => { setBarNaRondje(null); setBarRondjeIdx(null); setShowBarlijst(true) }}>{L.backToBarList}</button>
           )}
           {settle && !fromQuick && <button style={{ ...S.btn, flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, opacity: (view === "final" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goFinal() }}>{L.settleBtn}</button>}
           {/* Op het rondjesoverzicht is de derde tab overbodig: het rondje is bevestigd
@@ -12387,6 +12442,7 @@ export default function PartyTest() {
         <h2 style={{ fontSize: 23, fontWeight: 800, lineHeight: 1.15, margin: "0 0 6px" }}>{L.fairIntroTitle}</h2>
         <p style={{ fontSize: 15.5, color: "#4a5567", lineHeight: 1.5, margin: "0 0 13px" }}>{L.fairIntroLead}</p>
         <div style={{ ...S.card, padding: 13, marginBottom: 10 }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "#1d2942", paddingBottom: 3 }}>{L.fairIntroHow}</div>
           {stappen.map(([titel, sub], i) => (
             <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start", padding: "10px 0",
               borderBottom: i < 2 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
@@ -12489,32 +12545,9 @@ export default function PartyTest() {
             terugpijl is dan overbodig. Toont AdminTabs niets — buiten QR, of nog vóór het
             bestellen openging — dan is de pijl de enige uitweg en blijft hij staan. */}
         <AdminTabs />
-        {/* Twee dingen die je hier meteen wil kunnen: terug naar het laatste rondje om nog
-            iets bij te tikken, en alle rondjes in één keer open- of dichtklappen. Ze stonden
-            alleen onderaan, dus bij een lange lijst moest je er eerst naartoe scrollen. */}
-        {!settle && rounds.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            {laatsteRondjeKlaar() && (
-              <button onClick={() => { setBarNaRondje(null); setBarRondjeIdx(null); setShowBarlijst(true) }}
-                // Opent het barlijstje van het laatste rondje, met de nummerrij om een vorig
-                // rondje te kiezen. Vroeger heropende deze knop je bestelling (editOrder).
-                // Zelfde maat en rand als de drankjesknop ernaast: twee gelijkwaardige wegen.
-                style={{ flex: 1, minWidth: 0, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "11px 8px",
-                  fontSize: 15.5, fontWeight: 800, background: "#fff", color: "#1d2942", border: "1.5px solid rgba(29,41,66,0.35)",
-                  whiteSpace: "nowrap", textAlign: "center" }}>
-                {L.backToBarList}
-              </button>
-            )}
-            {/* "Drankjes" brengt je naar het aantikscherm van het laatste rondje. Stond
-                vroeger onderaan; hier hoort hij, naast het barlijstje, op de plek waar de
-                afrekenknop stond. */}
-            <button onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}
-              style={{ flex: 1, minWidth: 0, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "11px 8px",
-                fontSize: 15.5, fontWeight: 800, background: "#fff", color: "#8a5e0f", border: "1.5px solid rgba(224,138,0,0.6)", whiteSpace: "nowrap", textAlign: "center" }}>
-              {L.drinksTabBtn}
-            </button>
-          </div>
-        )}
+        {/* Barlijstje staat nu in de navigatiebalk, naast Rondjes. De rij met Barlijstje
+            en Drankjes die hier stond, gaf samen met die balk vier knoppen, waarvan twee
+            keer Drankjes. */}
         {/* Wat er nog openstaat, op een moment dat je er iets aan kan doen. Aan de toog
             houdt niets je meer tegen; hier zie je wat er nog ingevuld moet. */}
         {settle && !fromQuick && (() => {
@@ -12552,21 +12585,9 @@ export default function PartyTest() {
         {/* Elk rondje, nieuwste bovenaan. Klik de kop om open/dicht te klappen.
             De toon/verberg-pil hangt half over de rand, boven én onder. */}
         <div ref={rondjesLijst} style={{ position: "relative", scrollMarginTop: 8 }}>
-          {rounds.length > 0 && (() => {
-            const allesOpen = openRounds.size >= rounds.length
-            const pil = {
-              display: "inline-block", padding: "7px 16px", borderRadius: 20, fontSize: 14, fontWeight: 800,
-              cursor: "pointer", background: "#fff", border: "1px solid rgba(29,41,66,0.3)", color: "#6b7484",
-              boxShadow: "0 2px 6px rgba(29,41,66,0.14)", whiteSpace: "nowrap" as const,
-            }
-            const klik = () => setOpenRounds(allesOpen ? new Set<string>() : new Set(rounds.map((r) => r.id)))
-            return (
-              <div style={{ position: "sticky", top: 6, zIndex: 6, display: "flex", justifyContent: "center", marginBottom: -15, pointerEvents: "none" }}>
-                <span onClick={klik} style={{ ...pil, pointerEvents: "auto" }}>{allesOpen ? `▴ ${L.hideDetails}` : `▾ ${L.showDetails}`}</span>
-              </div>
-            )
-          })()}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: rounds.length > 0 ? 10 : 0 }}>
+          {/* De zwevende "Toon details"-pil boven de rondjes is weg: hij overlapte het
+              eerste rondje, en elk rondje heeft rechts al zijn eigen "details". */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4 }}>
           {rounds.map((r) => {
             const nr = rounds.indexOf(r) + 1
             const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
