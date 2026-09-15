@@ -899,6 +899,7 @@ const T = {
     noPotYet: "Nog geen pot",
     potSummary: (n: number, over: string) => `${n} inlegger${n === 1 ? "" : "s"} \u00b7 ${over} nog over`,
     detailsWord: "details",
+    roundsTitleShort: "Rondjes",
     alreadySpent: "al besteed",
     stillLeft: (b: string) => `nog ${b}`,
     potAdjust: "Pot aanpassen",
@@ -1187,7 +1188,7 @@ const T = {
     fairIntroStep3Sub: "Per rondje handig en snel toewijzen.",
     fairIntroSafe: "Alles wat je invult blijft bewaard. Je kan tussendoor stoppen en later verder.",
     fairIntroStart: "Beginnen",
-    fairIntroLater: "Later doen",
+    fairIntroLater: "Later — ga terug",
     fairCancelTitle: "Stoppen met splitten?",
     fairCancelBody: "Wat je al invulde blijft bewaard — namen, bedragen en wie betaalde. Je kan later verder waar je gebleven was.",
     fairCancelGo: "Verder invullen",
@@ -1833,6 +1834,7 @@ const T = {
     noPotYet: "Pas encore de cagnotte",
     potSummary: (n: number, over: string) => `${n} participant${n === 1 ? "" : "s"} \u00b7 ${over} restant`,
     detailsWord: "d\u00e9tails",
+    roundsTitleShort: "Tournées",
     alreadySpent: "d\u00e9j\u00e0 d\u00e9pens\u00e9",
     stillLeft: (b: string) => `reste ${b}`,
     potAdjust: "Ajuster la cagnotte",
@@ -2122,7 +2124,7 @@ const T = {
     fairIntroStep3Sub: "Attribution rapide, tournée par tournée.",
     fairIntroSafe: "Tout ce que tu remplis est conservé. Tu peux t’arrêter et reprendre plus tard.",
     fairIntroStart: "Commencer",
-    fairIntroLater: "Plus tard",
+    fairIntroLater: "Plus tard — retour",
     fairCancelTitle: "Arrêter le partage ?",
     fairCancelBody: "Ce que tu as déjà rempli est conservé — noms, montants et qui a payé. Tu pourras reprendre où tu t’es arrêté.",
     fairCancelGo: "Continuer",
@@ -4438,16 +4440,20 @@ export default function PartyTest() {
     if (fqVlag) setFromQuick(true)
     setGroepDatum((g as { last_active?: string } | null)?.last_active ?? null)
     setGroepDicht(!!(g as { finalized?: boolean } | null)?.finalized)
-    setPeople((vorige) => (pp || []).map((r) => {
+    setPeople((vorige) => (pp || []).map((r, i: number) => {
       // named = de admin (of de gast zelf) gaf een echte naam. Een naamloze plaats
       // heet "Gast N", zodat de bestaande placeholder-logica blijft werken.
+      // Het stoelnummer uit de databank loopt door: wis je er zeven van de acht, dan blijf
+      // je met "Gast 8" zitten. Voor een naamloze gast telt alleen zijn plaats in de rij,
+      // dus nummeren we op volgorde. Wie zelf een naam invulde, houdt die natuurlijk.
+      const volgnr = i + 1
       const serverNaam = (r.name || "").trim()
       const bezig = (naamBezig.current[r.id] ?? 0) > Date.now()
       const lokaal = bezig ? vorige.find((x) => x.id === r.id) : undefined
       return {
         id: r.id, seat: r.seat,
         named: lokaal ? lokaal.named : !!serverNaam,
-        name: lokaal ? lokaal.name : (serverNaam || `Gast ${r.seat}`),
+        name: lokaal ? lokaal.name : (serverNaam || L.guestN(volgnr)),
         claimedBy: r.claimed_by, selfJoined: !!r.self_joined,
         settleWith: r.settle_with, left: !!r.left, leftSettled: !!r.left_settled,
       }
@@ -12192,8 +12198,8 @@ export default function PartyTest() {
       <div style={S.page}><div style={S.wrap}>
         <Header kaal />
         {renderDialogs()}
-        <span onClick={() => { setOverviewBackTo("hub"); setView("roundsOverview") }}
-          style={{ display: "inline-block", fontSize: 15, fontWeight: 800, color: "#4a5567", cursor: "pointer", marginBottom: 9 }}>←</span>
+        {/* Het pijltje is weg: onderaan staat "Later — ga terug", en dat is duidelijker
+            dan een klein teken linksboven. */}
         <h2 style={{ fontSize: 23, fontWeight: 800, lineHeight: 1.15, margin: "0 0 6px" }}>{L.fairIntroTitle}</h2>
         <p style={{ fontSize: 15.5, color: "#4a5567", lineHeight: 1.5, margin: "0 0 13px" }}>{L.fairIntroLead}</p>
         <div style={{ ...S.card, padding: 13, marginBottom: 10 }}>
@@ -12286,7 +12292,12 @@ export default function PartyTest() {
     })
     return (
       <div style={S.page}><div style={S.wrap}>
-        <Header />
+        <Header titel={!settle && rounds.length > 0 ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{L.roundsTitleShort}</span>
+            <span style={{ background: "rgba(245,179,1,0.2)", border: "1px solid rgba(245,179,1,0.55)", color: "#F5B301", borderRadius: 999, padding: "3px 10px", fontSize: 13.5, fontWeight: 800 }}>{rounds.length}</span>
+          </span>
+        ) : undefined} />
         {showPot && renderPotModal()}
         {renderDialogs()}
         {/* In QR draagt dit scherm dezelfde drie tabbladen als elk ander: "Rondjes" is
@@ -12303,9 +12314,10 @@ export default function PartyTest() {
               <button onClick={() => editOrder()}
                 // Nooit afkappen: deze knop moet leesbaar blijven, ook op een smal scherm.
                 // Daarom krimpt hij niet mee en staat de tekst voluit.
-                style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "11px 13px",
+                // Even breed als de drankjesknop ernaast: twee gelijkwaardige wegen.
+                style={{ flex: 1, minWidth: 0, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "11px 8px",
                   fontSize: 15.5, fontWeight: 800, background: "#fff", color: "#1d2942", border: "1px solid rgba(29,41,66,0.28)",
-                  whiteSpace: "nowrap" }}>
+                  whiteSpace: "nowrap", textAlign: "center" }}>
                 {L.backToBarList}
               </button>
             )}
@@ -12751,6 +12763,15 @@ export default function PartyTest() {
             )
           })}
           </div>
+          {/* Alles openklappen hoort onder de rondjes zelf, niet onder de knoppen: hier
+              kijk je naar de lijst, dus hier hoort wat de lijst opent. Stond per ongeluk
+              ná "Nieuw rondje". */}
+          {!settle && rounds.length > 1 && (
+            <div onClick={() => setOpenRounds(openRounds.size >= rounds.length ? new Set<string>() : new Set(rounds.map((r) => r.id)))}
+              style={{ textAlign: "right", fontSize: 14.5, fontWeight: 800, color: "#6b7484", cursor: "pointer", margin: "4px 3px 0" }}>
+              {openRounds.size >= rounds.length ? L.closeAllRounds : L.openAllRounds}
+            </div>
+          )}
         </div>
 
         {/* Kwam je bedragen aanvullen? Dan is er maar één zinnige volgende stap. */}
@@ -12818,14 +12839,6 @@ export default function PartyTest() {
                     background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
               )}
             </div>
-            {/* Alles openklappen staat onder de rondjes en niet meer bovenaan: hier kijk je
-                naar de lijst, dus hier hoort de knop die de lijst opent. */}
-            {!settle && rounds.length > 1 && (
-              <div onClick={() => setOpenRounds(openRounds.size >= rounds.length ? new Set<string>() : new Set(rounds.map((r) => r.id)))}
-                style={{ textAlign: "right", fontSize: 14.5, fontWeight: 800, color: "#6b7484", cursor: "pointer", margin: "-2px 3px 10px" }}>
-                {openRounds.size >= rounds.length ? L.closeAllRounds : L.openAllRounds}
-              </div>
-            )}
             {/* De enige plek waar het verdelen nog begint. In "Neem zelf op" vraagt de app
                 onderweg niets meer — geen bedragen, geen namen, geen toewijzing — dus hier
                 staat wat je nodig hebt als je het tóch wil verdelen. De streepjesrand zegt
