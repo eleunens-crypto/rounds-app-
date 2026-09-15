@@ -1309,7 +1309,7 @@ const T = {
     fairAssignLeft: (n: number) => `Nog ${n} drankje${n === 1 ? "" : "s"} zonder naam`,
     drinkAllNamed: "Dit drankje staat al volledig op naam. Tik op \u2212 naast een naam om er een vrij te maken.",
     payStepTitle: "Wat kostte het, en wie betaalde?",
-    payStepSub: "Vul per rondje het bedrag in en tik aan wie betaalde.",
+    payStepSub: "Vul per rondje het bedrag in. Jij staat meteen als betaler. Betaalde iemand anders, tik dan die naam aan en jezelf uit.",
     paidLabel: "Betaald",
     adjustWord: "Aanpassen",
     notSavedYet: "niet opgeslagen",
@@ -2251,7 +2251,7 @@ const T = {
     fairAssignLeft: (n: number) => `Encore ${n} boisson${n === 1 ? "" : "s"} sans nom`,
     drinkAllNamed: "Cette boisson est d\u00e9j\u00e0 enti\u00e8rement attribu\u00e9e. Touche \u2212 \u00e0 c\u00f4t\u00e9 d\u2019un nom pour en lib\u00e9rer une.",
     payStepTitle: "Combien, et qui a pay\u00e9\u00a0?",
-    payStepSub: "Indique le montant de chaque tourn\u00e9e et touche qui a pay\u00e9.",
+    payStepSub: "Indique le montant de chaque tourn\u00e9e. Tu es mis d\u2019office comme payeur\u00a0; si quelqu\u2019un d\u2019autre a pay\u00e9, touche son nom et retire le tien.",
     paidLabel: "Pay\u00e9",
     adjustWord: "Modifier",
     notSavedYet: "non enregistr\u00e9",
@@ -13152,6 +13152,25 @@ export default function PartyTest() {
     const zonderBedragHier = rounds.filter((r) => (r.amount || 0) <= 0.005)
     const zonderBetaler = rounds.filter((r) => (r.amount || 0) <= 0.005 || rPaidSum(r) < (r.amount || 0) - 0.005)
     const klaar = zonderBetaler.length === 0 && !potZonderNamen
+    // "Jij" als standaardbetaler: in Neem zelf op betaalde de noteerder meestal zelf. Dat
+    // is wie op dit toestel zit, anders de beheerder, anders de eerste in de rij (bij
+    // snel opnemen is dat de beheerder zelf).
+    const ikBetaler = meId
+      ?? people.find((p) => !!ownerDevice && p.claimedBy === ownerDevice)?.id
+      ?? people[0]?.id
+      ?? null
+    // Alleen bij het éérste bedrag van een rondje zonder betaler en zonder pot. Haal je
+    // jezelf daarna weg, dan zet een nieuw bedrag je niet opnieuw aan.
+    const zetBedrag = (idx: number, v: number) => {
+      const r = rounds[idx]
+      const nogNiets = !!r && (r.amount || 0) <= 0.005 && Object.keys(r.payers || {}).length === 0 && (r.potPart || 0) <= 0.005
+      if (nogNiets && v > 0.005 && ikBetaler) {
+        setRounds((rs) => rs.map((rr, i) => i === idx ? rRedistribute(rr, idx, false, [ikBetaler], v) : rr))
+        setDirtyRound(idx)
+        return
+      }
+      rSetAmount(idx, v)
+    }
     return (
       <div style={S.page}><div style={S.wrap}>
         <style>{`@keyframes rundoPilWenk{0%,100%{border-color:rgba(224,138,0,0.35);box-shadow:0 0 0 0 rgba(224,138,0,0)}50%{border-color:rgba(224,138,0,0.95);box-shadow:0 0 0 4px rgba(224,138,0,0.13)}}
@@ -13313,7 +13332,7 @@ export default function PartyTest() {
                 <span style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                   <span style={{ fontSize: 17, color: "#6b7484", fontWeight: 700 }}>€</span>
                   <input type="text" inputMode="decimal" placeholder="0,00" aria-label={L.roundSummary(idx + 1, items)}
-                    {...bedragVeld(`betaal-${r.id}`, r.amount || 0, (v) => rSetAmount(idx, v))}
+                    {...bedragVeld(`betaal-${r.id}`, r.amount || 0, (v) => zetBedrag(idx, v))}
                     style={{ ...S.input, width: 98, padding: "8px 10px", fontSize: 19, fontWeight: 800, boxSizing: "border-box",
                       border: geenBedrag ? "1.5px solid rgba(224,138,0,0.75)" : "1px solid rgba(29,41,66,0.22)",
                       background: geenBedrag ? "#fffaf0" : "#fff" }} />
