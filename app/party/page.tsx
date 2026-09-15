@@ -7353,7 +7353,10 @@ export default function PartyTest() {
           sluitBar()
           setLastRoundHandled(true)
           if (openKlappen) setOpenRound(Math.max(0, rounds.length - 1))
-          setOverviewBackTo("hub"); setView("roundsOverview")
+          // Uit het barlijstje kom je op het rondjesoverzicht, niet terug in de bestelling.
+          // "order" bleef hier plakken via overviewBackTo, waardoor de terugknop je in je
+          // openstaande rondje zette in plaats van in de lijst.
+          setOverviewBackTo("hub"); setFillMode(false); setView("roundsOverview")
         }
         return (
           <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={() => { if (!barNaRondje) sluitBar() }}>
@@ -7362,13 +7365,16 @@ export default function PartyTest() {
                   bestelscherm: dat scheelt de hoogte van een aparte kopregel. De groepsnaam
                   en de aantallen schuiven eronder in kleinere letters. */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 14, padding: "10px 12px", marginBottom: 8 }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                {/* Zelfde balk als op het drankjesscherm: merknaam links, waar je bent
+                    rechts. Het aantal krijgt het woord erbij, want "6" alleen zegt niets. */}
+                <span style={{ fontSize: 21, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🍻 Rundo</span>
+                <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <span style={{ fontSize: 19, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🔍 {L.barlistTitle}</span>
-                  <span style={{ flexShrink: 0, background: "rgba(245,179,1,0.2)", border: "1px solid rgba(245,179,1,0.55)", color: "#F5B301", borderRadius: 999, padding: "3px 10px", fontSize: 13.5, fontWeight: 800 }}>{som}</span>
+                  <span style={{ flexShrink: 0, background: "rgba(245,179,1,0.2)", border: "1px solid rgba(245,179,1,0.55)", color: "#F5B301", borderRadius: 999, padding: "4px 11px", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{L.drinksCount(som)}</span>
                 </span>
                 {barNaRondje
                   ? null
-                  : <button onClick={sluitBar} style={{ marginLeft: "auto", flexShrink: 0, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", height: 38, padding: "0 15px", borderRadius: 999, fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>}
+                  : <button onClick={sluitBar} style={{ flexShrink: 0, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", height: 38, padding: "0 15px", borderRadius: 999, fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>}
               </div>
               <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "0 2px 11px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length} {L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"}</div>
               {/* Bij meerdere rondjes een rij nummers om te wisselen; het laatste staat al
@@ -7404,7 +7410,7 @@ export default function PartyTest() {
               <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 9, paddingTop: 14 }}>
                   <button onClick={heropenRondje} style={{ flex: 1, background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistAdjust}</button>
-                  <button onClick={() => naarOverzicht(false)} style={{ flex: 1.3, background: RAND, border: "none", color: RANDTEKST, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistDone} →</button>
+                  <button onClick={() => naarOverzicht(false)} style={{ flex: 1.3, background: RAND, border: "none", color: RANDTEKST, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistDone}</button>
                 </div>
               </div>
             )}
@@ -10535,12 +10541,22 @@ export default function PartyTest() {
               {settingsBackTo !== "order" && <button style={{ ...S.btnP, flex: 1 }} onClick={naarRondje}>{L.toFirstRound}</button>}
             </div>
           )}
+            {/* Afrekenen bestaat niet meer in "Neem zelf op": verdelen doe je achteraf via
+                "Eerlijk splitten" op het rondjesoverzicht. Deze knop brengt je daar dus
+                gewoon naartoe. In QR blijft het de afrekenknop. */}
             {kanAfrekenen && (
-              <button style={{ ...S.btn, width: "100%", marginTop: 10, padding: "11px 8px", borderRadius: 12, background: RAND, border: "none", color: RANDTEKST, lineHeight: 1.3 }}
-                onClick={() => { if (settle) goFinal(); else goQuickSettle() }}>
-                <span style={{ display: "block", fontSize: 18, fontWeight: 600 }}>📋 {settle ? L.settleBtn : L.quickSettleTitle}</span>
-                <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: koel ? "#a8c8cd" : "#c9d2de" }}>{L.fairSubtitle}</span>
-              </button>
+              settle ? (
+                <button style={{ ...S.btn, width: "100%", marginTop: 10, padding: "11px 8px", borderRadius: 12, background: RAND, border: "none", color: RANDTEKST, lineHeight: 1.3 }}
+                  onClick={goFinal}>
+                  <span style={{ display: "block", fontSize: 18, fontWeight: 600 }}>📋 {L.settleBtn}</span>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: koel ? "#a8c8cd" : "#c9d2de" }}>{L.fairSubtitle}</span>
+                </button>
+              ) : (
+                <button style={{ ...S.btn, width: "100%", marginTop: 10, padding: "12px 8px", borderRadius: 12, background: RAND, border: "none", color: RANDTEKST, fontSize: 17, fontWeight: 800 }}
+                  onClick={() => { setOverviewBackTo("hub"); setView("roundsOverview") }}>
+                  📋 {L.roundsTitleShort}
+                </button>
+              )
             )}
             {/* Beheer overdragen: alleen in QR-modus, want alleen daar heeft iemand anders
                 een toestel dat het over kán nemen. */}
