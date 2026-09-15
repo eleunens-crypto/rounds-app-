@@ -1032,10 +1032,11 @@ const T = {
 
     // ── afrekenen
     totalPaid: "💰 Totaal betaald",
-    fairVsEqual: "⚖️ Eerlijk verdelen vs Gelijk verdelen",
+    fairVsEqual: "⚖️ Eerlijk vs gelijk verdelen",
+    whatIsThis: "Wat is dit?",
     whoPaysWho: "🤝 Wie betaalt aan wie?",
     shortestWay: "Zo min mogelijk overschrijvingen — de app zoekt de kortste weg.",
-    fairInfo: "⚖️ Eerlijk — wie weinig of goedkopere drankjes nam, betaalt niet mee voor de rest!",
+    fairInfo: "⚖️ We gebruiken richtprijzen als verdeelsleutel, geen exacte prijzen. Kostten een gin-tonic en een cola samen €16, dan betaalt de gin-tonic ongeveer €12,50 en de cola €3,50. Het totaalbedrag klopt natuurlijk wel exact volgens wat betaald werd.",
     equalSplit: "iedereen evenveel",
     equalWouldBe: (v: string) => `Gelijk verdelen zou ${v} per persoon zijn.`,
     equalColHead: "gelijk",
@@ -1312,7 +1313,6 @@ const T = {
     fairAssignLeft: (n: number) => `Nog ${n} drankje${n === 1 ? "" : "s"} zonder naam`,
     drinkAllNamed: "Dit drankje staat al volledig op naam. Tik op \u2212 naast een naam om er een vrij te maken.",
     payStepTitle: "Wat kostte het, en wie betaalde?",
-    payStepSub: "Vul per rondje het bedrag in. Jij staat meteen als betaler. Betaalde iemand anders, tik dan die naam aan en jezelf uit.",
     paidLabel: "Betaald",
     adjustWord: "Aanpassen",
     notSavedYet: "niet opgeslagen",
@@ -1365,6 +1365,7 @@ const T = {
     payersTitle: "Wie betaalde?",
     roundCount: (n: number) => `${n} ${n === 1 ? "rondje" : "rondjes"}`,
     stillToAssign: (v: string) => `${v} nog toe te wijzen`,
+    fullyAssigned: "Volledig toegewezen",
     tapNameBelow: "Wie betaalde dit rondje? Tik een naam aan",
     fillAmountFirstShort: "Vul eerst het bedrag in",
     sameForAll: "Dezelfde betaler voor alle rondjes",
@@ -1981,10 +1982,11 @@ const T = {
 
     // ── afrekenen
     totalPaid: "💰 Total payé",
-    fairVsEqual: "⚖️ Partage \u00e9quitable vs partage \u00e9gal",
+    fairVsEqual: "⚖️ Partage \u00e9quitable vs \u00e9gal",
+    whatIsThis: "C\u2019est quoi\u00a0?",
     whoPaysWho: "🤝 Qui paie à qui ?",
     shortestWay: "Le moins de virements possible — l’appli cherche le chemin le plus court.",
-    fairInfo: "⚖️ \u00c9quitable — qui a bu peu ou moins cher ne paie pas pour les autres\u00a0!",
+    fairInfo: "⚖️ On utilise des prix indicatifs comme cl\u00e9 de r\u00e9partition, pas les prix exacts. Si un gin tonic et un coca ont co\u00fbt\u00e9 16\u00a0€ ensemble, le gin tonic paie environ 12,50\u00a0€ et le coca 3,50\u00a0€. Le montant total correspond bien s\u00fbr exactement \u00e0 ce qui a \u00e9t\u00e9 pay\u00e9.",
     equalSplit: "part égale",
     equalWouldBe: (v: string) => `Un partage égal ferait ${v} par personne.`,
     equalColHead: "\u00e9gal",
@@ -2258,7 +2260,6 @@ const T = {
     fairAssignLeft: (n: number) => `Encore ${n} boisson${n === 1 ? "" : "s"} sans nom`,
     drinkAllNamed: "Cette boisson est d\u00e9j\u00e0 enti\u00e8rement attribu\u00e9e. Touche \u2212 \u00e0 c\u00f4t\u00e9 d\u2019un nom pour en lib\u00e9rer une.",
     payStepTitle: "Combien, et qui a pay\u00e9\u00a0?",
-    payStepSub: "Indique le montant de chaque tourn\u00e9e. Tu es mis d\u2019office comme payeur\u00a0; si quelqu\u2019un d\u2019autre a pay\u00e9, touche son nom et retire le tien.",
     paidLabel: "Pay\u00e9",
     adjustWord: "Modifier",
     notSavedYet: "non enregistr\u00e9",
@@ -2311,6 +2312,7 @@ const T = {
     payersTitle: "Qui a payé ?",
     roundCount: (n: number) => `${n} ${n === 1 ? "tourn\u00e9e" : "tourn\u00e9es"}`,
     stillToAssign: (v: string) => `${v} \u00e0 attribuer`,
+    fullyAssigned: "Enti\u00e8rement attribu\u00e9",
     tapNameBelow: "Qui a pay\u00e9\u00a0? Coche un nom ci-dessous",
     fillAmountFirstShort: "Indique d'abord le montant",
     sameForAll: "Le même payeur pour toutes les tournées",
@@ -2508,9 +2510,10 @@ export default function PartyTest() {
   // Welk rondje je herhaalt (index in rounds). Standaard het laatste; in het venster
   // en vanuit het barlijstje kies je ook een vorig.
   const [herhaalBron, setHerhaalBron] = useState<number | null>(null)
-  // Stap 2 van het splitten: welke rondjes je zelf dichtklapte. Standaard staat alles
-  // open; een rondje klapt niet vanzelf dicht terwijl je er nog in tikt.
-  const [stap2Dicht, setStap2Dicht] = useState<Set<string>>(new Set())
+  // Stap 2 van het splitten: welke rondjes je zelf open- of dichtklapte (true = open).
+  // Zonder eigen keuze staat een rondje open zolang er iets zonder naam is, en klapt het
+  // dicht zodra alles een naam heeft.
+  const [stap2Open, setStap2Open] = useState<Record<string, boolean>>({})
   const [showCoins, setShowCoins] = useState(false)
   const [coinInfo, setCoinInfo] = useState(false)
   const [depositInfo, setDepositInfo] = useState(false)
@@ -7965,7 +7968,10 @@ export default function PartyTest() {
               )}
 
               <div style={{ ...S.card, padding: 12 }}>
-                <div style={{ fontSize: 16.5, fontWeight: 800, marginBottom: 8 }}>{L.fairVsEqual}</div>
+                <div style={{ fontSize: 16.5, fontWeight: 800 }}>{L.fairVsEqual}</div>
+                <button onClick={() => setNotice(L.fairInfo)}
+                  style={{ margin: "6px 0 9px", cursor: "pointer", fontFamily: "inherit", background: "#fff", border: "1.5px solid rgba(200,138,0,0.55)",
+                    color: "#8a5e0f", borderRadius: 999, padding: "5px 12px", fontSize: 14, fontWeight: 800 }}>{L.whatIsThis}</button>
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 8, paddingBottom: 6, borderBottom: "1.5px solid rgba(29,41,66,0.2)", fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em" }}>
                   <span style={{ flex: 1, minWidth: 0, color: "#6b7484" }}>{L.participantColHead.toUpperCase()}</span>
                   <span style={{ width: 70, textAlign: "right", color: "#1f8a4c", flexShrink: 0 }}>{L.fairColHead.toUpperCase()}</span>
@@ -13093,8 +13099,8 @@ export default function PartyTest() {
           const roundDrinks = drinks.filter((d) => drinkTotalRound(r, d.id) > 0)
           const totaal = roundDrinks.reduce((a, d) => a + drinkTotalRound(r, d.id), 0)
           const los = roundDrinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0)
-          const dicht = stap2Dicht.has(r.id)
-          const klap = () => setStap2Dicht((prev) => { const n = new Set(prev); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n })
+          const dicht = !(stap2Open[r.id] ?? los > 0)
+          const klap = () => setStap2Open((prev) => ({ ...prev, [r.id]: dicht }))
           return (
             <div key={r.id} style={{ ...S.card, position: "relative", padding: 0, overflow: "hidden",
               ...(los > 0 ? { border: "2px solid rgba(224,104,92,0.6)" } : {}) }}>
@@ -13117,8 +13123,9 @@ export default function PartyTest() {
                         <div style={{ ...S.row, justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
                           <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1d2942", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.emoji} {d.name}</span>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-                            {dlos > 0 && <span style={{ fontSize: 13, fontWeight: 800, color: "#b0402f" }}>{L.toAssignCount(dlos)}</span>}
-                            <span style={{ fontSize: 18, fontWeight: 800, color: "#c98a00" }}>{drinkTotalRound(r, d.id)}×</span>
+                            {dlos > 0
+                              ? <span style={{ fontSize: 14, fontWeight: 800, color: "#b0402f" }}>{L.toAssignCount(dlos)}</span>
+                              : <span style={{ fontSize: 15, fontWeight: 800, color: "#1f8a4c" }}>✓</span>}
                           </span>
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
@@ -13150,6 +13157,20 @@ export default function PartyTest() {
             </div>
           )
         })}
+        {/* Alles open- of dichtklappen, onder het laatste rondje. */}
+        {toonRondjes.length > 1 && (() => {
+          const isOpen = (r: Round) => {
+            const los = drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0)
+            return stap2Open[r.id] ?? los > 0
+          }
+          const allesOpen = toonRondjes.every(({ r }) => isOpen(r))
+          return (
+            <div role="button" onClick={() => setStap2Open(Object.fromEntries(toonRondjes.map(({ r }) => [r.id, !allesOpen])))}
+              style={{ textAlign: "right", fontSize: 14.5, fontWeight: 800, color: "#6b7484", cursor: "pointer", margin: "-4px 3px 12px" }}>
+              {allesOpen ? L.closeAllRounds : L.openAllRounds}
+            </div>
+          )
+        })()}
         <button disabled={!klaar}
           style={{ ...S.btnP, width: "100%", marginTop: 4,
             background: klaar ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#c3c9d4",
@@ -13180,25 +13201,8 @@ export default function PartyTest() {
     const geenEnkelBedrag = !rounds.some((r) => (r.amount || 0) > 0.005)
     const zonderBetaler = rounds.filter((r) => (r.amount || 0) > 0.005 && rPaidSum(r) < (r.amount || 0) - 0.005)
     const klaar = !geenEnkelBedrag && zonderBetaler.length === 0 && !potZonderNamen
-    // "Jij" als standaardbetaler: in Neem zelf op betaalde de noteerder meestal zelf. Dat
-    // is wie op dit toestel zit, anders de beheerder, anders de eerste in de rij (bij
-    // snel opnemen is dat de beheerder zelf).
-    const ikBetaler = meId
-      ?? people.find((p) => !!ownerDevice && p.claimedBy === ownerDevice)?.id
-      ?? people[0]?.id
-      ?? null
-    // Alleen bij het éérste bedrag van een rondje zonder betaler en zonder pot. Haal je
-    // jezelf daarna weg, dan zet een nieuw bedrag je niet opnieuw aan.
-    const zetBedrag = (idx: number, v: number) => {
-      const r = rounds[idx]
-      const nogNiets = !!r && (r.amount || 0) <= 0.005 && Object.keys(r.payers || {}).length === 0 && (r.potPart || 0) <= 0.005
-      if (nogNiets && v > 0.005 && ikBetaler) {
-        setRounds((rs) => rs.map((rr, i) => i === idx ? rRedistribute(rr, idx, false, [ikBetaler], v) : rr))
-        setDirtyRound(idx)
-        return
-      }
-      rSetAmount(idx, v)
-    }
+    // Geen standaardbetaler: niets staat vanzelf aangetikt. Wie snel één betaler voor
+    // alles wil, heeft "Zelfde betaler voor alle rondjes".
     return (
       <div style={S.page}><div style={S.wrap}>
         <style>{`@keyframes rundoPilWenk{0%,100%{border-color:rgba(224,138,0,0.35);box-shadow:0 0 0 0 rgba(224,138,0,0)}50%{border-color:rgba(224,138,0,0.95);box-shadow:0 0 0 4px rgba(224,138,0,0.13)}}
@@ -13210,8 +13214,7 @@ export default function PartyTest() {
         {fromQuick && stapBalk(3)}
         {/* Stap 3 is het betaalscherm: het bedrag en wie betaalde staan per rondje samen.
             Vroeger moest je voor het bedrag naar het rondjesoverzicht en terug. */}
-        <h3 style={{ ...S.h3, margin: "0 0 3px" }}>💶 {L.payStepTitle}</h3>
-        <div style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 600, lineHeight: 1.4, marginBottom: 11 }}>{L.payStepSub}</div>
+        <h3 style={{ ...S.h3, margin: "0 0 8px" }}>💶 {L.payStepTitle}</h3>
 
         {/* Eén regel volstaat: het totaal staat vast, en wat je nog moet doen is het
             openstaande bedrag. De rest — pot, personen — lees je bij de rondjes zelf. */}
@@ -13219,12 +13222,17 @@ export default function PartyTest() {
           const totaalRondjes = rounds.reduce((a, r) => a + (r.amount || 0), 0)
           const doorPersonen = rounds.reduce((a, r) => a + Object.values(r.payers || {}).reduce((x, y) => x + (y || 0), 0), 0)
           const openstaand = Math.max(0, totaalRondjes - potSpent - doorPersonen)
+          // Eén statusregel, en pas zodra er een bedrag staat: vóór dat moment is er niets
+          // toe te wijzen. Rood zolang er geld zonder betaler is, groen als alles gedekt is.
+          if (totaalRondjes <= 0.005) return null
+          const rond = openstaand <= 0.005
           return (
-            <div style={{ ...S.row, justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "0 4px 11px", borderBottom: "1px solid rgba(29,41,66,0.18)", marginBottom: 12 }}>
-              <span style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 800 }}>{openstaand > 0.005 ? L.roundCount(rounds.length) : L.totalOf(euro(totaalRondjes))}</span>
-              {/* Staat er niets meer open, dan zeggen de vinkjes bij de rondjes het al.
-                  Een "alles gedekt" naast een leeg scherm bevestigt niets. */}
-              {openstaand > 0.005 && <span style={{ fontSize: 21.5, fontWeight: 800, color: "#b0402f" }}>{L.stillToAssign(euro(openstaand))}</span>}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12, padding: "10px 12px", marginBottom: 12,
+              background: rond ? "rgba(31,138,76,0.1)" : "rgba(224,104,92,0.1)",
+              border: `1.5px solid ${rond ? "rgba(31,138,76,0.45)" : "rgba(224,104,92,0.45)"}` }}>
+              <span style={{ fontSize: 19, fontWeight: 800, color: rond ? "#1f6b3a" : "#b0402f" }}>
+                {rond ? `✓ ${L.fullyAssigned}` : L.stillToAssign(euro(openstaand))}
+              </span>
             </div>
           )
         })()}
@@ -13361,7 +13369,7 @@ export default function PartyTest() {
                 <span style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                   <span style={{ fontSize: 17, color: "#6b7484", fontWeight: 700 }}>€</span>
                   <input type="text" inputMode="decimal" placeholder="0,00" aria-label={L.roundSummary(idx + 1, items)}
-                    {...bedragVeld(`betaal-${r.id}`, r.amount || 0, (v) => zetBedrag(idx, v))}
+                    {...bedragVeld(`betaal-${r.id}`, r.amount || 0, (v) => rSetAmount(idx, v))}
                     style={{ ...S.input, width: 98, padding: "8px 10px", fontSize: 19, fontWeight: 800, boxSizing: "border-box",
                       border: geenBedrag ? "1.5px solid rgba(224,138,0,0.75)" : "1px solid rgba(29,41,66,0.22)",
                       background: geenBedrag ? "#fffaf0" : "#fff" }} />
@@ -13512,10 +13520,15 @@ export default function PartyTest() {
       <div style={S.card}>
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
           <span style={{ minWidth: 0 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 21.5, fontWeight: 800, color: "#1d2942", lineHeight: 1.25 }}>{L.fairVsEqual}</span>
-              <span onClick={() => setNotice(L.fairInfo)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 19, height: 19, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 14, fontWeight: 800, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>i</span>
-            </span>
+            <span style={{ display: "block", fontSize: 21.5, fontWeight: 800, color: "#1d2942", lineHeight: 1.25 }}>{L.fairVsEqual}</span>
+            {/* Een echte knop onder de titel in plaats van een klein "i": zo zie je dat er
+                uitleg is, en raak je hem ook met een dikke duim. */}
+            <button onClick={() => setNotice(L.fairInfo)}
+              style={{ marginTop: 7, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontFamily: "inherit",
+                background: "#fff", border: "1.5px solid rgba(200,138,0,0.55)", color: "#8a5e0f", borderRadius: 999, padding: "6px 13px", fontSize: 14.5, fontWeight: 800 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, lineHeight: 1 }}>?</span>
+              {L.whatIsThis}
+            </button>
           </span>
         </div>
         {/* Staat de kolom uit? Dan de vergelijking als één regel, zodat ze niet verdwijnt. */}
