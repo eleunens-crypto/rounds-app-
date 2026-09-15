@@ -1472,6 +1472,7 @@ const T = {
     leaveWaitingHint: "Zodra het bedrag er staat, verschijnt hier jouw stand.",
     leaveResend: "Nog eens seinen",
     leaveBackToRounds: "← Terug naar rondjes",
+    backToRoundsOverview: "← Terug naar Rondjesoverzicht",
     leaveResentNotice: "Nog eens geseind.",
     leftBadge: "vertrokken",
     leftSettledLine: (v: string, naam: string) => `✓ al afgerekend · ${v} aan ${naam}`,
@@ -2422,6 +2423,7 @@ const T = {
     leaveWaitingHint: "Dès que le montant est là, ton solde s'affiche ici.",
     leaveResend: "Renvoyer le signal",
     leaveBackToRounds: "← Retour aux tournées",
+    backToRoundsOverview: "← Retour à l\u2019aperçu des tournées",
     leaveResentNotice: "Signal renvoyé.",
     leftBadge: "parti·e",
     leftSettledLine: (v: string, naam: string) => `✓ déjà réglé · ${v} à ${naam}`,
@@ -7578,7 +7580,7 @@ export default function PartyTest() {
                         vond je te verstopt. */}
                     <button onClick={() => { sluitBar(); setOverviewBackTo("hub"); setView("roundsOverview") }}
                       style={{ width: "100%", background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "12px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-                      {L.leaveBackToRounds}
+                      {L.backToRoundsOverview}
                     </button>
                     {/* Wat je hier ziet, kan je meteen exact zo opnieuw bestellen, of eerst
                         aanpassen. Bestellen toont daarna het gewone barlijstje. */}
