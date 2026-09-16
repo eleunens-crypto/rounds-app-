@@ -1331,6 +1331,9 @@ const T = {
     repeatListTitle: "Rondje opnieuw",
     newRoundFresh: "Volledig nieuw rondje",
     newRoundPlain: "Nieuw rondje",
+    barEditSub: (n: number) => `Rondje ${n} aanpassen`,
+    barEditNamesInfo: "Sommige drankjes hebben al een naam. Haal je er een weg, dan gaat eerst wat nog geen naam had.",
+    barEditEmpty: "Er moet minstens één drankje in het rondje blijven.",
     newRoundFreshSub: "begin met een lege bestelling",
     newRoundSame: "Zelfde rondje opnieuw",
     newRoundSameSub: "exact hetzelfde, of eerst aanpassen",
@@ -2309,6 +2312,9 @@ const T = {
     repeatListTitle: "Tourn\u00e9e \u00e0 refaire",
     newRoundFresh: "Toute nouvelle tourn\u00e9e",
     newRoundPlain: "Nouvelle tourn\u00e9e",
+    barEditSub: (n: number) => `Modifier la tourn\u00e9e ${n}`,
+    barEditNamesInfo: "Certaines boissons ont d\u00e9j\u00e0 un nom. Si tu en retires une, on retire d\u2019abord celles sans nom.",
+    barEditEmpty: "Il doit rester au moins une boisson dans la tourn\u00e9e.",
     newRoundFreshSub: "commencer avec une commande vide",
     newRoundSame: "M\u00eame tourn\u00e9e",
     newRoundSameSub: "exactement pareil, ou ajust\u00e9e d\u2019abord",
@@ -2586,6 +2592,12 @@ export default function PartyTest() {
   // Popup bij "Nieuw rondje" vanaf rondje 2: volledig nieuw, of een vorig rondje opnieuw.
   // nieuwKeuzeLijst = de rondjeslijst is opengeklapt.
   const [nieuwKeuze, setNieuwKeuze] = useState(false)
+  // Barlijstje aanpassen (zelf noteren): de aantallen van het bekeken rondje, zolang je
+  // aan het aanpassen bent. null = gewone weergave.
+  const [barEdit, setBarEdit] = useState<Record<string, number> | null>(null)
+  const [barEditBezig, setBarEditBezig] = useState(false)
+  const [barEditAdd, setBarEditAdd] = useState(false)
+  const [barEditCat, setBarEditCat] = useState<Cat | null>(null)
   // Uitleg bij eerlijk verdelen, als eigen venster met opbouw in plaats van één lap tekst.
   const [fairInfoOpen, setFairInfoOpen] = useState(false)
   const [nieuwKeuzeLijst, setNieuwKeuzeLijst] = useState(false)
@@ -3221,7 +3233,14 @@ export default function PartyTest() {
   // Rondjesoverzicht (scherm 2): welke rondjes staan open. Standaard alleen het laatste.
   const [openRounds, setOpenRounds] = useState<Set<string>>(new Set())
   // Elk bezoek aan het overzicht begint dicht — je opent zelf wat je wil zien.
-  useEffect(() => { if (view === "roundsOverview") setOpenRounds(new Set<string>()) }, [view])
+  // Wie net een rondje aanpaste in het barlijstje, ziet dat ene rondje open; de volgende
+  // keer klapt het overzicht weer alles dicht.
+  const openNaWissel = useRef<string | null>(null)
+  useEffect(() => {
+    if (view !== "roundsOverview") return
+    setOpenRounds(openNaWissel.current ? new Set([openNaWissel.current]) : new Set<string>())
+    openNaWissel.current = null
+  }, [view])
   // Ook bij de gast: kom je op het rondjes-tabblad, dan staat alles dicht. Anders bleef
   // een kaart die je vorige keer opende openstaan, en scrol je langs oude details.
   useEffect(() => { if (guestTab === "me") setOpenRounds(new Set<string>()) }, [guestTab])
@@ -7687,12 +7706,57 @@ export default function PartyTest() {
             if (gekozen) drinksOf(gekozen).forEach(({ d, n }) => { totalen[d.id] = n })
           }
         }
-        const lijst = drinks.filter((d) => (totalen[d.id] || 0) > 0).map((d) => ({ d, n: totalen[d.id] })).sort((a, b) => b.n - a.n || a.d.name.localeCompare(b.d.name))
+        const bewerk = barEdit !== null && !barNaRondje
+        const bekekenIdx = barRondjeIdx !== null && rounds[barRondjeIdx] ? barRondjeIdx : rounds.length - 1
+        const lijst = bewerk
+          ? drinks.filter((d) => barEdit![d.id] !== undefined).map((d) => ({ d, n: barEdit![d.id] || 0 }))
+          : drinks.filter((d) => (totalen[d.id] || 0) > 0).map((d) => ({ d, n: totalen[d.id] })).sort((a, b) => b.n - a.n || a.d.name.localeCompare(b.d.name))
         const som = lijst.reduce((a, x) => a + x.n, 0)
         // Na een bevestigd rondje is dit geen venster dat je wegtikt maar een stap: je
         // gaat ermee naar de toog. Vandaar geen sluitknop en geen wegtikken op de
         // achtergrond — één van beide knoppen onderaan brengt je verder.
-        const sluitBar = () => { setShowBarlijst(false); setBarNaRondje(null); setBarRondjeIdx(null) }
+        const sluitBar = () => { setShowBarlijst(false); setBarNaRondje(null); setBarRondjeIdx(null); setBarEdit(null); setBarEditAdd(false) }
+        const zetBarEdit = (did: string, n: number | null) => setBarEdit((c) => {
+          if (!c) return c
+          const nieuw = { ...c }
+          if (n === null) delete nieuw[did]
+          else nieuw[did] = Math.max(0, n)
+          return nieuw
+        })
+        // Opslaan: dezelfde verdeelregel als "zelfde rondje opnieuw" (wat eraf gaat, komt
+        // eerst van wat nog geen naam had), en dan enkel de verschillen wegschrijven.
+        const bewaarBarEdit = async () => {
+          const r = rounds[bekekenIdx]
+          if (!barEdit || !r || !groupId || barEditBezig) return
+          if (Object.values(barEdit).reduce((a, b) => a + (b || 0), 0) <= 0) { setNotice(L.barEditEmpty); return }
+          setBarEditBezig(true)
+          try {
+            const { orders, anon } = naarTotalen(r.orders as Assign, r.anon as Anon, barEdit)
+            const items: { person: string | null; drink: string; delta: number }[] = []
+            const ids = new Set([...Object.keys(r.orders || {}), ...Object.keys(r.anon || {}), ...Object.keys(orders), ...Object.keys(anon)])
+            ids.forEach((did) => {
+              const personen = new Set([...Object.keys(r.orders?.[did] || {}), ...Object.keys(orders[did] || {})])
+              personen.forEach((pid) => {
+                const delta = (orders[did]?.[pid] || 0) - (r.orders?.[did]?.[pid] || 0)
+                if (delta !== 0) items.push({ person: pid, drink: did, delta })
+              })
+              const deltaLos = (anon[did] || 0) - (r.anon?.[did] || 0)
+              if (deltaLos !== 0) items.push({ person: null, drink: did, delta: deltaLos })
+            })
+            for (const it of items) {
+              const { error } = await supabase.rpc("party_bump", { p_group: groupId, p_round: r.id, p_person: it.person, p_drink: it.drink, p_delta: it.delta })
+              if (error) { setNotice("Opslaan mislukt: " + error.message); await loadParty(groupId); return }
+            }
+            await loadParty(groupId)
+            // Terug naar het overzicht, met dit rondje open zodat je de wijziging ziet.
+            openNaWissel.current = r.id
+            setOpenRounds(new Set([r.id]))
+            sluitBar()
+            setOverviewBackTo("hub"); setFillMode(false); setView("roundsOverview")
+          } finally {
+            setBarEditBezig(false)
+          }
+        }
         const heropenRondje = async () => {
           const laatste = rounds[rounds.length - 1]
           sluitBar()
@@ -7738,7 +7802,7 @@ export default function PartyTest() {
           setOverviewBackTo("hub"); setFillMode(false); setView("roundsOverview")
         }
         return (
-          <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={() => { if (!barNaRondje) sluitBar() }}>
+          <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={() => { if (!barNaRondje && !bewerk) sluitBar() }}>
             <div style={{ maxWidth: 430, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
               {/* De titel zit in de donkere balk, net als het rondjenummer op het
                   bestelscherm: dat scheelt de hoogte van een aparte kopregel. De groepsnaam
@@ -7756,6 +7820,7 @@ export default function PartyTest() {
               </div>
               {/* Het totaal als titel: dat is wat je aan de toog als eerste wil weten. */}
               <div style={{ fontSize: 26, fontWeight: 800, color: "#1d2942", lineHeight: 1.15, margin: "6px 2px 2px" }}>{L.drinksCount(som)}</div>
+              {bewerk && <div style={{ fontSize: 15.5, color: "#8a5e0f", fontWeight: 800, margin: "0 2px 4px" }}>✏️ {L.barEditSub(bekekenIdx + 1)}</div>}
               <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "0 2px 11px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length} {L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"}</div>
               {/* Bij meerdere rondjes een rij nummers om te wisselen; het laatste staat al
                   open. Bij één rondje valt de rij vanzelf weg en is dit gewoon het
@@ -7766,8 +7831,9 @@ export default function PartyTest() {
                   <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 7, marginBottom: 12 }}>
                     <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 800, color: "#1d2942", marginRight: 2 }}>{L.roundWord}</span>
                     {rounds.map((_, i) => (
-                      <span key={i} onClick={() => setBarRondjeIdx(i)}
-                        style={{ flexShrink: 0, minWidth: 44, textAlign: "center", cursor: "pointer", borderRadius: 10, padding: "8px 12px",
+                      <span key={i} onClick={() => { if (!bewerk) setBarRondjeIdx(i) }}
+                        style={{ flexShrink: 0, minWidth: 44, textAlign: "center", cursor: bewerk ? "default" : "pointer", borderRadius: 10, padding: "8px 12px",
+                          opacity: bewerk && i !== actief ? 0.35 : 1,
                           fontSize: 16, fontWeight: 800, whiteSpace: "nowrap",
                           background: i === actief ? "#1d2942" : "#fff", color: i === actief ? "#fff" : "#4a5567",
                           border: `1px solid ${i === actief ? "#1d2942" : "rgba(29,41,66,0.25)"}` }}>{i + 1}</span>
@@ -7775,6 +7841,69 @@ export default function PartyTest() {
                   </div>
                 )
               })()}
+              {bewerk ? (() => {
+                const rondKnop: React.CSSProperties = { width: 40, height: 40, borderRadius: "50%", flexShrink: 0, cursor: "pointer", fontFamily: "inherit",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, lineHeight: 1 }
+                const r = rounds[bekekenIdx]
+                const heeftNamen = !!r && Object.values(r.orders || {}).some((per) => Object.values(per || {}).some((q) => (q || 0) > 0))
+                const nietInLijst = drinks.filter((d) => barEdit![d.id] === undefined)
+                return (
+                  <>
+                    <div style={{ ...S.card, padding: "6px 16px", background: "#fcfdfe", border: "1.5px solid rgba(224,138,0,0.6)" }}>
+                      {lijst.map(({ d, n }, i) => (
+                        <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
+                          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 19, fontWeight: 800, color: n > 0 ? "#1d2942" : "#a7b0bf" }}>{d.emoji} {d.name}</span>
+                          <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 8 }}>
+                            <button aria-label="−" disabled={n <= 0} onClick={() => zetBarEdit(d.id, n - 1)}
+                              style={{ ...rondKnop, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", opacity: n <= 0 ? 0.35 : 1, cursor: n <= 0 ? "default" : "pointer" }}>−</button>
+                            <span style={{ minWidth: 32, textAlign: "center", fontSize: 21, fontWeight: 800, color: n > 0 ? "#c98a00" : "#a7b0bf" }}>{n}×</span>
+                            <button aria-label="+" onClick={() => zetBarEdit(d.id, n + 1)}
+                              style={{ ...rondKnop, background: RAND, border: "none", color: RANDTEKST }}>+</button>
+                            <button aria-label={L.removeWord} onClick={() => zetBarEdit(d.id, null)}
+                              style={{ ...rondKnop, width: 30, height: 30, fontSize: 15, background: "none", border: "none", color: "#c0554a" }}>✕</button>
+                          </span>
+                        </div>
+                      ))}
+                      {/* Drankje toevoegen: eerst de categorieën, uitklapbaar. */}
+                      <div style={{ padding: "10px 0 8px", borderTop: lijst.length ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
+                        {!barEditAdd ? (
+                          <span role="button" onClick={() => { setBarEditCat(null); setBarEditAdd(true) }}
+                            style={{ display: "block", textAlign: "center", cursor: "pointer", border: "1.5px dashed rgba(29,41,66,0.3)", borderRadius: 11, padding: "10px", fontSize: 15, fontWeight: 800, color: "#4a5567" }}>{L.addDrinkBtn}</span>
+                        ) : (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {[...new Set(nietInLijst.map((d) => d.cat))].map((c) => {
+                              const open = barEditCat === c
+                              const inCat = nietInLijst.filter((d) => d.cat === c)
+                              return (
+                                <div key={c} style={{ background: "#fff", borderRadius: 10, border: `1px solid ${open ? "#1d2942" : "rgba(29,41,66,0.18)"}` }}>
+                                  <div role="button" onClick={() => setBarEditCat(open ? null : c)}
+                                    style={{ ...S.row, justifyContent: "space-between", gap: 8, padding: "10px 12px", cursor: "pointer" }}>
+                                    <span style={{ fontSize: 15, fontWeight: 800, color: "#1d2942" }}>{CAT_LABEL[c]}</span>
+                                    <span style={{ fontSize: 13.5, fontWeight: 700, color: "#8b93a3" }}>{inCat.length} {open ? "▴" : "▾"}</span>
+                                  </div>
+                                  {open && (
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: "0 10px 10px" }}>
+                                      {inCat.map((d) => (
+                                        <span key={d.id} role="button" onClick={() => { zetBarEdit(d.id, 1); setBarEditAdd(false) }}
+                                          style={{ cursor: "pointer", borderRadius: 999, padding: "8px 13px", fontSize: 14, fontWeight: 700, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#1d2942" }}>{d.emoji} {d.name}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                            <span role="button" onClick={() => setBarEditAdd(false)}
+                              style={{ textAlign: "center", fontSize: 14.5, fontWeight: 700, color: "#8b93a3", cursor: "pointer", padding: "4px 0" }}>{L.cancel}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {heeftNamen && (
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#8a5e0f", background: "#fff7e6", borderRadius: 10, padding: "8px 11px", marginTop: 10, lineHeight: 1.4 }}>{L.barEditNamesInfo}</div>
+                    )}
+                  </>
+                )
+              })() : (
               <div style={{ ...S.card, padding: "6px 16px", background: "#fcfdfe" }}>
                 {lijst.map(({ d, n }, i) => (
                   <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "12px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
@@ -7783,6 +7912,7 @@ export default function PartyTest() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
             {/* Sticky, niet fixed: bij een kort lijstje staan de knoppen er meteen onder
                 in plaats van een half scherm lager, en bij een lang rondje plakken ze
@@ -7790,7 +7920,22 @@ export default function PartyTest() {
             {/* Kijk je naar een afgerond rondje (niet net na het bestellen, en niet tijdens
                 een lopend rondje), dan kan je het van hieruit opnieuw bestellen. Dat opent
                 hetzelfde aanpasbare lijstje als "Zelfde rondje opnieuw". */}
-            {!barNaRondje && !settle && rounds.length > 0 && laatsteRondjeKlaar() && drinks.reduce((a, d) => a + drinkTotal(d.id), 0) === 0 && (() => {
+            {bewerk && (
+              <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
+                <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 14, display: "flex", gap: 12 }}>
+                  {/* Annuleren stopt alleen het aanpassen: het rondje blijft zoals het was. */}
+                  <button disabled={barEditBezig} onClick={() => { setBarEdit(null); setBarEditAdd(false) }}
+                    style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(192,85,74,0.55)", color: "#c0554a", borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", opacity: barEditBezig ? 0.5 : 1 }}>
+                    {L.cancel}
+                  </button>
+                  <button disabled={barEditBezig} onClick={() => { void bewaarBarEdit() }}
+                    style={{ flex: 1.3, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", border: "none", color: "#fff", borderRadius: 13, padding: "13px 6px", fontSize: 16.5, fontWeight: 800, cursor: barEditBezig ? "default" : "pointer", fontFamily: "inherit" }}>
+                    {barEditBezig ? "…" : L.saveWord}
+                  </button>
+                </div>
+              </div>
+            )}
+            {!bewerk && !barNaRondje && !settle && rounds.length > 0 && laatsteRondjeKlaar() && drinks.reduce((a, d) => a + drinkTotal(d.id), 0) === 0 && (() => {
               const actief = barRondjeIdx !== null && rounds[barRondjeIdx] ? barRondjeIdx : rounds.length - 1
               return (
                 <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
@@ -7798,7 +7943,12 @@ export default function PartyTest() {
                     {/* Wat je hier ziet, kan je meteen exact zo opnieuw bestellen, of eerst
                         aanpassen. Bestellen toont daarna het gewone barlijstje. */}
                     <div style={{ display: "flex", gap: 12 }}>
-                      <button disabled={herhaalBezig} onClick={() => { sluitBar(); openHerhaal(actief) }}
+                      <button disabled={herhaalBezig} onClick={() => {
+                        // Aanpassen past dít rondje aan, in het barlijstje zelf.
+                        const t: Record<string, number> = {}
+                        drinksOf(rounds[actief]).forEach(({ d, n }) => { t[d.id] = n })
+                        setBarEditAdd(false); setBarEdit(t)
+                      }}
                         style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(224,138,0,0.65)", color: "#8a5e0f", borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", opacity: herhaalBezig ? 0.5 : 1 }}>
                         ✏️ {L.adjustOrderShort}
                       </button>
