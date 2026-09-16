@@ -3177,9 +3177,6 @@ export default function PartyTest() {
   const gastCatRij = useRef<HTMLDivElement | null>(null)
   // Het zoekveld: daar wil je staan zodra een rondje begint, niet bij de kop erboven.
   const zoekRij = useRef<HTMLDivElement | null>(null)
-  const hintBlok = useRef<HTMLDivElement | null>(null)
-  const telRij = useRef<HTMLDivElement | null>(null)
-  const namenRij = useRef<HTMLDivElement | null>(null)
   const rondjesLijst = useRef<HTMLDivElement | null>(null)
   const strookRij = useRef<HTMLDivElement | null>(null)
   const sprongGedaan = useRef(false)
@@ -3191,15 +3188,6 @@ export default function PartyTest() {
       if (el.getBoundingClientRect().top <= 8) return
       el.scrollIntoView({ behavior: "smooth", block: "start" })
     })
-  }
-  const naarLijst = () => {
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const el = perPersoon
-        ? (telRij.current || namenRij.current || hintBlok.current || catRij.current)
-        : (catRij.current || strookRij.current)
-      if (!el) return
-      el.scrollIntoView({ behavior: "smooth", block: "start" })
-    }))
   }
   // Het pijltje aan de rand van de categorieën. Zonder teken weet niemand dat de rij
   // verder loopt; het wenkt daarom zachtjes naar de kant waar meer staat.
@@ -4173,7 +4161,8 @@ export default function PartyTest() {
     if (roundItems === 0) { sprongGedaan.current = false; return }
     if (sprongGedaan.current) return
     sprongGedaan.current = true
-    naarLijst()
+    // Zelf noteren: niet meer doorschuiven. Het scherm is compact genoeg; alles blijft
+    // staan waar je het zag.
   }, [roundItems, perPersoon, settle]) // eslint-disable-line
   const resumeRound = () => { if (blokTenzijQR()) return; setActiveCat(catsPresent[0]); setView("order") }
   const unfinishedRound = roundItems > 0 && rounds.length < roundNr
@@ -7983,9 +7972,6 @@ export default function PartyTest() {
             {/* Sticky, niet fixed: bij een kort lijstje staan de knoppen er meteen onder
                 in plaats van een half scherm lager, en bij een lang rondje plakken ze
                 alsnog onderaan zodat je niet eerst terug moet scrollen. */}
-            {/* Kijk je naar een afgerond rondje (niet net na het bestellen, en niet tijdens
-                een lopend rondje), dan kan je het van hieruit opnieuw bestellen. Dat opent
-                hetzelfde aanpasbare lijstje als "Zelfde rondje opnieuw". */}
             {bewerk && (
               <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 14, display: "flex", gap: 12 }}>
@@ -8002,35 +7988,11 @@ export default function PartyTest() {
               </div>
             )}
             {!bewerk && !barNaRondje && !settle && rounds.length > 0 && laatsteRondjeKlaar() && drinks.reduce((a, d) => a + drinkTotal(d.id), 0) === 0 && (() => {
-              const actief = barRondjeIdx !== null && rounds[barRondjeIdx] ? barRondjeIdx : rounds.length - 1
               return (
                 <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 14, display: "flex", flexDirection: "column", gap: 14 }}>
-                    {/* Wat je hier ziet, kan je meteen exact zo opnieuw bestellen, of eerst
-                        aanpassen. Bestellen toont daarna het gewone barlijstje. */}
-                    <div style={{ display: "flex", gap: 12 }}>
-                      <button disabled={herhaalBezig} onClick={() => {
-                        // Aanpassen past dít rondje aan, in het barlijstje zelf.
-                        const t: Record<string, number> = {}
-                        drinksOf(rounds[actief]).forEach(({ d, n }) => { t[d.id] = n })
-                        setBarEditAdd(false); setBarWeg({}); setBarKies(null); setBarEdit(t)
-                      }}
-                        style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(224,138,0,0.65)", color: "#8a5e0f", borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", opacity: herhaalBezig ? 0.5 : 1 }}>
-                        ✏️ {L.adjustOrderShort}
-                      </button>
-                      <button disabled={herhaalBezig}
-                        onClick={() => {
-                          const t: Record<string, number> = {}
-                          drinksOf(rounds[actief]).forEach(({ d, n }) => { t[d.id] = n })
-                          setHerhaalBron(actief)
-                          void bestelOpnieuw(t, actief)
-                        }}
-                        style={{ flex: 1.4, background: RAND, border: "none", color: RANDTEKST, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit" }}>
-                        {herhaalBezig ? "…" : L.repeatThisRound(actief + 1)}
-                      </button>
-                    </div>
-                    {/* Terug staat onder de twee bestelknoppen, met ruimte ertussen: zo tik
-                        je op een gsm niet per ongeluk mis. */}
+                    {/* Vanuit het overzicht is het barlijstje alleen om te bekijken: de enige
+                        knop is terug. Opnieuw bestellen gaat via Nieuw rondje. */}
                     <button onClick={() => { sluitBar(); setOverviewBackTo("hub"); setView("roundsOverview") }}
                       style={{ width: "100%", background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "12px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
                       {L.backToRoundsOverview}
@@ -8165,8 +8127,8 @@ export default function PartyTest() {
                         {/* Eén knop: naar het barlijstje van dit rondje, waar je nog kan
                             aanpassen en dan bestelt. */}
                         <button onClick={() => { if (!herhaalBezig) { sluit(); openHerhaal(i) } }} disabled={herhaalBezig}
-                          style={{ width: "100%", marginTop: 9, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit", border: "none", borderRadius: 11, padding: "11px 8px",
-                            background: RAND, color: RANDTEKST, fontSize: 15.5, fontWeight: 800, opacity: herhaalBezig ? 0.5 : 1 }}>
+                          style={{ width: "100%", marginTop: 9, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit", border: `1.5px solid ${RAND}`, borderRadius: 11, padding: "11px 8px",
+                            background: "#fff", color: RAND, fontSize: 15.5, fontWeight: 800, opacity: herhaalBezig ? 0.5 : 1 }}>
                           {L.repeatOrderAdjustable}
                         </button>
                       </div>
@@ -8252,6 +8214,13 @@ export default function PartyTest() {
                 <button disabled={herhaalBezig || som <= 0}
                   onClick={() => { void bestelOpnieuw(herhaalLijst) }}
                   style={{ flex: 1.3, background: som > 0 ? RAND : "#c3c9d4", border: "none", color: som > 0 ? RANDTEKST : "#fff", borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: herhaalBezig || som <= 0 ? "default" : "pointer", fontFamily: "inherit", opacity: herhaalBezig ? 0.6 : 1 }}>{herhaalBezig ? "…" : L.repeatOrderBtn}</button>
+              </div>
+              {/* Toch geen rondje: terug naar waar je vandaan kwam, zonder iets te bestellen. */}
+              <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 12 }}>
+                <button disabled={herhaalBezig} onClick={sluit}
+                  style={{ width: "100%", background: "#fff", border: "1.5px solid rgba(192,85,74,0.5)", color: "#c0554a", borderRadius: 13, padding: "12px 6px", fontSize: 15.5, fontWeight: 800, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit", opacity: herhaalBezig ? 0.5 : 1 }}>
+                  {L.cancel}
+                </button>
               </div>
             </div>
           </div>
@@ -13235,7 +13204,8 @@ export default function PartyTest() {
               {L.closeAllRounds}
             </div>
           )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: settle && rounds.length > 0 ? 10 : 4 }}>
+          {/* Zelf noteren: iets meer ruimte boven het eerste rondje. */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: settle && rounds.length > 0 ? 10 : settle ? 4 : 14 }}>
           {rounds.map((r) => {
             const nr = rounds.indexOf(r) + 1
             const items = drinksOf(r).reduce((a, x) => a + x.n, 0)
