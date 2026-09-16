@@ -1191,11 +1191,9 @@ const T = {
     showLessDrinks: "Verberg details ▴",
     lastRoundPill: "laatste",
     fairSplitCta: "⚖️ Toch eerlijk splitten?",
-    fairSplitCtaSub: "Verdeel eerlijk volgens wie wat dronk!",
     fairStep2Title: "Wat kostte elk rondje?",
     fairStep2Next: "Naar stap 2 · wie dronk wat",
     backToBarList: "📋 Barlijstje",
-    drinksTabBtn: "🍺 Drankjes",
     addTyped: (naam: string) => `＋ "${naam}" toevoegen`,
     addTypedSub: "Je zet er zelf een prijs bij.",
     editDrinkTitle: (naam: string) => `✏️ ${naam} aanpassen`,
@@ -1338,7 +1336,7 @@ const T = {
     toFinalShort: "⚖️ Eindbalans",
     fairSplitAdjust: "Splitten aanpassen",
     totalPaidPlain: "Totaal betaald",
-    potLaidQ: "Pot gelegd?",
+    potLaidQ: "Pot?",
     repeatOrderAdjustable: "🔁 Bestel opnieuw · aanpasbaar",
     barEditSub: (n: number) => `Rondje ${n} aanpassen`,
     roundLabel: (n: number) => `Rondje ${n}`,
@@ -1348,8 +1346,6 @@ const T = {
     newRoundFreshSub: "begin met een lege bestelling",
     newRoundSame: "Zelfde rondje opnieuw",
     newRoundSameSub: "exact hetzelfde, of eerst aanpassen",
-    adjustOrderShort: "Aanpassen",
-    repeatThisRound: (n: number) => `🔁 Rondje ${n} opnieuw`,
     repeatEditBtn: "Extra drankjes",
     repeatEmpty: "Zet minstens \u00e9\u00e9n drankje op de lijst.",
     fairAssignTitle: "Wie dronk wat?",
@@ -1369,8 +1365,6 @@ const T = {
     skipCostWarn: "Je vulde al iets in bij dit rondje. Toch overslaan zonder het op te slaan?",
     skipCostYes: "Ja, overslaan",
     finishRoundFirst: "Rond eerst dit rondje af — vul in wat het kostte of tik Overslaan.",
-    payFirstOne: (nr: number) => `Vul eerst de betaling van rondje ${nr} in, of sla ze over.`,
-    payFirstMany: (n: number) => `Nog ${n} rondjes zonder bedrag. Vul ze in, of sla de betaling over.`,
     totalPaidShort: "Totaal betaald",
     potShare: "waarvan uit de pot",
     potLeftLong: "nog in de pot",
@@ -2187,11 +2181,9 @@ const T = {
     showLessDrinks: "Masquer les détails ▴",
     lastRoundPill: "dernière",
     fairSplitCta: "⚖️ Partager équitablement ?",
-    fairSplitCtaSub: "Partage selon ce que chacun a bu !",
     fairStep2Title: "Combien coûtait chaque tournée ?",
     fairStep2Next: "Vers l'étape 2 · qui a bu quoi",
     backToBarList: "📋 Commande",
-    drinksTabBtn: "🍺 Boissons",
     addTyped: (naam: string) => `＋ Ajouter « ${naam} »`,
     addTypedSub: "Tu y mets toi-même un prix.",
     editDrinkTitle: (naam: string) => `✏️ Modifier ${naam}`,
@@ -2330,7 +2322,7 @@ const T = {
     toFinalShort: "⚖️ D\u00e9compte",
     fairSplitAdjust: "Modifier le partage",
     totalPaidPlain: "Total pay\u00e9",
-    potLaidQ: "Une cagnotte\u00a0?",
+    potLaidQ: "Cagnotte\u00a0?",
     repeatOrderAdjustable: "🔁 Recommander · modifiable",
     barEditSub: (n: number) => `Modifier la tourn\u00e9e ${n}`,
     roundLabel: (n: number) => `Tourn\u00e9e ${n}`,
@@ -2340,8 +2332,6 @@ const T = {
     newRoundFreshSub: "commencer avec une commande vide",
     newRoundSame: "M\u00eame tourn\u00e9e",
     newRoundSameSub: "exactement pareil, ou ajust\u00e9e d\u2019abord",
-    adjustOrderShort: "Ajuster",
-    repeatThisRound: (n: number) => `🔁 Tourn\u00e9e ${n} \u00e0 nouveau`,
     repeatEditBtn: "Boissons en plus",
     repeatEmpty: "Mets au moins une boisson sur la liste.",
     fairAssignTitle: "Qui a bu quoi\u00a0?",
@@ -2361,8 +2351,6 @@ const T = {
     skipCostWarn: "Tu as d\u00e9j\u00e0 rempli quelque chose pour cette tourn\u00e9e. Passer quand m\u00eame sans enregistrer ?",
     skipCostYes: "Oui, passer",
     finishRoundFirst: "Cl\u00f4ture d\u2019abord cette tourn\u00e9e — indique le montant ou appuie sur Passer.",
-    payFirstOne: (nr: number) => `Indique d'abord le paiement de la tourn\u00e9e ${nr}, ou passe-le.`,
-    payFirstMany: (n: number) => `Encore ${n} tourn\u00e9es sans montant. Indique-les, ou passe le paiement.`,
     totalPaidShort: "Total pay\u00e9",
     potShare: "dont du pot",
     potLeftLong: "encore dans le pot",
@@ -7849,7 +7837,7 @@ export default function PartyTest() {
               {/* De titel zit in de donkere balk, net als het rondjenummer op het
                   bestelscherm: dat scheelt de hoogte van een aparte kopregel. De groepsnaam
                   en de aantallen schuiven eronder in kleinere letters. */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 15, padding: "11px 13px", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 18, background: RAND, borderRadius: 15, padding: "11px 24px 11px 13px", marginBottom: 8 }}>
                 {/* Zelfde balk als op het rondjesoverzicht: het Rundo-logo links, even groot,
                     en rechts waar je bent. */}
                 <span style={{ flexShrink: 0, display: "inline-flex" }}><RundoLogo size={58} /></span>
@@ -8199,7 +8187,7 @@ export default function PartyTest() {
         return (
           <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={tikNaast(sluit)}>
             <div style={{ maxWidth: 430, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 15, padding: "11px 13px", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 18, background: RAND, borderRadius: 15, padding: "11px 24px 11px 13px", marginBottom: 8 }}>
                 <span style={{ flexShrink: 0, display: "inline-flex" }}><RundoLogo size={58} /></span>
                 <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{L.repeatListTitle}</span>
@@ -9767,11 +9755,11 @@ export default function PartyTest() {
         </div>
         {/* Waar je bent, rechts in de balk: "Rondje 3" op het drankjesscherm, "Rondjes 4"
             op het overzicht. Die titel werd wel meegegeven, maar deze balk toonde hem niet. */}
-        {titel && <span style={{ marginLeft: "auto", flexShrink: 0, textAlign: "right", minWidth: 0 }}>{titel}</span>}
+        {titel && <span style={{ marginLeft: "auto", flexShrink: 0, textAlign: "right", minWidth: 0, paddingRight: settle && !fromQuick ? 0 : 20 }}>{titel}</span>}
         {/* Pot rechtsboven, in de buitenste rij: hij gaat over de hele avond en hoort
             dus naast het logo, niet bij één rondje. */}
         {!!groupId && !kaal && (!splitTraject || view === "payers") && (
-          <span style={{ flexShrink: 0 }}>{potContribTotal > 0.005 ? potKnopje() : potLegBadge()}</span>
+          <span style={{ flexShrink: 0, marginRight: settle && !fromQuick ? 0 : 10 }}>{potContribTotal > 0.005 ? potKnopje() : potLegBadge()}</span>
         )}
         {!uitgebreidLook && !!groupId && !kaal && (
           <div style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", marginTop: 11, marginLeft: -13, marginRight: -13, marginBottom: -11, padding: "10px 13px", background: "#f4fafb", borderRadius: "0 0 15px 15px", boxSizing: "content-box" }}>
