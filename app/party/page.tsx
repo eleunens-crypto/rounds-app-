@@ -13789,8 +13789,9 @@ export default function PartyTest() {
                 style={{ width: "100%", marginTop: 10, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
                   borderRadius: 14, padding: "9px 10px", border: "2px dashed rgba(13,124,140,0.55)",
                   background: "#f2fafb", color: "#0d7c8c", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                <span style={{ fontSize: 17, fontWeight: 800 }}>{L.fairSplitTitleNew}</span>
-                <span style={{ fontSize: 13.5, fontWeight: 600, color: "#4a5567" }}>{L.doneWithRounds}</span>
+                {/* Eerst de vraag, dan groter wat je doet. */}
+                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#0d7c8c" }}>{L.doneWithRounds}</span>
+                <span style={{ fontSize: 19, fontWeight: 800 }}>{L.fairSplitTitleNew}</span>
               </button>
             )}
             {/* De enige plek waar het verdelen nog begint. In "Neem zelf op" vraagt de app
