@@ -8,7 +8,7 @@
 // Richtprijzen blijven ONZICHTBAAR bij bestellen. Volledig lokaal. app/party-test/page.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useMemo, useState, useEffect, useCallback, useRef } from "react"
+import { Fragment, useMemo, useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import { QRCodeSVG } from "qrcode.react"
 import { useLang, LanguageToggle } from "@/lib/i18n"
@@ -1333,10 +1333,8 @@ const T = {
     newRoundPlain: "Nieuw rondje",
     barEditSub: (n: number) => `Rondje ${n} aanpassen`,
     roundLabel: (n: number) => `Rondje ${n}`,
-    removeAsk: "Weghalen?",
-    removeNo: "Nee",
-    removeYes: "Ja",
-    barEditNamesInfo: "Sommige drankjes hebben al een naam. Haal je er een weg, dan gaat eerst wat nog geen naam had.",
+    barEditNamesInfo: "Sommige drankjes staan al op iemands naam. Haal je er zo een weg, dan vraagt de app bij wie.",
+    lockedNamed: (n: number) => `${n} op naam`,
     barEditEmpty: "Er moet minstens één drankje in het rondje blijven.",
     newRoundFreshSub: "begin met een lege bestelling",
     newRoundSame: "Zelfde rondje opnieuw",
@@ -2318,10 +2316,8 @@ const T = {
     newRoundPlain: "Nouvelle tourn\u00e9e",
     barEditSub: (n: number) => `Modifier la tourn\u00e9e ${n}`,
     roundLabel: (n: number) => `Tourn\u00e9e ${n}`,
-    removeAsk: "Retirer\u00a0?",
-    removeNo: "Non",
-    removeYes: "Oui",
-    barEditNamesInfo: "Certaines boissons ont d\u00e9j\u00e0 un nom. Si tu en retires une, on retire d\u2019abord celles sans nom.",
+    barEditNamesInfo: "Certaines boissons sont d\u00e9j\u00e0 attribu\u00e9es. Si tu en retires une, l\u2019app te demande chez qui.",
+    lockedNamed: (n: number) => `${n} attribu\u00e9e${n === 1 ? "" : "s"}`,
     barEditEmpty: "Il doit rester au moins une boisson dans la tourn\u00e9e.",
     newRoundFreshSub: "commencer avec une commande vide",
     newRoundSame: "M\u00eame tourn\u00e9e",
@@ -2606,8 +2602,10 @@ export default function PartyTest() {
   const [barEditBezig, setBarEditBezig] = useState(false)
   const [barEditAdd, setBarEditAdd] = useState(false)
   const [barEditCat, setBarEditCat] = useState<Cat | null>(null)
-  // Welk drankje wacht op "echt weghalen?" (sleutel "bar:<id>" of "her:<id>").
-  const [wegVraag, setWegVraag] = useState<string | null>(null)
+  // Bij wie je een drankje op naam weghaalde (per drankje een lijst persoon-id's), en
+  // voor welk drankje de vraag "bij wie?" openstaat.
+  const [barWeg, setBarWeg] = useState<Record<string, string[]>>({})
+  const [barKies, setBarKies] = useState<string | null>(null)
   // Uitleg bij eerlijk verdelen, als eigen venster met opbouw in plaats van één lap tekst.
   const [fairInfoOpen, setFairInfoOpen] = useState(false)
   const [nieuwKeuzeLijst, setNieuwKeuzeLijst] = useState(false)
@@ -2963,6 +2961,8 @@ export default function PartyTest() {
     // rondje wél als betaald geldt. Een bedrag wissen mag wél — dan valt het rondje
     // terug op "geen bedrag ingevuld", wat een geldige toestand is.
     if (editDraft.usePot && (editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
+    // Zelf noteren: net als in het barlijstje moet er minstens één drankje overblijven.
+    if (!settle && Object.values(editDraft.drinks).reduce((a, b) => a + (b || 0), 0) <= 0) { setNotice(L.barEditEmpty); return }
     const idx = rounds.indexOf(r)
     const huidig: Record<string, number> = {}
     drinksOf(r).forEach(({ d, n }) => { huidig[d.id] = n })
@@ -7533,17 +7533,6 @@ export default function PartyTest() {
             </div>
   )
 
-  // "Echt weghalen?" in de regel zelf, in plaats van een venster: het barlijstje ligt al
-  // bovenop alles, en zo blijft je duim waar hij was.
-  const wegBevestig = (weg: () => void) => (
-    <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7 }}>
-      <span style={{ fontSize: 14.5, fontWeight: 800, color: "#c0554a" }}>{L.removeAsk}</span>
-      <button onClick={() => setWegVraag(null)}
-        style={{ cursor: "pointer", fontFamily: "inherit", borderRadius: 10, padding: "9px 12px", fontSize: 14.5, fontWeight: 800, background: "#fff", color: "#4a5567", border: "1.5px solid rgba(29,41,66,0.3)" }}>{L.removeNo}</button>
-      <button onClick={() => { weg(); setWegVraag(null) }}
-        style={{ cursor: "pointer", fontFamily: "inherit", borderRadius: 10, padding: "9px 12px", fontSize: 14.5, fontWeight: 800, background: "#c0554a", color: "#fff", border: "none" }}>{L.removeYes}</button>
-    </span>
-  )
   const renderDialogs = () => (
     <>
         {assignIdx !== null && rounds[assignIdx] && (() => {
@@ -7746,7 +7735,7 @@ export default function PartyTest() {
         // Na een bevestigd rondje is dit geen venster dat je wegtikt maar een stap: je
         // gaat ermee naar de toog. Vandaar geen sluitknop en geen wegtikken op de
         // achtergrond — één van beide knoppen onderaan brengt je verder.
-        const sluitBar = () => { setShowBarlijst(false); setBarNaRondje(null); setBarRondjeIdx(null); setBarEdit(null); setBarEditAdd(false); setWegVraag(null) }
+        const sluitBar = () => { setShowBarlijst(false); setBarNaRondje(null); setBarRondjeIdx(null); setBarEdit(null); setBarEditAdd(false); setBarWeg({}); setBarKies(null) }
         const zetBarEdit = (did: string, n: number | null) => setBarEdit((c) => {
           if (!c) return c
           const nieuw = { ...c }
@@ -7762,7 +7751,15 @@ export default function PartyTest() {
           if (Object.values(barEdit).reduce((a, b) => a + (b || 0), 0) <= 0) { setNotice(L.barEditEmpty); return }
           setBarEditBezig(true)
           try {
-            const { orders, anon } = naarTotalen(r.orders as Assign, r.anon as Anon, barEdit)
+            // Eerst wat je bewust bij iemand weghaalde; de rest van de verschillen komt
+            // uit wat nog geen naam had.
+            const basisOrders: Assign = {}
+            Object.entries(r.orders || {}).forEach(([did, per]) => {
+              const rij: Record<string, number> = { ...(per || {}) }
+              ;(barWeg[did] ?? []).forEach((pid) => { rij[pid] = Math.max(0, (rij[pid] || 0) - 1) })
+              basisOrders[did] = rij
+            })
+            const { orders, anon } = naarTotalen(basisOrders, r.anon as Anon, barEdit)
             const items: { person: string | null; drink: string; delta: number }[] = []
             const ids = new Set([...Object.keys(r.orders || {}), ...Object.keys(r.anon || {}), ...Object.keys(orders), ...Object.keys(anon)])
             ids.forEach((did) => {
@@ -7879,22 +7876,61 @@ export default function PartyTest() {
                   <>
                     <div style={{ ...S.card, padding: "0 16px 6px", background: "#fcfdfe", border: "1.5px solid rgba(224,138,0,0.6)" }}>
                       {kaartKop(`✏️ ${L.barEditSub(bekekenIdx + 1)}`, "#8a5e0f")}
-                      {lijst.map(({ d, n }, i) => (
-                        <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
-                          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 19, fontWeight: 800, color: n > 0 ? "#1d2942" : "#a7b0bf" }}>{d.emoji} {d.name}</span>
-                          {wegVraag === `bar:${d.id}` ? wegBevestig(() => zetBarEdit(d.id, null)) : (
+                      {lijst.map(({ d, n }, i) => {
+                        const weg = barWeg[d.id] ?? []
+                        const opNaamHier = r ? people.reduce((a, p) => a + (r.orders[d.id]?.[p.id] ?? 0), 0) - weg.length : 0
+                        const opties = r ? people
+                          .map((p) => ({ id: p.id, naam: p.name, n: (r.orders[d.id]?.[p.id] ?? 0) - weg.filter((x) => x === p.id).length }))
+                          .filter((x) => x.n > 0) : []
+                        const min = () => {
+                          if (n <= 0) return
+                          // Zolang er iets zonder naam (of net toegevoegd) is, gaat dat eerst.
+                          if (n > opNaamHier) { zetBarEdit(d.id, n - 1); return }
+                          setBarKies(d.id)
+                        }
+                        const plus = () => {
+                          // Haalde je hier net iets bij iemand weg, dan komt dat eerst terug.
+                          if (weg.length > 0) setBarWeg((c) => ({ ...c, [d.id]: weg.slice(0, -1) }))
+                          zetBarEdit(d.id, n + 1)
+                        }
+                        return (
+                        <Fragment key={d.id}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
+                          <span style={{ minWidth: 0 }}>
+                            <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 19, fontWeight: 800, color: n > 0 ? "#1d2942" : "#a7b0bf" }}>{d.emoji} {d.name}</span>
+                            {opNaamHier > 0 && <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#8a5e0f" }}>👤 {L.lockedNamed(opNaamHier)}</span>}
+                          </span>
                           <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 8 }}>
-                            <button aria-label="−" disabled={n <= 0} onClick={() => zetBarEdit(d.id, n - 1)}
+                            <button aria-label="−" disabled={n <= 0} onClick={min}
                               style={{ ...rondKnop, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", opacity: n <= 0 ? 0.35 : 1, cursor: n <= 0 ? "default" : "pointer" }}>−</button>
                             <span style={{ minWidth: 32, textAlign: "center", fontSize: 21, fontWeight: 800, color: n > 0 ? "#c98a00" : "#a7b0bf" }}>{n}×</span>
-                            <button aria-label="+" onClick={() => zetBarEdit(d.id, n + 1)}
+                            <button aria-label="+" onClick={plus}
                               style={{ ...rondKnop, background: RAND, border: "none", color: RANDTEKST }}>+</button>
-                            <button aria-label={L.removeWord} onClick={() => setWegVraag(`bar:${d.id}`)}
-                              style={{ ...rondKnop, width: 30, height: 30, fontSize: 15, background: "none", border: "none", color: "#c0554a" }}>✕</button>
                           </span>
-                          )}
                         </div>
-                      ))}
+                        {/* Staat het op naam: vraag bij wie het weg moet, in de regel zelf. */}
+                        {barKies === d.id && (
+                          <div style={{ background: "#fff7e6", border: "1.5px solid rgba(224,138,0,0.55)", borderRadius: 12, padding: "10px 11px", margin: "-2px 0 10px" }}>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f", marginBottom: 8 }}>{L.removeFromWho(d.name)}</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                              {opties.map((o) => (
+                                <button key={o.id} onClick={() => {
+                                  setBarWeg((c) => ({ ...c, [d.id]: [...(c[d.id] ?? []), o.id] }))
+                                  zetBarEdit(d.id, n - 1)
+                                  setBarKies(null)
+                                }}
+                                  style={{ cursor: "pointer", fontFamily: "inherit", borderRadius: 999, padding: "10px 15px", fontSize: 15, fontWeight: 800, background: "#fff", color: "#1d2942", border: "1.5px solid rgba(29,41,66,0.3)" }}>
+                                  {o.naam}{o.n > 1 ? ` (${o.n}×)` : ""}
+                                </button>
+                              ))}
+                              <button onClick={() => setBarKies(null)}
+                                style={{ cursor: "pointer", fontFamily: "inherit", borderRadius: 999, padding: "10px 15px", fontSize: 15, fontWeight: 700, background: "none", color: "#6b7484", border: "none" }}>{L.cancel}</button>
+                            </div>
+                          </div>
+                        )}
+                        </Fragment>
+                        )
+                      })}
                       {/* Drankje toevoegen: eerst de categorieën, uitklapbaar. */}
                       <div style={{ padding: "10px 0 8px", borderTop: lijst.length ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
                         {!barEditAdd ? (
@@ -7956,7 +7992,7 @@ export default function PartyTest() {
               <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 14, display: "flex", gap: 12 }}>
                   {/* Annuleren stopt alleen het aanpassen: het rondje blijft zoals het was. */}
-                  <button disabled={barEditBezig} onClick={() => { setBarEdit(null); setBarEditAdd(false); setWegVraag(null) }}
+                  <button disabled={barEditBezig} onClick={() => { setBarEdit(null); setBarEditAdd(false); setBarWeg({}); setBarKies(null) }}
                     style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(192,85,74,0.55)", color: "#c0554a", borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", opacity: barEditBezig ? 0.5 : 1 }}>
                     {L.cancel}
                   </button>
@@ -7979,7 +8015,7 @@ export default function PartyTest() {
                         // Aanpassen past dít rondje aan, in het barlijstje zelf.
                         const t: Record<string, number> = {}
                         drinksOf(rounds[actief]).forEach(({ d, n }) => { t[d.id] = n })
-                        setBarEditAdd(false); setBarEdit(t)
+                        setBarEditAdd(false); setBarWeg({}); setBarKies(null); setBarEdit(t)
                       }}
                         style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(224,138,0,0.65)", color: "#8a5e0f", borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", opacity: herhaalBezig ? 0.5 : 1 }}>
                         ✏️ {L.adjustOrderShort}
@@ -8135,10 +8171,10 @@ export default function PartyTest() {
         const bronIdx = herhaalBron !== null && rounds[herhaalBron] ? herhaalBron : rounds.length - 1
         const lijst = drinks.filter((d) => herhaalLijst[d.id] !== undefined)
           .map((d) => ({ d, n: herhaalLijst[d.id] || 0 }))
-        // Een drankje op nul blijft staan; met ✕ haal je het echt weg.
+        // Een drankje op nul blijft gedempt staan en wordt niet besteld.
         const som = lijst.reduce((a, x) => a + x.n, 0)
         const zet = (did: string, delta: number) => setHerhaalLijst((c) => c ? { ...c, [did]: Math.max(0, (c[did] || 0) + delta) } : c)
-        const sluit = () => { if (!herhaalBezig) { setHerhaalLijst(null); setHerhaalBron(null); setWegVraag(null) } }
+        const sluit = () => { if (!herhaalBezig) { setHerhaalLijst(null); setHerhaalBron(null) } }
         const kiesBron = (i: number) => {
           const t: Record<string, number> = {}
           if (rounds[i]) drinksOf(rounds[i]).forEach(({ d, n }) => { t[d.id] = n })
@@ -8181,18 +8217,13 @@ export default function PartyTest() {
                 {lijst.map(({ d, n }, i) => (
                   <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
                     <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 20, fontWeight: 800, color: n > 0 ? "#1d2942" : "#a7b0bf" }}>{d.emoji} {d.name}</span>
-                    {wegVraag === `her:${d.id}` ? wegBevestig(() => setHerhaalLijst((c) => { if (!c) return c; const n = { ...c }; delete n[d.id]; return n })) : (
                     <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 8 }}>
                       <button aria-label="−" disabled={n <= 0} onClick={() => zet(d.id, -1)}
                         style={{ ...rondKnop, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", opacity: n <= 0 ? 0.35 : 1, cursor: n <= 0 ? "default" : "pointer" }}>−</button>
                       <span style={{ minWidth: 34, textAlign: "center", fontSize: 21.5, fontWeight: 800, color: n > 0 ? "#c98a00" : "#a7b0bf" }}>{n}×</span>
                       <button aria-label="+" onClick={() => zet(d.id, 1)}
                         style={{ ...rondKnop, background: RAND, border: "none", color: RANDTEKST }}>+</button>
-                      {/* Verwijderen haalt het drankje helemaal van de lijst. */}
-                      <button aria-label={L.removeWord} onClick={() => setWegVraag(`her:${d.id}`)}
-                        style={{ ...rondKnop, width: 32, height: 32, fontSize: 15, background: "none", border: "none", color: "#c0554a" }}>✕</button>
                     </span>
-                    )}
                   </div>
                 ))}
               </div>
@@ -13312,9 +13343,15 @@ export default function PartyTest() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {rijen.map(({ d, n }) => {
                         const val = bewerk && dr ? (dr.drinks[d.id] ?? n) : n
+                        // Zelf noteren: hoeveel hiervan nog op naam staat (na wat je al weghaalde).
+                        const opNaamHier = !settle ? people.reduce((a, p) => a + (r.orders[d.id]?.[p.id] ?? 0), 0)
+                          - (dr?.weg[d.id] ?? []).filter((x) => x !== "").length : 0
+                        const opNaamTonen = bewerk && !settle && opNaamHier > 0
                         return (
                         <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "3px 0" }}>
-                          <span style={{ fontSize: 17.5, fontWeight: 700, minWidth: 0 }}>{d.emoji} {d.name}{!bewerk && (() => {
+                          <span style={{ fontSize: 17.5, fontWeight: 700, minWidth: 0, ...(bewerk && !settle && val <= 0 ? { color: "#a7b0bf" } : {}) }}>{d.emoji} {d.name}{opNaamTonen && (
+                            <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#8a5e0f" }}>👤 {L.lockedNamed(opNaamHier)}</span>
+                          )}{!bewerk && (() => {
                             // Wie dronk wat — ook bij "gewoon rondjes", want ook daar kan je
                             // toewijzen. Amber, kroontje bij je eigen naam, onbenoemd in het rood.
                             const alleWie = people.filter((p) => (r.orders[d.id]?.[p.id] ?? 0) > 0)
@@ -13328,10 +13365,18 @@ export default function PartyTest() {
                           })()}</span>
                           {bewerk ? (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
-                              <button style={{ width: 30, height: 30, borderRadius: 8, background: "#eef1f6", border: "1px solid rgba(29,41,66,0.2)", fontSize: 18, color: "#6b7484", fontWeight: 800, cursor: "pointer" }}
+                              <button disabled={!settle && val <= 0}
+                                style={settle
+                                  ? { width: 30, height: 30, borderRadius: 8, background: "#eef1f6", border: "1px solid rgba(29,41,66,0.2)", fontSize: 18, color: "#6b7484", fontWeight: 800, cursor: "pointer" }
+                                  : { width: 40, height: 40, borderRadius: "50%", background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", fontSize: 22, color: "#6b7484", fontWeight: 800, lineHeight: 1,
+                                    display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit",
+                                    opacity: val <= 0 ? 0.35 : 1, cursor: val <= 0 ? "default" : "pointer" }}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   if (val <= 0) return
+                                  // Zelf noteren: staat er meer dan in het bewaarde rondje, dan neemt
+                                  // de − eerst een net toegevoegd drankje terug.
+                                  if (!settle && val > n) { setEditDraft((c) => c ? { ...c, drinks: { ...c.drinks, [d.id]: val - 1 } } : c); return }
                                   // "weg" onthoudt per drankje bij wie elke aftrek vandaan komt: een lege
                                   // string is het onbenoemde restant, anders het id van de gast. Zo weet
                                   // saveEditRound het precies en draait Annuleren ook de keuze terug.
@@ -13348,6 +13393,9 @@ export default function PartyTest() {
                                     .map((pp) => ({ id: pp.id, naam: pp.name, n: (r.orders[d.id]?.[pp.id] ?? 0) - alWeg.filter((x) => x === pp.id).length }))
                                     .filter((x) => x.n > 0)
                                   if (opties.length === 0) { omlaag(""); return }
+                                  // Zelf noteren: staat het op naam, dan vraag je altijd bij wie het weg
+                                  // moet, ook als het maar één persoon is. Niets verdwijnt stilletjes.
+                                  if (!settle) { setKiesWeg({ did: d.id, naam: d.name, opties }); return }
                                   if (opties.length === 1) {
                                     setConfirmDlg({ variant: "danger", msg: L.removeAssignedQ(d.name, opties[0].naam), yes: L.removeWord, onYes: () => { setConfirmDlg(null); omlaag(opties[0].id) } })
                                     return
@@ -13355,8 +13403,11 @@ export default function PartyTest() {
                                   // Meer dan één gast heeft dit drankje: dan mag jij zeggen bij wie.
                                   setKiesWeg({ did: d.id, naam: d.name, opties })
                                 }}>−</button>
-                              <span style={{ fontSize: 19, fontWeight: 800, color: "#c98a00", minWidth: 28, textAlign: "center" }}>{val}×</span>
-                              <button style={{ width: 30, height: 30, borderRadius: 8, background: AAN, border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }}
+                              <span style={{ fontSize: 19, fontWeight: 800, color: !settle && val <= 0 ? "#a7b0bf" : "#c98a00", minWidth: 28, textAlign: "center" }}>{val}×</span>
+                              <button style={settle
+                                ? { width: 30, height: 30, borderRadius: 8, background: AAN, border: "none", fontSize: 18, color: "#fff", fontWeight: 800, cursor: "pointer" }
+                                : { width: 40, height: 40, borderRadius: "50%", background: RAND, border: "none", fontSize: 22, color: RANDTEKST, fontWeight: 800, lineHeight: 1,
+                                  display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit", cursor: "pointer" }}
                                 onClick={(e) => { e.stopPropagation(); setEditDraft((c) => {
                                   if (!c) return c
                                   // Stond er nog een aftrek open, dan neem je die terug in plaats van er
