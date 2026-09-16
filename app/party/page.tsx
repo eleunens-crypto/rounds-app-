@@ -1411,8 +1411,8 @@ const T = {
     sameForAll: "Dezelfde betaler voor alle rondjes",
     toFinal: "Eindbalans — eerlijk verdeeld",
     missingPayer: (n: number) => `Nog ${n} ${n === 1 ? "rondje" : "rondjes"} zonder betaler`,
+    missingAmount: (n: number) => `Nog ${n} ${n === 1 ? "rondje" : "rondjes"} zonder bedrag`,
     missingPayerQr: (n: number) => `Nog ${n} ${n === 1 ? "rondje" : "rondjes"} zonder bedrag of betaler`,
-    zeroRoundHint: "Nog geen bedrag. Laat je het leeg, dan telt dit rondje als getrakteerd.",
     potNotSplit: "De pot staat op de groep, nog niet op namen.",
     potSpreadEven: "Gelijk verdelen",
     potNewTotal: "Nieuw totaal in de pot",
@@ -2389,8 +2389,8 @@ const T = {
     sameForAll: "Le même payeur pour toutes les tournées",
     toFinal: "Bilan final — partage \u00e9quitable",
     missingPayer: (n: number) => `Encore ${n} tournée${n === 1 ? "" : "s"} sans payeur`,
+    missingAmount: (n: number) => `Encore ${n} tourn\u00e9e${n === 1 ? "" : "s"} sans montant`,
     missingPayerQr: (n: number) => `Encore ${n} tournée${n === 1 ? "" : "s"} sans montant ou sans payeur`,
-    zeroRoundHint: "Pas encore de montant. Si tu laisses vide, cette tourn\u00e9e compte comme offerte.",
     potNotSplit: "La cagnotte est sur le groupe, pas encore sur des noms.",
     potSpreadEven: "Répartir également",
     potNewTotal: "Nouveau total dans la cagnotte",
@@ -6015,12 +6015,12 @@ export default function PartyTest() {
     // zoals de eindbalans en stap 3 het tonen. Anders stuurde afsluiten je naar stap 3,
     // en stap 3 je terug naar de eindbalans, zonder einde. Alleen als géén enkel rondje
     // een bedrag heeft, valt er niets af te sluiten.
-    // QR houdt de oorspronkelijke regel: ook een rondje zonder bedrag houdt afsluiten tegen.
+    // Een rondje zonder bedrag of zonder betaler houdt afsluiten tegen, in beide modi.
+    // Bij eerlijk verdelen is €0 niet toegelaten: wie in zo'n rondje zat, zou zijn
+    // drankjes gratis krijgen.
     const zonderBetalerRond = (rr: Round) => Math.max(0, (rr.amount || 0) - (rr.potPart || 0)) > 0.005
       && Object.values(rr.payers || {}).reduce((a, b) => a + (b || 0), 0) <= 0.005
-    const nietRond = settle && !fromQuick
-      ? rounds.some((rr) => (rr.amount || 0) <= 0.005 || zonderBetalerRond(rr))
-      : !rounds.some((rr) => (rr.amount || 0) > 0.005) || rounds.some(zonderBetalerRond)
+    const nietRond = rounds.some((rr) => (rr.amount || 0) <= 0.005 || zonderBetalerRond(rr))
     if (nietRond) { setNotice(L.fillAmountsFirst); setOverviewBackTo("final"); setView("payers"); return }
     // Kwam de Fair Split hier via de overstap vanuit zelf opnemen (fromQuick), dan is
     // "settle" enkel geleend geweest voor de afrekening — de groep wás en blijft een
@@ -6179,7 +6179,9 @@ export default function PartyTest() {
     // rondjesoverzicht en tikt opnieuw op afrekenen; de drie stappen nóg eens lopen
     // voegt dan niets toe. Ontbreekt er wél iets, dan begint de flow gewoon bij stap 1.
     const namenOk = people.length > 0 && people.every((pp) => (pp.name.trim() && !isGuestDefault(pp.name)) || !dronkIets(pp.id))
-    const betalersOk = rounds.every((r) => (r.amount || 0) <= 0.005 || (r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005))
+    // Elk rondje heeft een bedrag én een betaler (of de pot). Een rondje op €0 laat de
+    // eerlijke verdeling niet toe, dus dan gewoon de stappen door.
+    const betalersOk = rounds.every((r) => (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005)))
     if (namenOk && unassignedAllRounds === 0 && betalersOk) {
       setSettle(true)
       // fq = "begon als snel opnemen": zo blijft de sessie ook na herladen of op een
@@ -13936,12 +13938,11 @@ export default function PartyTest() {
   if (view === "payers") {
     // Gedekt = pot + personen samen komen aan het bedrag. Een rondje dat volledig uit
     // de pot ging heeft geen enkele persoon als betaler, en dat is prima.
-    // Een rondje zonder bedrag mag blijven: het telt als getrakteerd (€0), net zoals op
-    // de eindbalans. Alleen als géén enkel rondje een bedrag heeft, valt er niets te
-    // verdelen. Een rondje mét bedrag moet wel volledig gedekt zijn.
-    const geenEnkelBedrag = !rounds.some((r) => (r.amount || 0) > 0.005)
+    // Eerlijk verdelen kan alleen als elk rondje een bedrag heeft: een rondje op €0 zou
+    // de drankjes erin gratis maken voor wie erin zat. En elk rondje moet gedekt zijn.
+    const zonderBedragHier = rounds.filter((r) => (r.amount || 0) <= 0.005)
     const zonderBetaler = rounds.filter((r) => (r.amount || 0) > 0.005 && rPaidSum(r) < (r.amount || 0) - 0.005)
-    const klaar = !geenEnkelBedrag && zonderBetaler.length === 0 && !potZonderNamen
+    const klaar = zonderBedragHier.length === 0 && zonderBetaler.length === 0 && !potZonderNamen
     // Geen standaardbetaler: niets staat vanzelf aangetikt. Wie snel één betaler voor
     // alles wil, heeft "Zelfde betaler voor alle rondjes".
     return (
@@ -14163,7 +14164,7 @@ export default function PartyTest() {
                 {drinksOf(r).map(({ d, n }) => `${n}× ${d.name}`).join(", ")}
               </div>
                   {geenBedrag ? (
-                    <div style={{ fontSize: 14.5, fontWeight: 700, color: "#a8720a", marginBottom: 9, lineHeight: 1.4 }}>{L.zeroRoundHint}</div>
+                    <div style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", marginBottom: 9, lineHeight: 1.4 }}>{L.fillAmountFirstShort}</div>
                   ) : tekort > 0.005 ? (
                     <div style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", marginBottom: 9 }}>{L.tapNameBelow} 👇</div>
                   ) : null}
@@ -14218,7 +14219,7 @@ export default function PartyTest() {
               }}>{L.toFinalFair}</button>
             {!klaar && (
               <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700, color: "#a8720a", marginTop: 7, lineHeight: 1.4 }}>
-                {geenEnkelBedrag ? L.fillAmountsFirst
+                {zonderBedragHier.length > 0 ? L.missingAmount(zonderBedragHier.length)
                   : zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit}
               </div>
             )}
