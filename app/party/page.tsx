@@ -1334,9 +1334,9 @@ const T = {
     newRoundPlain: "Nieuw rondje",
     fairSplitHeader: "Eerlijk splitten",
     toFinalShort: "⚖️ Eindbalans",
+    potIntroZN: "Samen een pot leggen? Noteer het hieronder. Wordt later gebruikt bij Eerlijk splitten (optioneel).",
     fairSplitAdjust: "Splitten aanpassen",
     totalPaidPlain: "Totaal betaald",
-    potLaidQ: "Pot?",
     repeatOrderAdjustable: "🔁 Bestel opnieuw · aanpasbaar",
     barEditSub: (n: number) => `Rondje ${n} aanpassen`,
     roundLabel: (n: number) => `Rondje ${n}`,
@@ -2320,9 +2320,9 @@ const T = {
     newRoundPlain: "Nouvelle tourn\u00e9e",
     fairSplitHeader: "Partager \u00e9quitablement",
     toFinalShort: "⚖️ D\u00e9compte",
+    potIntroZN: "Une cagnotte commune\u00a0? Note-la ci-dessous. Elle servira plus tard pour le partage \u00e9quitable (facultatif).",
     fairSplitAdjust: "Modifier le partage",
     totalPaidPlain: "Total pay\u00e9",
-    potLaidQ: "Cagnotte\u00a0?",
     repeatOrderAdjustable: "🔁 Recommander · modifiable",
     barEditSub: (n: number) => `Modifier la tourn\u00e9e ${n}`,
     roundLabel: (n: number) => `Tourn\u00e9e ${n}`,
@@ -6247,6 +6247,7 @@ export default function PartyTest() {
   }
   // ── Stap 3 in zelf noteren ─────────────────────────────────────────────────
   const ZB_POT = "__pot"
+  const euroKort = (v: number) => Math.abs(v - Math.round(v)) < 0.005 ? `€${Math.round(v)}` : euro(v)
   // Eén rondje wegschrijven. Valt het netwerk even weg ("Failed to fetch"), dan eerst
   // één keer opnieuw proberen voor we een melding tonen.
   const opslaanZN = async (r: Round): Promise<void> => {
@@ -7276,7 +7277,7 @@ export default function PartyTest() {
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
         <div style={{ ...S.row, justifyContent: "space-between", margin: "0 0 8px" }}>
           <h3 style={{ ...S.h3, fontSize: 21.5, margin: 0, display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span>{potIsCard ? L.drinkCard : L.potTitle}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>{!(settle && !fromQuick) && !potIsCard && <ZakjeIcoon size={26} />}{potIsCard ? L.drinkCard : L.potTitle}
               {(potRounds.length === 0 || potBuilderOpen || editPotId !== null) && (
                 <span style={{ fontSize: 14, fontWeight: 700, color: "#6b7484", marginLeft: 8 }}>
                   · {editPotId !== null ? L.editDeposit : (potRounds.length === 0 ? L.firstDeposit : L.addDeposit)}
@@ -7295,6 +7296,12 @@ export default function PartyTest() {
             <span style={{ fontSize: 17, fontWeight: 700, color: "#6b7484", whiteSpace: "nowrap" }}>👤 {headcount < 1 ? "—" : headcount}</span>
           )}
         </div>
+        {/* Zelf noteren: kort zeggen wat de pot doet, en dat hij optioneel is. */}
+        {!(settle && !fromQuick) && !potIsCard && (
+          <div style={{ background: "#eef4fb", borderRadius: 11, padding: "9px 12px", marginBottom: 10, fontSize: 15, lineHeight: 1.45, color: "#2f5693", fontWeight: 600 }}>
+            {L.potIntroZN}
+          </div>
+        )}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           <span style={{ ...S.pill, background: "rgba(29,41,66,0.08)", color: "#8a5e0f", fontSize: 15.5, padding: "4px 10px" }}>ingelegd {euro(potContribTotal)}</span>
           {potSpent > 0 && <span style={{ ...S.pill, background: "rgba(47,111,181,0.12)", color: "#2f6fb5", fontSize: 15.5, padding: "4px 10px" }}>besteed {euro(potSpent)}</span>}
@@ -9466,7 +9473,7 @@ export default function PartyTest() {
       <path d="M13 14 Q20 11 27 14 Q33 19 32 27 Q31 35 20 35 Q9 35 8 27 Q7 19 13 14 Z" fill="#e8a821" stroke="#b9821a" strokeWidth="1.5" />
       <text x="20" y="29" fontSize="12" fontWeight="800" fill="#5a3d0a" textAnchor="middle">€</text>
       </svg>
-      <span style={{ color: "#c3cbd8" }}>{fromQuick ? L.potLaidQ : L.potLayBtn}</span>
+      <span style={{ color: "#c3cbd8" }}>{L.potLayBtn}</span>
       <span style={{ color: "#F5B301", fontWeight: 800 }}>+</span>
       </span>
   ) : null
@@ -9758,8 +9765,28 @@ export default function PartyTest() {
         {titel && <span style={{ marginLeft: "auto", flexShrink: 0, textAlign: "right", minWidth: 0, paddingRight: settle && !fromQuick ? 0 : 20 }}>{titel}</span>}
         {/* Pot rechtsboven, in de buitenste rij: hij gaat over de hele avond en hoort
             dus naast het logo, niet bij één rondje. */}
-        {!!groupId && !kaal && (!splitTraject || view === "payers") && (
-          <span style={{ flexShrink: 0, marginRight: settle && !fromQuick ? 0 : 10 }}>{potContribTotal > 0.005 ? potKnopje() : potLegBadge()}</span>
+        {/* QR: de pot zoals altijd. Zelf noteren: een getekend geldzakje, alleen op het
+            drankjesscherm, het rondjesoverzicht en de betaalstap. Zonder pot met een geel
+            plusje, met pot als blauw pilletje met wat er nog in zit. */}
+        {!!groupId && !kaal && settle && !fromQuick && (
+          <span style={{ flexShrink: 0 }}>{potContribTotal > 0.005 ? potKnopje() : potLegBadge()}</span>
+        )}
+        {!!groupId && !kaal && !(settle && !fromQuick) && (view === "order" || view === "roundsOverview" || (view === "payers" && fromQuick)) && (
+          potContribTotal > 0.005 ? (
+            <button onClick={() => setShowPot(true)} aria-label={L.potTitle}
+              style={{ flexShrink: 0, marginRight: 10, display: "inline-flex", alignItems: "center", gap: 3, height: 40, padding: "0 12px 0 6px",
+                borderRadius: 999, border: "none", background: "rgba(47,111,181,0.6)", color: "#fff", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+              <ZakjeIcoon size={28} />{euroKort(potRemaining)}
+            </button>
+          ) : (
+            <button onClick={() => setShowPot(true)} aria-label={L.potTitle}
+              style={{ flexShrink: 0, marginRight: 10, position: "relative", width: 42, height: 42, borderRadius: "50%", border: "none",
+                background: "rgba(255,255,255,0.12)", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
+              <ZakjeIcoon size={30} />
+              <span style={{ position: "absolute", right: -2, bottom: -2, width: 17, height: 17, borderRadius: "50%", background: "#F5B301", color: "#1d2942",
+                fontSize: 13, fontWeight: 800, lineHeight: "17px", textAlign: "center" }}>+</span>
+            </button>
+          )
         )}
         {!uitgebreidLook && !!groupId && !kaal && (
           <div style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", marginTop: 11, marginLeft: -13, marginRight: -13, marginBottom: -11, padding: "10px 13px", background: "#f4fafb", borderRadius: "0 0 15px 15px", boxSizing: "content-box" }}>
