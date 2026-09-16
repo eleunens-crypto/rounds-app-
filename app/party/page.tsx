@@ -1398,11 +1398,11 @@ const T = {
     fullyAssigned: "Volledig toegewezen",
     sameForAllQ: "Zelfde betaler voor alle rondjes?",
     toFinalFair: "⚖️ Bekijk de eerlijke verdeling",
-    perPersonToggle: "👤 Liever per persoon toewijzen?",
-    perDrinkToggle: "🍺 Liever per drankje toewijzen?",
-    ppSub: "Open een naam en tel wat die persoon dronk.",
+    ppSub: "Kies een naam en tik aan wat die persoon dronk.",
+    stap2PerRondje: "Drankjes per rondje",
+    stap2PerPersoon: "Drankjes per persoon",
     ppOf: (n: number, vrij: number) => `van ${n}${vrij > 0 ? ` · nog ${vrij} vrij` : ""}`,
-    ppDone: (naam: string, volgende: string | null) => volgende ? `✓ Klaar met ${naam}, naar ${volgende}` : `✓ Klaar met ${naam}`,
+    ppDone: (naam: string, volgende: string | null) => volgende ? `Volgende: ${volgende}` : `${naam} sluiten`,
     yesWordZb: "Ja",
     noWordZb: "Nee",
     samePayerSet: (n: string) => `Alle rondjes staan op ${n}. Per rondje aanpassen kan nog.`,
@@ -2376,11 +2376,11 @@ const T = {
     fullyAssigned: "Enti\u00e8rement attribu\u00e9",
     sameForAllQ: "M\u00eame payeur pour toutes les tourn\u00e9es\u00a0?",
     toFinalFair: "⚖️ Voir le partage \u00e9quitable",
-    perPersonToggle: "👤 Plut\u00f4t attribuer par personne\u00a0?",
-    perDrinkToggle: "🍺 Plut\u00f4t attribuer par boisson\u00a0?",
-    ppSub: "Ouvre un nom et compte ce que cette personne a bu.",
+    ppSub: "Choisis un nom et indique ce que cette personne a bu.",
+    stap2PerRondje: "Boissons par tourn\u00e9e",
+    stap2PerPersoon: "Boissons par personne",
     ppOf: (n: number, vrij: number) => `sur ${n}${vrij > 0 ? ` \u00b7 encore ${vrij} libre${vrij === 1 ? "" : "s"}` : ""}`,
-    ppDone: (naam: string, volgende: string | null) => volgende ? `✓ Fini avec ${naam}, au suivant\u00a0: ${volgende}` : `✓ Fini avec ${naam}`,
+    ppDone: (naam: string, volgende: string | null) => volgende ? `Suivant\u00a0: ${volgende}` : `Fermer ${naam}`,
     yesWordZb: "Oui",
     noWordZb: "Non",
     samePayerSet: (n: string) => `Toutes les tourn\u00e9es sont sur ${n}. Tu peux encore ajuster par tourn\u00e9e.`,
@@ -2675,6 +2675,17 @@ export default function PartyTest() {
   const me = useRef(deviceId())
   const mounted = useRef(true)
   const [groupId, setGroupId] = useState<string | null>(null)
+  // Stap 2 begint per rondje. Koos je ooit per persoon, dan onthoudt dit toestel dat per
+  // groep: kom je later terug (ook na herladen), dan sta je weer waar je laatst was.
+  useEffect(() => {
+    if (!groupId) return
+    try { setPerPersoonStap2(localStorage.getItem(`rundo_stap2_${groupId}`) === "persoon") } catch { /* niets */ }
+  }, [groupId])
+  const kiesStap2Modus = (perPersoon: boolean) => {
+    setPerPersoonStap2(perPersoon)
+    setPpOpen(null)
+    if (groupId) { try { localStorage.setItem(`rundo_stap2_${groupId}`, perPersoon ? "persoon" : "rondje") } catch { /* niets */ } }
+  }
   const [openRoundId, setOpenRoundId] = useState<string | null>(null)
   // Snelle rondjes: is het laatst bevestigde rondje al "afgehandeld" (kost ingevuld of
   // bewust overgeslagen)? Zolang niet, houden de tabs je even op dit scherm zodat je de
@@ -3240,7 +3251,7 @@ export default function PartyTest() {
   const [payAmts, setPayAmts] = useState<Record<string, string>>({})
   const [potAmtDraft, setPotAmtDraft] = useState<string>("")
   const [paidConfirmed, setPaidConfirmed] = useState(false)
-  const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; onNo?: () => void; no?: string; variant?: "danger" | "dangerDirect" } | null>(null)
+  const [confirmDlg, setConfirmDlg] = useState<{ msg: string; yes: string; onYes: () => void; onNo?: () => void; no?: string; variant?: "danger" | "dangerDirect" | "dangerGroot" } | null>(null)
   // "Waar was je gebleven?" bij het naamloos starten van een modus waarin nog groepen
   // openstaan: een lijstje om verder te gaan, of gewoon een nieuwe groep beginnen.
   const [waarGebleven, setWaarGebleven] = useState<{ groepen: SavedGroup[]; wilSettle: boolean } | null>(null)
@@ -6159,7 +6170,7 @@ export default function PartyTest() {
     const terug = verlaatSplitten
     const ietsGedaan = people.length > 1 || rounds.some((r) => (r.amount || 0) > 0.005)
     if (!ietsGedaan) { terug(); return }
-    setConfirmDlg({ variant: "danger", msg: `${L.fairCancelTitle}\n\n${L.fairCancelBody}`,
+    setConfirmDlg({ variant: "dangerGroot", msg: `${L.fairCancelTitle}\n\n${L.fairCancelBody}`,
       yes: L.fairCancelYes, no: L.fairCancelGo,
       onYes: () => { setConfirmDlg(null); terug() } })
   }
@@ -7694,6 +7705,29 @@ export default function PartyTest() {
           if (groupId) await loadParty(groupId)
           setView("order")
         }
+        // Het net bevestigde rondje weer weghalen (zelf noteren). Het barlijstje met
+        // Aanpassen en Klaar verschijnt alleen meteen na het bestellen, dus het laatste
+        // rondje is het juiste.
+        const annuleerNetBesteld = () => {
+          const laatste = rounds[rounds.length - 1]
+          if (!laatste || !groupId) return
+          setConfirmDlg({
+            variant: "dangerDirect",
+            msg: L.cancelRoundConfirm(rounds.length),
+            yes: L.yesCancel, no: L.ratherNot,
+            onYes: async () => {
+              setConfirmDlg(null)
+              const { error } = await supabase.from("party_rounds").delete().eq("id", laatste.id)
+              if (error) { setNotice(L.cancelRoundFailed); return }
+              const nogAndere = rounds.length > 1
+              sluitBar()
+              setLastRoundHandled(true)
+              await loadParty(groupId)
+              if (nogAndere) { setOverviewBackTo("hub"); setView("roundsOverview") }
+              else { setActiveCat(catsPresent[0]); setView("order") }
+            },
+          })
+        }
         const naarOverzicht = (openKlappen: boolean) => {
           sluitBar()
           setLastRoundHandled(true)
@@ -7794,6 +7828,13 @@ export default function PartyTest() {
                 <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 12, paddingTop: 14 }}>
                   <button onClick={heropenRondje} style={{ flex: 1, background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistAdjust}</button>
                   <button onClick={() => naarOverzicht(false)} style={{ flex: 1.3, background: RAND, border: "none", color: RANDTEKST, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistDone}</button>
+                </div>
+                {/* Toch niet bestellen: het rondje dat je net bevestigde weer weghalen. */}
+                <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 12 }}>
+                  <button onClick={annuleerNetBesteld}
+                    style={{ width: "100%", background: "#fff", border: "1.5px solid rgba(192,85,74,0.5)", color: "#c0554a", borderRadius: 13, padding: "12px 6px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                    {L.cancelRound}
+                  </button>
                 </div>
               </div>
             )}
@@ -8369,6 +8410,14 @@ export default function PartyTest() {
                 <button style={{ ...S.btnP, background: "#c0554a", color: "#fff", boxShadow: "none" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
                 <button style={{ background: "none", border: "none", width: "100%", marginTop: 11, fontSize: 16, color: "#6b7484", fontWeight: 700, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}
                   onClick={() => { const f = confirmDlg?.onNo; setConfirmDlg(null); f && f() }}>{confirmDlg.no ?? L.backFinish}</button>
+              </>
+            ) : confirmDlg.variant === "dangerGroot" ? (
+              <>
+                {/* Zoals "danger", maar stoppen is een echte knop met ruimte erboven: een
+                    onderstreepte link was te klein en stond te dicht bij de rest. */}
+                <button style={{ ...S.btnP, background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", boxShadow: "none" }} onClick={() => setConfirmDlg(null)}>{confirmDlg.no ?? L.backFinish}</button>
+                <button style={{ width: "100%", marginTop: 16, padding: "14px 8px", borderRadius: 13, fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+                  background: "#fff", color: "#c0554a", border: "1.5px solid rgba(192,85,74,0.55)" }} onClick={confirmDlg.onYes}>{confirmDlg.yes}</button>
               </>
             ) : confirmDlg.variant === "danger" ? (
               <>
@@ -13503,11 +13552,22 @@ export default function PartyTest() {
           {stapBalk(2)}
           <h3 style={{ ...S.h3, margin: "0 0 3px" }}>🍻 {L.fairAssignTitle}</h3>
           <div style={{ fontSize: 15.5, color: "#6b7484", fontWeight: 600, lineHeight: 1.4 }}>{perPersoonStap2 ? L.ppSub : L.fairAssignSub}</div>
-          <button onClick={() => { setPerPersoonStap2((v) => !v); setPpOpen(null) }}
-            style={{ marginTop: 9, cursor: "pointer", fontFamily: "inherit", background: "#fff", border: "1.5px solid rgba(200,138,0,0.6)",
-              color: "#8a5e0f", borderRadius: 999, padding: "8px 14px", fontSize: 15, fontWeight: 800 }}>
-            {perPersoonStap2 ? L.perDrinkToggle : L.perPersonToggle}
-          </button>
+          {/* Twee tegels: kies hoe je toewijst. De gekozen tegel heeft een donkere rand. */}
+          <div role="radiogroup" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginTop: 11 }}>
+            {([[false, "🍻", L.stap2PerRondje], [true, "👤", L.stap2PerPersoon]] as const).map(([waarde, icoon, label]) => {
+              const aan = perPersoonStap2 === waarde
+              return (
+                <button key={label} role="radio" aria-checked={aan} onClick={() => { if (!aan) kiesStap2Modus(waarde) }}
+                  style={{ cursor: aan ? "default" : "pointer", fontFamily: "inherit", borderRadius: 14, padding: "12px 8px",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4, lineHeight: 1.25,
+                    background: aan ? "#eef3fb" : "#fff", color: "#1d2942",
+                    border: aan ? `2.5px solid ${RAND}` : "1.5px solid rgba(29,41,66,0.22)" }}>
+                  <span style={{ fontSize: 28, lineHeight: 1 }}>{icoon}</span>
+                  <span style={{ fontSize: 15.5, fontWeight: 800 }}>{label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
         {perPersoonStap2 && (() => {
           // Per persoon, per drankjessoort over alle rondjes samen. Met + krijgt deze
@@ -13543,8 +13603,10 @@ export default function PartyTest() {
                   return (
                     <div key={p.id} role="button" onClick={() => setPpOpen(p.id)}
                       style={{ ...S.card, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: "pointer",
-                        ...(klaarHier ? { borderColor: "rgba(31,138,76,0.45)", background: "#f7fcf9" } : {}) }}>
-                      {klaarHier && <span style={{ width: 23, height: 23, borderRadius: "50%", background: "#1f8a4c", color: "#fff", fontSize: 14, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✓</span>}
+                        ...(klaarHier ? { background: "#f6f7f9" } : {}) }}>
+                      {/* Grijs vinkje: je bekeek deze naam al. Geen groen, want de app kan
+                          niet weten of het aantal klopt. */}
+                      {klaarHier && <span style={{ width: 23, height: 23, borderRadius: "50%", background: "#c3c9d4", color: "#fff", fontSize: 14, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✓</span>}
                       <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 800, color: "#1d2942", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                       <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 700, color: "#6b7484" }}>{L.drinksCount(totaalVan(p.id))}</span>
                       <span style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#6b7484" }}>▾</span>
@@ -13582,14 +13644,14 @@ export default function PartyTest() {
                           </div>
                         )
                       })}
-                      {/* Hoeveel iemand dronk, weet de app niet vooraf: daarom vink je een
-                          naam zelf af. Dan klapt hij dicht en gaat de volgende open. */}
+                      {/* Hulpknop om door te gaan: deze naam klapt dicht en de volgende gaat
+                          open. Hij controleert niets; hoeveel iemand dronk, weet de app niet. */}
                       <button onClick={() => {
                         setPpKlaar((prev) => new Set(prev).add(p.id))
                         setPpOpen(volgende ? volgende.id : "__geen")
                       }}
                         style={{ width: "100%", marginTop: 10, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "12px 8px",
-                          fontSize: 16, fontWeight: 800, background: "#fff", color: "#1f6b3a", border: "1.5px solid rgba(31,138,76,0.55)" }}>
+                          fontSize: 16, fontWeight: 800, background: "#fff", color: RAND, border: `1.5px solid ${RAND}` }}>
                         {L.ppDone(p.name, volgende?.name ?? null)}
                       </button>
                     </div>
