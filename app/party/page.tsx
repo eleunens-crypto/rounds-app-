@@ -1309,7 +1309,7 @@ const T = {
     fillPayBtn: "💶 Bedrag & betaling invullen",
     tappedForYou: (naam: string) => `🍺 ${naam} duidt drankjes voor je aan — kijk even op je lijstje.`,
     editOrderPlain: "bestelling aanpassen",
-    barlistTitle: "Barlijst",
+    barlistTitle: "Barlijstje",
     barlistPieces: (n: number) => `${n} ${n === 1 ? "stuk" : "stuks"}`,
     barlistAdjust: "Aanpassen",
     barlistDone: "Klaar",
@@ -1321,7 +1321,6 @@ const T = {
     newRoundSame: "Zelfde rondje opnieuw",
     newRoundSameSub: "exact hetzelfde, of eerst aanpassen",
     adjustOrderShort: "Aanpassen",
-    showAllRoundsN: (n: number) => `Toon alle ${n} rondjes`,
     repeatThisRound: (n: number) => `🔁 Rondje ${n} opnieuw`,
     repeatEditBtn: "Pas bestelling aan",
     repeatEmpty: "Zet minstens \u00e9\u00e9n drankje op de lijst.",
@@ -2274,7 +2273,7 @@ const T = {
     fillPayBtn: "💶 Montant & paiement",
     tappedForYou: (naam: string) => `🍺 ${naam} coche des boissons pour toi — jette un œil à ta liste.`,
     editOrderPlain: "modifier la commande",
-    barlistTitle: "Liste bar",
+    barlistTitle: "Liste du bar",
     barlistPieces: (n: number) => `${n} pi\u00e8ce${n === 1 ? "" : "s"}`,
     barlistAdjust: "Modifier",
     barlistDone: "Termin\u00e9",
@@ -2286,7 +2285,6 @@ const T = {
     newRoundSame: "M\u00eame tourn\u00e9e",
     newRoundSameSub: "exactement pareil, ou ajust\u00e9e d\u2019abord",
     adjustOrderShort: "Ajuster",
-    showAllRoundsN: (n: number) => `Voir les ${n} tourn\u00e9es`,
     repeatThisRound: (n: number) => `🔁 Tourn\u00e9e ${n} \u00e0 nouveau`,
     repeatEditBtn: "Modifier la commande",
     repeatEmpty: "Mets au moins une boisson sur la liste.",
@@ -2547,12 +2545,11 @@ export default function PartyTest() {
   // en vanuit het barlijstje kies je ook een vorig.
   const [herhaalBron, setHerhaalBron] = useState<number | null>(null)
   // Popup bij "Nieuw rondje" vanaf rondje 2: volledig nieuw, of een vorig rondje opnieuw.
-  // nieuwKeuzeLijst = de rondjeslijst is opengeklapt, nieuwKeuzeAlle = ook de oudere.
+  // nieuwKeuzeLijst = de rondjeslijst is opengeklapt.
   const [nieuwKeuze, setNieuwKeuze] = useState(false)
   // Uitleg bij eerlijk verdelen, als eigen venster met opbouw in plaats van één lap tekst.
   const [fairInfoOpen, setFairInfoOpen] = useState(false)
   const [nieuwKeuzeLijst, setNieuwKeuzeLijst] = useState(false)
-  const [nieuwKeuzeAlle, setNieuwKeuzeAlle] = useState(false)
   // Stap 2 van het splitten: welke rondjes je zelf open- of dichtklapte (true = open).
   // Zonder eigen keuze staat een rondje open zolang er iets zonder naam is, en klapt het
   // dicht zodra alles een naam heeft.
@@ -7576,7 +7573,7 @@ export default function PartyTest() {
                     rechts. Het aantal krijgt het woord erbij, want "6" alleen zegt niets. */}
                 <span style={{ fontSize: 21, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🍻 Rundo</span>
                 <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                  <span style={{ fontSize: 19, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🔍 {L.barlistTitle}</span>
+                  <span style={{ fontSize: 19, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{L.barlistTitle}</span>
                 </span>
                 {barNaRondje
                   ? null
@@ -7686,7 +7683,9 @@ export default function PartyTest() {
       {nieuwKeuze && (() => {
         // Nieuwste rondje bovenaan; standaard de laatste drie, de rest achter een knop.
         const volgorde = rounds.map((r, i) => ({ r, i })).reverse()
-        const zichtbaar = nieuwKeuzeAlle ? volgorde : volgorde.slice(0, 3)
+        // Alle rondjes, nieuwste bovenaan. Het venster scrolt zelf; een extra knop om
+        // de oudere te tonen was een tik te veel.
+        const zichtbaar = volgorde
         const sluit = () => setNieuwKeuze(false)
         const wegtikken = () => { if (!herhaalBezig) sluit() }
         const knop: React.CSSProperties = { width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit", borderRadius: 13,
@@ -7755,12 +7754,6 @@ export default function PartyTest() {
                       </div>
                     )
                   })}
-                  {!nieuwKeuzeAlle && volgorde.length > 3 && (
-                    <div role="button" onClick={() => setNieuwKeuzeAlle(true)}
-                      style={{ textAlign: "center", fontSize: 14.5, fontWeight: 800, color: "#6b7484", cursor: "pointer", padding: "4px 0" }}>
-                      {L.showAllRoundsN(volgorde.length)} ▾
-                    </div>
-                  )}
                 </div>
               )}
               <button onClick={wegtikken}
@@ -9335,6 +9328,9 @@ export default function PartyTest() {
         {/* Op het instelscherm staat geen ondertitel: de tagline staat al op het
             startscherm, en hier telt elke pixel voor de twee keuzekaarten. */}
         </div>
+        {/* Waar je bent, rechts in de balk: "Rondje 3" op het drankjesscherm, "Rondjes 4"
+            op het overzicht. Die titel werd wel meegegeven, maar deze balk toonde hem niet. */}
+        {titel && <span style={{ marginLeft: "auto", flexShrink: 0, textAlign: "right", minWidth: 0 }}>{titel}</span>}
         {/* Pot rechtsboven, in de buitenste rij: hij gaat over de hele avond en hoort
             dus naast het logo, niet bij één rondje. */}
         {!!groupId && !kaal && (
@@ -13262,7 +13258,7 @@ export default function PartyTest() {
                   Buiten QR blijft hij staan: daar is er geen tabbalk om langs te gaan. */}
               {laatsteRondjeKlaar() && !tabsHier && (
                 <button onClick={() => {
-                  if (!settle && rounds.length >= 1) { setNieuwKeuzeLijst(false); setNieuwKeuzeAlle(false); setNieuwKeuze(true); return }
+                  if (!settle && rounds.length >= 1) { setNieuwKeuzeLijst(false); setNieuwKeuze(true); return }
                   nextRound()
                 }}
                   style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
@@ -13270,30 +13266,22 @@ export default function PartyTest() {
                     background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
               )}
             </div>
+            {/* Eerlijk splitten zweeft mee onderaan: je ziet hem altijd, ook als je door de
+                rondjes scrolt. Geen "avond" in de tekst: het kan ook een namiddag zijn. */}
+            {!settle && rounds.length > 0 && (
+              <button onClick={() => { setSettleChoice("fair"); setView("fairIntro") }}
+                style={{ width: "100%", marginTop: 10, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
+                  borderRadius: 14, padding: "9px 10px", border: "2px dashed rgba(13,124,140,0.55)",
+                  background: "#f2fafb", color: "#0d7c8c", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                <span style={{ fontSize: 17, fontWeight: 800 }}>{L.fairSplitTitleNew}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: "#4a5567" }}>{L.doneWithRounds}</span>
+              </button>
+            )}
             {/* De enige plek waar het verdelen nog begint. In "Neem zelf op" vraagt de app
                 onderweg niets meer — geen bedragen, geen namen, geen toewijzing — dus hier
                 staat wat je nodig hebt als je het tóch wil verdelen. De streepjesrand zegt
                 dat dit iets anders is dan de gewone weg: jij betaalde, en dit is optioneel. */}
             </div>
-            {/* Eerlijk splitten staat een eind lager, los van Nieuw rondje: het is wat je
-                doet als je klaar bent met de rondjes, niet de volgende stap onderweg. Een
-                golvende pijl leidt ernaartoe. Geen "avond": het kan ook een namiddag zijn. */}
-            {!settle && rounds.length > 0 && (
-              <div style={{ marginTop: 34, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: "#0d7c8c", textAlign: "center" }}>{L.doneWithRounds}</div>
-                <svg width="38" height="58" viewBox="0 0 38 58" aria-hidden="true" style={{ display: "block", margin: "4px 0 6px" }}>
-                  <path d="M19 3 C 6 11, 32 19, 19 27 S 6 43, 19 50" fill="none" stroke="#0d7c8c" strokeWidth="2.6" strokeLinecap="round" />
-                  <path d="M11 44 L19 53 L27 44" fill="none" stroke="#0d7c8c" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <button onClick={() => { setSettleChoice("fair"); setView("fairIntro") }}
-                  style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
-                    borderRadius: 14, padding: "14px 10px", border: "2px dashed rgba(13,124,140,0.55)",
-                    background: "#f2fafb", color: "#0d7c8c", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                  <span style={{ fontSize: 18, fontWeight: 800 }}>{L.fairSplitTitleNew}</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "#4a5567" }}>{L.fairSplitCtaSub}</span>
-                </button>
-              </div>
-            )}
           </>
         )}
       </div></div>
