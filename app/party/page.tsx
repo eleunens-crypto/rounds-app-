@@ -1414,8 +1414,9 @@ const T = {
     toFinalFair: "⚖️ Bekijk de eerlijke verdeling",
     stap2PerRondje: "Drankjes per rondje",
     stap2PerPersoon: "Drankjes per persoon",
-    ppOf: (n: number, vrij: number) => `van ${n}${vrij > 0 ? ` · nog ${vrij} vrij` : ""}`,
     ppDone: (naam: string, volgende: string | null) => volgende ? `Volgende: ${volgende}` : `${naam} sluiten`,
+    ppFree: (vrij: number, van: number) => `nog ${vrij} vrij van ${van}`,
+    ppFullOf: (n: number) => `${n} van ${n}`,
     yesWordZb: "Ja",
     noWordZb: "Nee",
     samePayerSet: (n: string) => `Alle rondjes staan op ${n}. Per rondje aanpassen kan nog.`,
@@ -2405,8 +2406,9 @@ const T = {
     toFinalFair: "⚖️ Voir le partage \u00e9quitable",
     stap2PerRondje: "Boissons par tourn\u00e9e",
     stap2PerPersoon: "Boissons par personne",
-    ppOf: (n: number, vrij: number) => `sur ${n}${vrij > 0 ? ` \u00b7 encore ${vrij} libre${vrij === 1 ? "" : "s"}` : ""}`,
     ppDone: (naam: string, volgende: string | null) => volgende ? `Suivant\u00a0: ${volgende}` : `Fermer ${naam}`,
+    ppFree: (vrij: number, van: number) => `encore ${vrij} libre${vrij === 1 ? "" : "s"} sur ${van}`,
+    ppFullOf: (n: number) => `${n} sur ${n}`,
     yesWordZb: "Oui",
     noWordZb: "Non",
     samePayerSet: (n: string) => `Toutes les tourn\u00e9es sont sur ${n}. Tu peux encore ajuster par tourn\u00e9e.`,
@@ -13918,15 +13920,24 @@ export default function PartyTest() {
                           <div key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "9px 0",
                             borderTop: di > 0 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
                             <span style={{ minWidth: 0 }}>
-                              <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#1d2942", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.emoji} {d.name}</span>
-                              <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: v > 0 ? "#b0402f" : "#8b93a3" }}>{L.ppOf(van(d), v)}</span>
+                              {/* Nog vrij: amberen pilletje. Volzet: grijs pilletje, en de naam
+                                  gedempt als deze persoon er zelf geen van heeft. */}
+                              <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: v === 0 && n === 0 ? "#8b93a3" : "#1d2942", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.emoji} {d.name}</span>
+                              {v > 0 ? (
+                                <span style={{ display: "inline-block", marginTop: 3, fontSize: 13, fontWeight: 800, color: "#8a5e0f", background: "#fff4e0", border: "1px solid rgba(224,138,0,0.5)", borderRadius: 999, padding: "2px 9px" }}>{L.ppFree(v, van(d))}</span>
+                              ) : (
+                                <span style={{ display: "inline-block", marginTop: 3, fontSize: 13, fontWeight: 700, color: "#8b93a3", background: "#f1f3f7", borderRadius: 999, padding: "2px 9px" }}>{L.ppFullOf(van(d))}</span>
+                              )}
                             </span>
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
                               <button aria-label="−" disabled={n <= 0} onClick={() => min(d, p.id)}
                                 style={{ ...rondKnop, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", opacity: n <= 0 ? 0.35 : 1, cursor: n <= 0 ? "default" : "pointer" }}>−</button>
                               <span style={{ minWidth: 26, textAlign: "center", fontSize: 21, fontWeight: 800, color: n > 0 ? "#c98a00" : "#a7b0bf" }}>{n}</span>
-                              <button aria-label="+" onClick={() => plus(d, p.id)}
-                                style={{ ...rondKnop, background: v > 0 ? RAND : "#c3c9d4", border: "none", color: "#fff" }}>+</button>
+                              {/* Niets meer vrij: een groen vinkje waar anders de + staat. */}
+                              <button aria-label={v > 0 ? "+" : L.ppFullOf(van(d))} onClick={() => plus(d, p.id)}
+                                style={{ ...rondKnop, border: "none", ...(v > 0
+                                  ? { background: RAND, color: "#fff" }
+                                  : { background: "#e7f5ec", color: "#1f8a4c", fontSize: 19 }) }}>{v > 0 ? "+" : "✓"}</button>
                             </span>
                           </div>
                         )
