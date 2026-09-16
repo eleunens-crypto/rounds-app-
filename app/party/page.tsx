@@ -929,6 +929,7 @@ const T = {
     closeRound: "✓ Rondje afsluiten",
     cancelRound: "✕ Rondje annuleren",
     yesCancel: "Ja, annuleren",
+    keepOrdering: "Nee, verder bestellen",
     backFinish: "← Terug, rondje afmaken",
     cups: "Bekers",
     cupsNotSet: "Bekers nog niet aangeduid.",
@@ -1036,7 +1037,17 @@ const T = {
     whatIsThis: "Wat is dit?",
     whoPaysWho: "🤝 Wie betaalt aan wie?",
     shortestWay: "Zo min mogelijk overschrijvingen — de app zoekt de kortste weg.",
-    fairInfo: "⚖️ We gebruiken richtprijzen als verdeelsleutel, geen exacte prijzen. Kostten een gin-tonic en een cola samen €16, dan betaalt de gin-tonic ongeveer €12,50 en de cola €3,50. Het totaalbedrag klopt natuurlijk wel exact volgens wat betaald werd.",
+    fairInfoTitle: "Hoe verdelen we eerlijk?",
+    fairInfoKey: "We gebruiken richtprijzen als verdeelsleutel, geen exacte prijzen.",
+    fairInfoExLead: "Kostten een gin-tonic en een cola samen €16, dan betaalt:",
+    fairInfoGt: "🍸 de gin-tonic",
+    fairInfoGtAmt: "€12,50",
+    fairInfoCola: "🥤 de cola",
+    fairInfoColaAmt: "€3,50",
+    fairInfoQ: "Niet altijd 100% correct?",
+    fairInfoA: "Klopt! Maar wel veel eerlijker dan gelijk verdelen!",
+    moreInfoBtn: "Meer info",
+    doneWithRounds: "Klaar met de rondjes?",
     equalSplit: "iedereen evenveel",
     equalWouldBe: (v: string) => `Gelijk verdelen zou ${v} per persoon zijn.`,
     equalColHead: "gelijk",
@@ -1886,6 +1897,7 @@ const T = {
     closeRound: "✓ Clôturer la tournée",
     cancelRound: "✕ Annuler la tournée",
     yesCancel: "Oui, annuler",
+    keepOrdering: "Non, continuer la commande",
     backFinish: "← Retour, terminer la tournée",
     cups: "Gobelets",
     cupsNotSet: "Gobelets pas encore indiqués.",
@@ -1993,7 +2005,17 @@ const T = {
     whatIsThis: "C\u2019est quoi\u00a0?",
     whoPaysWho: "🤝 Qui paie à qui ?",
     shortestWay: "Le moins de virements possible — l’appli cherche le chemin le plus court.",
-    fairInfo: "⚖️ On utilise des prix indicatifs comme cl\u00e9 de r\u00e9partition, pas les prix exacts. Si un gin tonic et un coca ont co\u00fbt\u00e9 16\u00a0€ ensemble, le gin tonic paie environ 12,50\u00a0€ et le coca 3,50\u00a0€. Le montant total correspond bien s\u00fbr exactement \u00e0 ce qui a \u00e9t\u00e9 pay\u00e9.",
+    fairInfoTitle: "Comment partager \u00e9quitablement\u00a0?",
+    fairInfoKey: "On utilise des prix indicatifs comme cl\u00e9 de r\u00e9partition, pas les prix exacts.",
+    fairInfoExLead: "Si un gin tonic et un coca ont co\u00fbt\u00e9 16\u00a0€ ensemble, alors\u00a0:",
+    fairInfoGt: "🍸 le gin tonic paie",
+    fairInfoGtAmt: "12,50\u00a0€",
+    fairInfoCola: "🥤 le coca paie",
+    fairInfoColaAmt: "3,50\u00a0€",
+    fairInfoQ: "Pas toujours correct \u00e0 100\u00a0%\u00a0?",
+    fairInfoA: "C\u2019est vrai\u00a0! Mais bien plus juste qu\u2019un partage \u00e9gal\u00a0!",
+    moreInfoBtn: "Plus d\u2019infos",
+    doneWithRounds: "Fini les tourn\u00e9es\u00a0?",
     equalSplit: "part égale",
     equalWouldBe: (v: string) => `Un partage égal ferait ${v} par personne.`,
     equalColHead: "\u00e9gal",
@@ -2527,6 +2549,8 @@ export default function PartyTest() {
   // Popup bij "Nieuw rondje" vanaf rondje 2: volledig nieuw, of een vorig rondje opnieuw.
   // nieuwKeuzeLijst = de rondjeslijst is opengeklapt, nieuwKeuzeAlle = ook de oudere.
   const [nieuwKeuze, setNieuwKeuze] = useState(false)
+  // Uitleg bij eerlijk verdelen, als eigen venster met opbouw in plaats van één lap tekst.
+  const [fairInfoOpen, setFairInfoOpen] = useState(false)
   const [nieuwKeuzeLijst, setNieuwKeuzeLijst] = useState(false)
   const [nieuwKeuzeAlle, setNieuwKeuzeAlle] = useState(false)
   // Stap 2 van het splitten: welke rondjes je zelf open- of dichtklapte (true = open).
@@ -5378,7 +5402,14 @@ export default function PartyTest() {
     // je hier door naar het startscherm met de keuzekaders, midden in je avond.
     if (view === "order" && !settle && rounds.length > 0) { setOpenRound(rounds.length - 1); setView("hub"); return }
     if (view === "settings") { setView(settingsBackTo === "order" ? "order" : "hub"); return }
-    if (view === "roundsOverview") { setView(overviewBackTo === "order" ? "order" : overviewBackTo); return }
+    if (view === "roundsOverview") {
+      // Wijst de terugweg nog naar een splitscherm terwijl je niet meer aan het splitten
+      // bent, dan is die weg verouderd: dan gewoon naar de hub.
+      const splitScherm = overviewBackTo === "payers" || overviewBackTo === "final"
+      setFillMode(false)
+      setView(splitScherm && !fromQuick ? "hub" : overviewBackTo === "order" ? "order" : overviewBackTo)
+      return
+    }
     // Deze twee ontbraken: vanaf het introscherm of stap 1 van het splitten viel je door
     // naar goStart() — het startscherm met de keuzekaders, midden in je avond. Eén stap
     // terug hoort hier het rondjesoverzicht te zijn.
@@ -5386,6 +5417,8 @@ export default function PartyTest() {
     if (view === "fairSetup" && fromQuick) { stopSplitten(); return }
     if (view === "fairAssign") { setView("fairSetup"); return }
     if (view === "payers" && fromQuick) { setView("fairAssign"); return }
+    // Van de eindbalans één stap terug is stap 3, niet de hub van Fair Split.
+    if (view === "final" && fromQuick && opNaam !== true) { setView("payers"); return }
     if (view === "final" && opNaam === true) { terugNaarUitgebreid(); setOverviewBackTo("hub"); setView("roundsOverview"); return }
     if (view === "confirmed" || view === "quickSettle" || view === "payers" || view === "final") { setView("hub"); return }
     goStart()
@@ -6058,8 +6091,19 @@ export default function PartyTest() {
   // Stoppen met splitten. De vraag komt er alleen als je al iets invulde; had je nog
   // niets gedaan, dan is er niets te verliezen en ga je meteen terug. Wat er staat,
   // blijft staan: namen, bedragen en betalers zitten in de groep, niet in dit scherm.
+  // Het splitten verlaten en terug naar Neem zelf op. Stap 1 zette settle aan (en
+  // bewaarde dat); bleef dat staan, dan las de app de groep daarna als Fair Split en
+  // kwam je via "terug" op oude schermen terecht: het overzicht in invulstand, de hub
+  // met het toewijskader. Wat je invulde (namen, bedragen, betalers) blijft bewaard;
+  // "Eerlijk splitten" brengt je er later weer naartoe.
+  const verlaatSplitten = () => {
+    if (settle) setSettle(false)
+    persistSettings({ settle: false, fq: false })
+    setFromQuick(false); setFillMode(false); setAssignAllMode(false); setAssignIdx(null)
+    setOverviewBackTo("hub"); setView("roundsOverview")
+  }
   const stopSplitten = () => {
-    const terug = () => { setFillMode(false); setAssignAllMode(false); setFromQuick(false); setOverviewBackTo("hub"); setView("roundsOverview") }
+    const terug = verlaatSplitten
     const ietsGedaan = people.length > 1 || rounds.some((r) => (r.amount || 0) > 0.005)
     if (!ietsGedaan) { terug(); return }
     setConfirmDlg({ variant: "danger", msg: `${L.fairCancelTitle}\n\n${L.fairCancelBody}`,
@@ -6452,6 +6496,9 @@ export default function PartyTest() {
     // Leeg rondje? Dan een rustigere zin, want er gaat niets verloren.
     msg: roundItems > 0 ? L.cancelRoundConfirm(roundNr) : L.cancelEmptyRoundConfirm(roundNr),
     yes: L.yesCancel,
+    // Twee duidelijke uitwegen: ja, weg ermee (en meteen naar het overzicht), of nee,
+    // verder bestellen. Geen melding achteraf meer: dat was een derde venster.
+    no: L.keepOrdering,
     onYes: () => {
       setConfirmDlg(null)
       setCart({}); setCartAnon({}); setGaveBackDraft({}); setCupsChecked(false); setCupsTouched(false); setRepeated(false)
@@ -6466,7 +6513,6 @@ export default function PartyTest() {
       // enkel via het rondjesoverzicht.
       setRoundNr(rounds.length + 1)
       setLastRoundHandled(true)
-      setNotice(L.roundCancelledNote(roundNr))
       // Zijn er al andere rondjes, dan is het overzicht de logische plek. Is dit het
       // eerste en enige, dan zou dat een leeg scherm zijn — dan blijf je hier met een
       // vers rondje. Vroeger belandde je in dat geval wél op dat lege overzicht.
@@ -7531,12 +7577,13 @@ export default function PartyTest() {
                 <span style={{ fontSize: 21, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🍻 Rundo</span>
                 <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <span style={{ fontSize: 19, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🔍 {L.barlistTitle}</span>
-                  <span style={{ flexShrink: 0, background: "rgba(245,179,1,0.2)", border: "1px solid rgba(245,179,1,0.55)", color: "#F5B301", borderRadius: 999, padding: "4px 11px", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{L.drinksCount(som)}</span>
                 </span>
                 {barNaRondje
                   ? null
                   : <button onClick={sluitBar} style={{ flexShrink: 0, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", height: 38, padding: "0 15px", borderRadius: 999, fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>}
               </div>
+              {/* Het totaal als titel: dat is wat je aan de toog als eerste wil weten. */}
+              <div style={{ fontSize: 26, fontWeight: 800, color: "#1d2942", lineHeight: 1.15, margin: "6px 2px 2px" }}>{L.drinksCount(som)}</div>
               <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "0 2px 11px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length} {L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"}</div>
               {/* Bij meerdere rondjes een rij nummers om te wisselen; het laatste staat al
                   open. Bij één rondje valt de rij vanzelf weg en is dit gewoon het
@@ -7544,7 +7591,7 @@ export default function PartyTest() {
               {!barNaRondje && !settle && rounds.length > 1 && drinks.reduce((a, d) => a + drinkTotal(d.id), 0) === 0 && (() => {
                 const actief = barRondjeIdx !== null && rounds[barRondjeIdx] ? barRondjeIdx : rounds.length - 1
                 return (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, overflowX: "auto", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 7, marginBottom: 12 }}>
                     <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 800, color: "#1d2942", marginRight: 2 }}>{L.roundWord}</span>
                     {rounds.map((_, i) => (
                       <span key={i} onClick={() => setBarRondjeIdx(i)}
@@ -7575,16 +7622,10 @@ export default function PartyTest() {
               const actief = barRondjeIdx !== null && rounds[barRondjeIdx] ? barRondjeIdx : rounds.length - 1
               return (
                 <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
-                  <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
-                    {/* Terug staat bovenaan en als eerste keuze: het kruisje rechtsboven
-                        vond je te verstopt. */}
-                    <button onClick={() => { sluitBar(); setOverviewBackTo("hub"); setView("roundsOverview") }}
-                      style={{ width: "100%", background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "12px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-                      {L.backToRoundsOverview}
-                    </button>
+                  <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 14, display: "flex", flexDirection: "column", gap: 14 }}>
                     {/* Wat je hier ziet, kan je meteen exact zo opnieuw bestellen, of eerst
                         aanpassen. Bestellen toont daarna het gewone barlijstje. */}
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 12 }}>
                       <button disabled={herhaalBezig} onClick={() => { sluitBar(); openHerhaal(actief) }}
                         style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(224,138,0,0.65)", color: "#8a5e0f", borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", opacity: herhaalBezig ? 0.5 : 1 }}>
                         ✏️ {L.adjustOrderShort}
@@ -7600,13 +7641,19 @@ export default function PartyTest() {
                         {herhaalBezig ? "…" : L.repeatThisRound(actief + 1)}
                       </button>
                     </div>
+                    {/* Terug staat onder de twee bestelknoppen, met ruimte ertussen: zo tik
+                        je op een gsm niet per ongeluk mis. */}
+                    <button onClick={() => { sluitBar(); setOverviewBackTo("hub"); setView("roundsOverview") }}
+                      style={{ width: "100%", background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "12px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                      {L.backToRoundsOverview}
+                    </button>
                   </div>
                 </div>
               )
             })()}
             {barNaRondje && (
               <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 9, paddingTop: 14 }}>
+                <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 12, paddingTop: 14 }}>
                   <button onClick={heropenRondje} style={{ flex: 1, background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistAdjust}</button>
                   <button onClick={() => naarOverzicht(false)} style={{ flex: 1.3, background: RAND, border: "none", color: RANDTEKST, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.barlistDone}</button>
                 </div>
@@ -7615,6 +7662,27 @@ export default function PartyTest() {
           </div>
         )
       })()}
+      {fairInfoOpen && (
+        <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setFairInfoOpen(false)}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#1d2942", lineHeight: 1.2, marginBottom: 10 }}>⚖️ {L.fairInfoTitle}</div>
+            <p style={{ fontSize: 17, color: "#1d2942", lineHeight: 1.5, margin: "0 0 12px", fontWeight: 600 }}>{L.fairInfoKey}</p>
+            <div style={{ background: "#f4f6fa", borderRadius: 13, padding: "12px 14px", marginBottom: 14 }}>
+              <div style={{ fontSize: 15, color: "#4a5567", fontWeight: 700, lineHeight: 1.4, marginBottom: 6 }}>{L.fairInfoExLead}</div>
+              {[[L.fairInfoGt, L.fairInfoGtAmt], [L.fairInfoCola, L.fairInfoColaAmt]].map(([wat, bedrag], i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "6px 0",
+                  borderTop: i > 0 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
+                  <span style={{ fontSize: 17, fontWeight: 700, color: "#1d2942" }}>{wat}</span>
+                  <span style={{ fontSize: 21, fontWeight: 800, color: "#1f8a4c", whiteSpace: "nowrap" }}>{bedrag}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#1d2942", marginBottom: 2 }}>{L.fairInfoQ}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "#1f6b3a", lineHeight: 1.45, marginBottom: 18 }}>{L.fairInfoA}</div>
+            <button style={S.btnP} onClick={() => setFairInfoOpen(false)}>OK</button>
+          </div>
+        </div>
+      )}
       {nieuwKeuze && (() => {
         // Nieuwste rondje bovenaan; standaard de laatste drie, de rest achter een knop.
         const volgorde = rounds.map((r, i) => ({ r, i })).reverse()
@@ -7726,15 +7794,15 @@ export default function PartyTest() {
                 <span style={{ fontSize: 21, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🍻 Rundo</span>
                 <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <span style={{ fontSize: 19, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🔁 {L.repeatListTitle}</span>
-                  <span style={{ flexShrink: 0, background: "rgba(245,179,1,0.2)", border: "1px solid rgba(245,179,1,0.55)", color: "#F5B301", borderRadius: 999, padding: "4px 11px", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{L.drinksCount(som)}</span>
                 </span>
                 <button aria-label="✕" onClick={sluit} style={{ flexShrink: 0, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", height: 38, padding: "0 15px", borderRadius: 999, fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
               </div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: "#1d2942", lineHeight: 1.15, margin: "6px 2px 2px" }}>{L.drinksCount(som)}</div>
               <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "0 2px 9px" }}>{L.repeatListSub(bronIdx + 1)}</div>
               {/* Een ander rondje herhalen: tik zijn nummer. De lijst neemt dan de aantallen
                   van dat rondje over; wat je al aanpaste, vervalt. */}
               {rounds.length > 1 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, overflowX: "auto", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 7, marginBottom: 12 }}>
                   <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 800, color: "#1d2942", marginRight: 2 }}>{L.roundWord}</span>
                   {rounds.map((_, i) => (
                     <span key={i} role="button" onClick={() => { if (!herhaalBezig && i !== bronIdx) kiesBron(i) }}
@@ -7764,7 +7832,7 @@ export default function PartyTest() {
               </div>
             </div>
             <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 9, paddingTop: 14 }}>
+              <div style={{ maxWidth: 430, margin: "0 auto", display: "flex", gap: 12, paddingTop: 14 }}>
                 <button disabled={herhaalBezig}
                   onClick={() => { const t = herhaalLijst; setHerhaalLijst(null); setHerhaalBron(null); repeatRound(t, bronIdx) }}
                   style={{ flex: 1, background: "#fff", border: `1.5px solid ${RAND}`, color: RAND, borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit", opacity: herhaalBezig ? 0.5 : 1 }}>{L.repeatEditBtn}</button>
@@ -8096,7 +8164,7 @@ export default function PartyTest() {
 
               <div style={{ ...S.card, padding: 12 }}>
                 <div style={{ fontSize: 16.5, fontWeight: 800 }}>{L.fairVsEqual}</div>
-                <button onClick={() => setNotice(L.fairInfo)}
+                <button onClick={() => setFairInfoOpen(true)}
                   style={{ margin: "6px 0 9px", cursor: "pointer", fontFamily: "inherit", background: "#fff", border: "1.5px solid rgba(200,138,0,0.55)",
                     color: "#8a5e0f", borderRadius: 999, padding: "5px 12px", fontSize: 14, fontWeight: 800 }}>{L.whatIsThis}</button>
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 8, paddingBottom: 6, borderBottom: "1.5px solid rgba(29,41,66,0.2)", fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em" }}>
@@ -9325,28 +9393,18 @@ export default function PartyTest() {
       )}
       {!verbergNav && !onboarding && !(settle && isAdmin && !fromQuick) && !(!settle && view === "order" && roundItems > 0) && !(!settle && view === "confirmed") && (
         <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-          {/* Neem zelf op kent geen afrekenknop meer: verdelen doe je via "Eerlijk
-              splitten" op het rondjesoverzicht. Deze plek wordt de weg naar de drankjes,
-              naast "Rondjes". Tijdens het splitten staat hij er niet: dat traject heeft
-              zijn eigen terug- en annuleerknoppen. */}
-          {!settle && !fromQuick && rounds.length >= 1 && view !== "roundsOverview" && (
-            <button style={{ flex: 1, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
-              border: `1.5px solid ${RAND}`,
-              background: view === "order" ? RAND : "#fff",
-              color: view === "order" ? RANDTEKST : RAND }}
-              onClick={() => { setActiveCat(catsPresent[0]); setView("order") }}>{L.drinksTabBtn}</button>
-          )}
+          {/* Geen Drankjes-knop meer in de kop: naar de drankjes ga je via Nieuw rondje. */}
           {settle && !fromQuick && (
           <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 16, fontWeight: 800, lineHeight: 1.15, borderRadius: 13 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } if (!settle && !lastRoundHandled) { setNotice(L.finishRoundFirst); return } goHome() }}>{L.groupShort}</button>
           )}
           {settle && !fromQuick ? (
             <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 16, fontWeight: 800, borderRadius: 13, opacity: (view === "hub" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goHub() }}>{L.overview}</button>
-          ) : rounds.length === 0 ? null : (
+          ) : rounds.length === 0 || (fromQuick && view === "final") ? null : (
             <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
               border: `1.5px solid ${RAND}`,
               background: view === "roundsOverview" ? RAND : "#fff",
               color: view === "roundsOverview" ? RANDTEKST : RAND }}
-              onClick={() => { if (view === "payers" || view === "fairAssign" || view === "fairSetup") { setConfirmDlg({ msg: L.leaveSettleMsg, yes: L.leaveSettleYes, onYes: () => { setConfirmDlg(null); setOverviewBackTo("hub"); setView("roundsOverview") } }); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
+              onClick={() => { if (view === "payers" || view === "fairAssign" || view === "fairSetup") { setConfirmDlg({ msg: L.leaveSettleMsg, yes: L.leaveSettleYes, onYes: () => { setConfirmDlg(null); if (fromQuick) verlaatSplitten(); else { setOverviewBackTo("hub"); setView("roundsOverview") } } }); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
           {/* Op het rondjesoverzicht zelf: Barlijstje naast Rondjes. Het opent het lijstje van
               het laatste rondje; met de nummerrij kies je een vorig. */}
@@ -12580,9 +12638,19 @@ export default function PartyTest() {
         {/* Het pijltje is weg: onderaan staat "Later — ga terug", en dat is duidelijker
             dan een klein teken linksboven. */}
         <h2 style={{ fontSize: 23, fontWeight: 800, lineHeight: 1.15, margin: "0 0 6px" }}>{L.fairIntroTitle}</h2>
-        <p style={{ fontSize: 15.5, color: "#4a5567", lineHeight: 1.5, margin: "0 0 13px" }}>{L.fairIntroLead}</p>
-        <div style={{ ...S.card, padding: 13, marginBottom: 10 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: "#1d2942", paddingBottom: 3 }}>{L.fairIntroHow}</div>
+        <p style={{ fontSize: 17, color: "#1d2942", fontWeight: 700, lineHeight: 1.45, margin: "0 0 8px" }}>{L.fairIntroLead}</p>
+        <button onClick={() => setFairInfoOpen(true)}
+          style={{ marginBottom: 14, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontFamily: "inherit",
+            background: "#fff", border: "1.5px solid rgba(200,138,0,0.55)", color: "#8a5e0f", borderRadius: 999, padding: "7px 14px", fontSize: 15, fontWeight: 800 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, lineHeight: 1 }}>i</span>
+          {L.moreInfoBtn}
+        </button>
+        <div style={{ ...S.card, padding: 0, overflow: "hidden", marginBottom: 10 }}>
+          {/* "Hoe?" als donkere band bovenaan het kader: het eerste wat je leest. */}
+          <div style={{ background: "#1d2942", color: "#fff", padding: "12px 14px", fontSize: 20, fontWeight: 800, lineHeight: 1.2 }}>
+            {L.fairIntroHow}
+          </div>
+          <div style={{ padding: "3px 13px 4px" }}>
           {stappen.map(([titel, sub], i) => (
             <div key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start", padding: "10px 0",
               borderBottom: i < 2 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
@@ -12593,6 +12661,7 @@ export default function PartyTest() {
               </span>
             </div>
           ))}
+          </div>
         </div>
         <div style={{ background: "#fff", border: "1px solid rgba(29,41,66,0.12)", borderRadius: 12, padding: "10px 12px",
           fontSize: 14.5, fontWeight: 600, color: "#4a5567", textAlign: "center", lineHeight: 1.35, marginBottom: 12 }}>
@@ -13205,16 +13274,26 @@ export default function PartyTest() {
                 onderweg niets meer — geen bedragen, geen namen, geen toewijzing — dus hier
                 staat wat je nodig hebt als je het tóch wil verdelen. De streepjesrand zegt
                 dat dit iets anders is dan de gewone weg: jij betaalde, en dit is optioneel. */}
-            {!settle && rounds.length > 0 && (
-              <button onClick={() => { setSettleChoice("fair"); setView("fairIntro") }}
-                style={{ width: "100%", marginTop: 14, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
-                  borderRadius: 14, padding: "14px 10px", border: "2px dashed rgba(13,124,140,0.55)",
-                  background: "#f2fafb", color: "#0d7c8c", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                <span style={{ fontSize: 18, fontWeight: 800 }}>{L.fairSplitTitleNew}</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#4a5567" }}>{L.fairSplitCtaSub}</span>
-              </button>
-            )}
             </div>
+            {/* Eerlijk splitten staat een eind lager, los van Nieuw rondje: het is wat je
+                doet als je klaar bent met de rondjes, niet de volgende stap onderweg. Een
+                golvende pijl leidt ernaartoe. Geen "avond": het kan ook een namiddag zijn. */}
+            {!settle && rounds.length > 0 && (
+              <div style={{ marginTop: 34, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#0d7c8c", textAlign: "center" }}>{L.doneWithRounds}</div>
+                <svg width="38" height="58" viewBox="0 0 38 58" aria-hidden="true" style={{ display: "block", margin: "4px 0 6px" }}>
+                  <path d="M19 3 C 6 11, 32 19, 19 27 S 6 43, 19 50" fill="none" stroke="#0d7c8c" strokeWidth="2.6" strokeLinecap="round" />
+                  <path d="M11 44 L19 53 L27 44" fill="none" stroke="#0d7c8c" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <button onClick={() => { setSettleChoice("fair"); setView("fairIntro") }}
+                  style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
+                    borderRadius: 14, padding: "14px 10px", border: "2px dashed rgba(13,124,140,0.55)",
+                    background: "#f2fafb", color: "#0d7c8c", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                  <span style={{ fontSize: 18, fontWeight: 800 }}>{L.fairSplitTitleNew}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#4a5567" }}>{L.fairSplitCtaSub}</span>
+                </button>
+              </div>
+            )}
           </>
         )}
       </div></div>
@@ -13669,7 +13748,7 @@ export default function PartyTest() {
             <span style={{ display: "block", fontSize: 21.5, fontWeight: 800, color: "#1d2942", lineHeight: 1.25 }}>{L.fairVsEqual}</span>
             {/* Een echte knop onder de titel in plaats van een klein "i": zo zie je dat er
                 uitleg is, en raak je hem ook met een dikke duim. */}
-            <button onClick={() => setNotice(L.fairInfo)}
+            <button onClick={() => setFairInfoOpen(true)}
               style={{ marginTop: 7, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontFamily: "inherit",
                 background: "#fff", border: "1.5px solid rgba(200,138,0,0.55)", color: "#8a5e0f", borderRadius: 999, padding: "6px 13px", fontSize: 14.5, fontWeight: 800 }}>
               <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, lineHeight: 1 }}>?</span>
@@ -13809,8 +13888,23 @@ export default function PartyTest() {
       {/* Kwam je hier via de drie stappen, dan moet de weg terug even netjes zijn als de
           weg heen: van de eindbalans naar stap 3, en van daar verder achteruit. */}
       {fromQuick && opNaam !== true && (
-        <button style={{ ...S.btn, width: "100%", marginTop: 12, fontSize: 17, fontWeight: 700, color: "#6b7484" }}
-          onClick={() => setView("payers")}>{L.backToPayers}</button>
+        <>
+          <button style={{ ...S.btn, width: "100%", marginTop: 12, fontSize: 17, fontWeight: 700, color: "#6b7484" }}
+            onClick={() => setView("payers")}>{L.backToPayers}</button>
+          {/* Onderaan: links terug naar het rondjesoverzicht (die knop stond eerst in de
+              kop), rechts afsluiten, het duidelijkst van alle knoppen hier. */}
+          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+            <button onClick={verlaatSplitten}
+              style={{ ...S.btn, flex: 1, padding: "14px 6px", fontSize: 16, fontWeight: 800 }}>{L.roundsOverview}</button>
+            {!!groupId && (
+              <button onClick={() => { if (isAutoNaam(groupName)) { setSluitNaamVeld(""); setSluitNaam(true); return } void sluitAvondAf() }}
+                style={{ flex: 1.2, padding: "14px 6px", borderRadius: 13, fontSize: 16.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+                  background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", color: "#fff", border: "none", boxShadow: "0 6px 16px -6px rgba(31,138,76,0.6)" }}>
+                🔒 {L.closeEveBtn}
+              </button>
+            )}
+          </div>
+        </>
       )}
       {/* Vanuit uitgebreid opnemen zijn er maar twee logische vervolgstappen: terugkijken
           in het overzicht, of doordrinken met een nieuw rondje. Liep de route via de
@@ -13825,9 +13919,10 @@ export default function PartyTest() {
       )}
       {/* De avond dichtzetten kan vanaf elke eindbalans; bij de QR-modus enkel voor de
           admin — gasten sluiten andermans avond niet af. */}
-      {!!groupId && (!settle || isAdmin) && (
+      {!!groupId && (!settle || isAdmin) && !(fromQuick && opNaam !== true) && (
         <button onClick={() => { if (isAutoNaam(groupName)) { setSluitNaamVeld(""); setSluitNaam(true); return } void sluitAvondAf() }}
-          style={{ width: "100%", marginTop: 10, padding: "12px 6px", borderRadius: 11, fontSize: 16, fontWeight: 800, cursor: "pointer", background: "#fff", color: "#3b486a", border: "1.5px dashed rgba(90,100,140,0.55)" }}>{L.closeEveBtn}</button>
+          style={{ width: "100%", marginTop: 10, padding: "14px 6px", borderRadius: 13, fontSize: 16.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+            background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", color: "#fff", border: "none", boxShadow: "0 6px 16px -6px rgba(31,138,76,0.6)" }}>🔒 {L.closeEveBtn}</button>
       )}
       {/* Terug naar de rondjes: na een lange tabel wil je niet omhoog scrollen naar de
           tabbalk. Alleen in QR-modus — de andere modi hebben hun eigen slot hierboven. */}
