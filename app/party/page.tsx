@@ -133,6 +133,28 @@ function MicroIcoon({ size = 18, kleur = "#8a5e0f" }: { size?: number; kleur?: s
   )
 }
 
+// Twee pinten die klinken, met drie streepjes voor de klink. Getekend in plaats van een
+// emoji, zodat hij de kleur van de knop volgt.
+function ProostIcoon({ size = 26, kleur = "currentColor" }: { size?: number; kleur?: string }) {
+  return (
+    <svg width={size} height={size * 0.8} viewBox="0 0 40 32" aria-hidden="true" style={{ display: "block", flexShrink: 0 }}>
+      <g fill="none" stroke={kleur} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round">
+        <g transform="rotate(-14 12 18)">
+          <path d="M5 9 H17 L15.5 28 H6.5 Z" />
+          <path d="M17 13 h2.5 a2.5 2.5 0 0 1 0 5 h-2.9" />
+          <path d="M6 14 H16.6" strokeWidth="1.6" />
+        </g>
+        <g transform="rotate(14 28 18)">
+          <path d="M23 9 H35 L33.5 28 H24.5 Z" />
+          <path d="M23 13 h-2.5 a2.5 2.5 0 0 0 0 5 h2.9" />
+          <path d="M23.4 14 H34" strokeWidth="1.6" />
+        </g>
+        <path d="M20 2 v3.2 M15.5 3.5 l1.6 2.4 M24.5 3.5 l-1.6 2.4" strokeWidth="1.8" />
+      </g>
+    </svg>
+  )
+}
+
 function KroonIcoon({ size = 15, kleur = "#0a6070", gevuld = false }: { size?: number; kleur?: string; gevuld?: boolean }) {
   // Strakke kroon met ronde punten en losse stippen: moderner dan de klassieke
   // gekartelde vorm, en op klein formaat nog steeds herkenbaar.
@@ -1317,6 +1339,7 @@ const T = {
     repeatOrderBtn: "Bestel opnieuw",
     repeatListTitle: "Rondje opnieuw",
     newRoundFresh: "Volledig nieuw rondje",
+    newRoundPlain: "Nieuw rondje",
     newRoundFreshSub: "begin met een lege bestelling",
     newRoundSame: "Zelfde rondje opnieuw",
     newRoundSameSub: "exact hetzelfde, of eerst aanpassen",
@@ -2281,6 +2304,7 @@ const T = {
     repeatOrderBtn: "Recommander",
     repeatListTitle: "Tourn\u00e9e \u00e0 refaire",
     newRoundFresh: "Toute nouvelle tourn\u00e9e",
+    newRoundPlain: "Nouvelle tourn\u00e9e",
     newRoundFreshSub: "commencer avec une commande vide",
     newRoundSame: "M\u00eame tourn\u00e9e",
     newRoundSameSub: "exactement pareil, ou ajust\u00e9e d\u2019abord",
@@ -6516,7 +6540,8 @@ export default function PartyTest() {
       if (rounds.length > 0) { setOverviewBackTo("hub"); setView("roundsOverview"); return }
       setActiveCat(catsPresent[0])
       setView("order")
-      naarRondjeKop()
+      // Een leeg drankjesscherm toon je van bovenaf; scrollen pas als er drankjes staan.
+      if (settle) naarRondjeKop()
     },
   })
   const cancelRound = () => setConfirmDlg({ msg: `Het volledige rondje ${roundNr} annuleren? Alle drankjes en bekers van dit rondje worden verwijderd. Dit kan niet ongedaan gemaakt worden.`, yes: L.yesCancel, onYes: () => { const remaining = rounds.length - 1; setRounds((rs) => rs.slice(0, -1)); setPaidConfirmed(false); setConfirmDlg(null); if (remaining > 0) { setOpenRound(remaining - 1); setView("hub") } else setView("order") } })
@@ -6557,7 +6582,11 @@ export default function PartyTest() {
     // Geen keuze meer te maken: elk rondje begint in de samen-stand.
     setPerPersoon(false); setModusGekozen(true)
     setView("order")
-    naarRondjeKop()
+    // Een nieuw rondje is leeg: dan zie je het volledige scherm van bovenaf. Het
+    // doorschuiven naar de lijst gebeurt pas bij het eerste drankje (zie het effect op
+    // roundItems), of meteen als het rondje al gevuld binnenkomt (zelfde rondje opnieuw).
+    if (settle) naarRondjeKop()
+    else if (typeof window !== "undefined") window.scrollTo(0, 0)
   }
   // Neemt de drankjes én de toewijzing van het laatste rondje over. Daarna nog gewoon aanpasbaar.
   // Wie deed mee aan dit rondje? Wie het rondje niet meemaakte, betaalt niet mee.
@@ -7568,12 +7597,12 @@ export default function PartyTest() {
               {/* De titel zit in de donkere balk, net als het rondjenummer op het
                   bestelscherm: dat scheelt de hoogte van een aparte kopregel. De groepsnaam
                   en de aantallen schuiven eronder in kleinere letters. */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 14, padding: "10px 12px", marginBottom: 8 }}>
-                {/* Zelfde balk als op het drankjesscherm: merknaam links, waar je bent
-                    rechts. Het aantal krijgt het woord erbij, want "6" alleen zegt niets. */}
-                <span style={{ fontSize: 21, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🍻 Rundo</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 15, padding: "11px 13px", marginBottom: 8 }}>
+                {/* Zelfde balk als op het rondjesoverzicht: het Rundo-logo links, even groot,
+                    en rechts waar je bent. */}
+                <span style={{ flexShrink: 0, display: "inline-flex" }}><RundoLogo size={58} /></span>
                 <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                  <span style={{ fontSize: 19, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{L.barlistTitle}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{L.barlistTitle}</span>
                 </span>
                 {barNaRondje
                   ? null
@@ -7693,23 +7722,25 @@ export default function PartyTest() {
         return (
           <div style={{ ...S.overlay, zIndex: 78 }} onClick={wegtikken}>
             <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 12 }}>{L.newRoundBtn}</h3>
+              <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 14 }}>{L.newRoundPlain}</h3>
+              {/* Geen gevulde knop meer: beide keuzes wegen even zwaar. Hoger en met meer
+                  ruimte ertussen, zodat je op een gsm niet mistikt. */}
               <button onClick={() => { sluit(); nextRound() }}
-                style={{ ...knop, background: RAND, border: "none", color: RANDTEKST }}>
-                <span style={{ fontSize: 22, flexShrink: 0 }}>➕</span>
+                style={{ ...knop, padding: "16px 14px", background: "#fff", border: `1.5px solid ${RAND}`, color: RAND }}>
+                <span style={{ flexShrink: 0, display: "inline-flex" }}><ProostIcoon size={30} /></span>
                 <span style={{ minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 17, fontWeight: 800 }}>{L.newRoundFresh}</span>
-                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, opacity: 0.85 }}>{L.newRoundFreshSub}</span>
+                  <span style={{ display: "block", fontSize: 17.5, fontWeight: 800 }}>{L.newRoundFresh}</span>
+                  <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "#6b7484" }}>{L.newRoundFreshSub}</span>
                 </span>
               </button>
               {/* Even groot als de knop erboven, en de ondertekst zegt meteen dat je het
                   eerst kan aanpassen: zo is "opnieuw" geen blinde herhaling. */}
               <button onClick={() => setNieuwKeuzeLijst((v) => !v)}
-                style={{ ...knop, marginTop: 9, background: nieuwKeuzeLijst ? "#fffdf4" : "#fff", color: "#1d2942",
-                  border: `2px solid ${nieuwKeuzeLijst ? "rgba(224,138,0,0.8)" : "rgba(29,41,66,0.35)"}` }}>
-                <span style={{ fontSize: 22, flexShrink: 0 }}>🔁</span>
+                style={{ ...knop, marginTop: 13, padding: "16px 14px", background: nieuwKeuzeLijst ? "#fffdf4" : "#fff", color: "#1d2942",
+                  border: `${nieuwKeuzeLijst ? 2 : 1.5}px solid rgba(224,138,0,${nieuwKeuzeLijst ? 0.85 : 0.7})` }}>
+                <span style={{ fontSize: 24, width: 30, textAlign: "center", flexShrink: 0 }}>🔁</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 17, fontWeight: 800 }}>{L.newRoundSame}</span>
+                  <span style={{ display: "block", fontSize: 17.5, fontWeight: 800 }}>{L.newRoundSame}</span>
                   <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "#8a5e0f" }}>{L.newRoundSameSub}</span>
                 </span>
                 <span style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#6b7484" }}>{nieuwKeuzeLijst ? "▴" : "▾"}</span>
@@ -7783,10 +7814,10 @@ export default function PartyTest() {
         return (
           <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={sluit}>
             <div style={{ maxWidth: 430, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 14, padding: "10px 12px", marginBottom: 8 }}>
-                <span style={{ fontSize: 21, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🍻 Rundo</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 15, padding: "11px 13px", marginBottom: 8 }}>
+                <span style={{ flexShrink: 0, display: "inline-flex" }}><RundoLogo size={58} /></span>
                 <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                  <span style={{ fontSize: 19, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>🔁 {L.repeatListTitle}</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{L.repeatListTitle}</span>
                 </span>
                 <button aria-label="✕" onClick={sluit} style={{ flexShrink: 0, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", height: 38, padding: "0 15px", borderRadius: 999, fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
               </div>
@@ -12738,10 +12769,7 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={S.wrap}>
         <Header titel={!settle && rounds.length > 0 ? (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{L.roundsTitleShort}</span>
-            <span style={{ background: "rgba(245,179,1,0.2)", border: "1px solid rgba(245,179,1,0.55)", color: "#F5B301", borderRadius: 999, padding: "3px 10px", fontSize: 13.5, fontWeight: 800 }}>{rounds.length}</span>
-          </span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{L.roundCount(rounds.length)}</span>
         ) : undefined} />
         {showPot && renderPotModal()}
         {renderDialogs()}
@@ -12792,6 +12820,13 @@ export default function PartyTest() {
         <div ref={rondjesLijst} style={{ position: "relative", scrollMarginTop: 8 }}>
           {/* De zwevende "Toon details"-pil boven de rondjes is weg: hij overlapte het
               eerste rondje, en elk rondje heeft rechts al zijn eigen "details". */}
+          {/* Staat alles open, dan is de lijst lang: dichtklappen kan dan ook bovenaan. */}
+          {!settle && rounds.length > 1 && openRounds.size >= rounds.length && (
+            <div onClick={() => setOpenRounds(new Set<string>())}
+              style={{ textAlign: "right", fontSize: 14.5, fontWeight: 800, color: "#6b7484", cursor: "pointer", margin: "0 3px 4px" }}>
+              {L.closeAllRounds}
+            </div>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4 }}>
           {rounds.map((r) => {
             const nr = rounds.indexOf(r) + 1
@@ -13261,9 +13296,11 @@ export default function PartyTest() {
                   if (!settle && rounds.length >= 1) { setNieuwKeuzeLijst(false); setNieuwKeuze(true); return }
                   nextRound()
                 }}
-                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
-                    display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: 62,
-                    background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }}>{settle && openRoundId ? L.continueRound(roundNr) : L.newRoundBtn}</button>
+                  style={{ flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 17, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 9, textAlign: "center", minHeight: 58,
+                    background: "#fff", color: RAND, border: `1.5px solid ${RAND}` }}>
+                  {settle && openRoundId ? L.continueRound(roundNr) : (<><ProostIcoon size={28} />{L.newRoundPlain}</>)}
+                </button>
               )}
             </div>
             {/* Eerlijk splitten zweeft mee onderaan: je ziet hem altijd, ook als je door de
