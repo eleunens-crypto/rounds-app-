@@ -1332,6 +1332,10 @@ const T = {
     newRoundFresh: "Volledig nieuw rondje",
     newRoundPlain: "Nieuw rondje",
     barEditSub: (n: number) => `Rondje ${n} aanpassen`,
+    roundLabel: (n: number) => `Rondje ${n}`,
+    removeAsk: "Weghalen?",
+    removeNo: "Nee",
+    removeYes: "Ja",
     barEditNamesInfo: "Sommige drankjes hebben al een naam. Haal je er een weg, dan gaat eerst wat nog geen naam had.",
     barEditEmpty: "Er moet minstens één drankje in het rondje blijven.",
     newRoundFreshSub: "begin met een lege bestelling",
@@ -2313,6 +2317,10 @@ const T = {
     newRoundFresh: "Toute nouvelle tourn\u00e9e",
     newRoundPlain: "Nouvelle tourn\u00e9e",
     barEditSub: (n: number) => `Modifier la tourn\u00e9e ${n}`,
+    roundLabel: (n: number) => `Tourn\u00e9e ${n}`,
+    removeAsk: "Retirer\u00a0?",
+    removeNo: "Non",
+    removeYes: "Oui",
     barEditNamesInfo: "Certaines boissons ont d\u00e9j\u00e0 un nom. Si tu en retires une, on retire d\u2019abord celles sans nom.",
     barEditEmpty: "Il doit rester au moins une boisson dans la tourn\u00e9e.",
     newRoundFreshSub: "commencer avec une commande vide",
@@ -2598,6 +2606,8 @@ export default function PartyTest() {
   const [barEditBezig, setBarEditBezig] = useState(false)
   const [barEditAdd, setBarEditAdd] = useState(false)
   const [barEditCat, setBarEditCat] = useState<Cat | null>(null)
+  // Welk drankje wacht op "echt weghalen?" (sleutel "bar:<id>" of "her:<id>").
+  const [wegVraag, setWegVraag] = useState<string | null>(null)
   // Uitleg bij eerlijk verdelen, als eigen venster met opbouw in plaats van één lap tekst.
   const [fairInfoOpen, setFairInfoOpen] = useState(false)
   const [nieuwKeuzeLijst, setNieuwKeuzeLijst] = useState(false)
@@ -7523,6 +7533,17 @@ export default function PartyTest() {
             </div>
   )
 
+  // "Echt weghalen?" in de regel zelf, in plaats van een venster: het barlijstje ligt al
+  // bovenop alles, en zo blijft je duim waar hij was.
+  const wegBevestig = (weg: () => void) => (
+    <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7 }}>
+      <span style={{ fontSize: 14.5, fontWeight: 800, color: "#c0554a" }}>{L.removeAsk}</span>
+      <button onClick={() => setWegVraag(null)}
+        style={{ cursor: "pointer", fontFamily: "inherit", borderRadius: 10, padding: "9px 12px", fontSize: 14.5, fontWeight: 800, background: "#fff", color: "#4a5567", border: "1.5px solid rgba(29,41,66,0.3)" }}>{L.removeNo}</button>
+      <button onClick={() => { weg(); setWegVraag(null) }}
+        style={{ cursor: "pointer", fontFamily: "inherit", borderRadius: 10, padding: "9px 12px", fontSize: 14.5, fontWeight: 800, background: "#c0554a", color: "#fff", border: "none" }}>{L.removeYes}</button>
+    </span>
+  )
   const renderDialogs = () => (
     <>
         {assignIdx !== null && rounds[assignIdx] && (() => {
@@ -7708,6 +7729,16 @@ export default function PartyTest() {
         }
         const bewerk = barEdit !== null && !barNaRondje
         const bekekenIdx = barRondjeIdx !== null && rounds[barRondjeIdx] ? barRondjeIdx : rounds.length - 1
+        // Net besteld of nog aan het bestellen: dat rondje is nog niet bevestigd, dus geen
+        // "x rondjes" maar het nummer van dit rondje.
+        const nogOnbevestigd = !!barNaRondje || drinks.reduce((a, d) => a + drinkTotal(d.id), 0) > 0
+        // Het aantal drankjes als titel van de lijst zelf, met rechts welk rondje.
+        const kaartKop = (rechts: string, kleur = "#6b7484") => (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "11px 0 9px", borderBottom: "1px solid rgba(29,41,66,0.14)" }}>
+            <span style={{ fontSize: 23, fontWeight: 800, color: "#1d2942", whiteSpace: "nowrap" }}>{L.drinksCount(som)}</span>
+            <span style={{ fontSize: 14.5, fontWeight: 800, color: kleur, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rechts}</span>
+          </div>
+        )
         const lijst = bewerk
           ? drinks.filter((d) => barEdit![d.id] !== undefined).map((d) => ({ d, n: barEdit![d.id] || 0 }))
           : drinks.filter((d) => (totalen[d.id] || 0) > 0).map((d) => ({ d, n: totalen[d.id] })).sort((a, b) => b.n - a.n || a.d.name.localeCompare(b.d.name))
@@ -7715,7 +7746,7 @@ export default function PartyTest() {
         // Na een bevestigd rondje is dit geen venster dat je wegtikt maar een stap: je
         // gaat ermee naar de toog. Vandaar geen sluitknop en geen wegtikken op de
         // achtergrond — één van beide knoppen onderaan brengt je verder.
-        const sluitBar = () => { setShowBarlijst(false); setBarNaRondje(null); setBarRondjeIdx(null); setBarEdit(null); setBarEditAdd(false) }
+        const sluitBar = () => { setShowBarlijst(false); setBarNaRondje(null); setBarRondjeIdx(null); setBarEdit(null); setBarEditAdd(false); setWegVraag(null) }
         const zetBarEdit = (did: string, n: number | null) => setBarEdit((c) => {
           if (!c) return c
           const nieuw = { ...c }
@@ -7818,10 +7849,7 @@ export default function PartyTest() {
                   ? null
                   : <button onClick={sluitBar} style={{ flexShrink: 0, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", height: 38, padding: "0 15px", borderRadius: 999, fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>}
               </div>
-              {/* Het totaal als titel: dat is wat je aan de toog als eerste wil weten. */}
-              <div style={{ fontSize: 26, fontWeight: 800, color: "#1d2942", lineHeight: 1.15, margin: "6px 2px 2px" }}>{L.drinksCount(som)}</div>
-              {bewerk && <div style={{ fontSize: 15.5, color: "#8a5e0f", fontWeight: 800, margin: "0 2px 4px" }}>✏️ {L.barEditSub(bekekenIdx + 1)}</div>}
-              <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "0 2px 11px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {rounds.length} {L.roundWord.toLowerCase()}{rounds.length === 1 ? "" : "s"}</div>
+              <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "0 2px 11px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{groupName.trim() || L.autoName()} · {nogOnbevestigd ? L.roundLabel(roundNr) : L.roundCount(laatsteRondjeKlaar() ? rounds.length : Math.max(0, rounds.length - 1))}</div>
               {/* Bij meerdere rondjes een rij nummers om te wisselen; het laatste staat al
                   open. Bij één rondje valt de rij vanzelf weg en is dit gewoon het
                   barlijstje. Niet tijdens het bestellen: dan kijk je naar wat je nú aantikt. */}
@@ -7849,19 +7877,22 @@ export default function PartyTest() {
                 const nietInLijst = drinks.filter((d) => barEdit![d.id] === undefined)
                 return (
                   <>
-                    <div style={{ ...S.card, padding: "6px 16px", background: "#fcfdfe", border: "1.5px solid rgba(224,138,0,0.6)" }}>
+                    <div style={{ ...S.card, padding: "0 16px 6px", background: "#fcfdfe", border: "1.5px solid rgba(224,138,0,0.6)" }}>
+                      {kaartKop(`✏️ ${L.barEditSub(bekekenIdx + 1)}`, "#8a5e0f")}
                       {lijst.map(({ d, n }, i) => (
                         <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
                           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 19, fontWeight: 800, color: n > 0 ? "#1d2942" : "#a7b0bf" }}>{d.emoji} {d.name}</span>
+                          {wegVraag === `bar:${d.id}` ? wegBevestig(() => zetBarEdit(d.id, null)) : (
                           <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 8 }}>
                             <button aria-label="−" disabled={n <= 0} onClick={() => zetBarEdit(d.id, n - 1)}
                               style={{ ...rondKnop, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", opacity: n <= 0 ? 0.35 : 1, cursor: n <= 0 ? "default" : "pointer" }}>−</button>
                             <span style={{ minWidth: 32, textAlign: "center", fontSize: 21, fontWeight: 800, color: n > 0 ? "#c98a00" : "#a7b0bf" }}>{n}×</span>
                             <button aria-label="+" onClick={() => zetBarEdit(d.id, n + 1)}
                               style={{ ...rondKnop, background: RAND, border: "none", color: RANDTEKST }}>+</button>
-                            <button aria-label={L.removeWord} onClick={() => zetBarEdit(d.id, null)}
+                            <button aria-label={L.removeWord} onClick={() => setWegVraag(`bar:${d.id}`)}
                               style={{ ...rondKnop, width: 30, height: 30, fontSize: 15, background: "none", border: "none", color: "#c0554a" }}>✕</button>
                           </span>
+                          )}
                         </div>
                       ))}
                       {/* Drankje toevoegen: eerst de categorieën, uitklapbaar. */}
@@ -7904,7 +7935,8 @@ export default function PartyTest() {
                   </>
                 )
               })() : (
-              <div style={{ ...S.card, padding: "6px 16px", background: "#fcfdfe" }}>
+              <div style={{ ...S.card, padding: "0 16px 6px", background: "#fcfdfe" }}>
+                {kaartKop(L.roundLabel(nogOnbevestigd ? roundNr : bekekenIdx + 1))}
                 {lijst.map(({ d, n }, i) => (
                   <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "12px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
                     <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 20, fontWeight: 800, color: "#1d2942" }}>{d.emoji} {d.name}</span>
@@ -7924,7 +7956,7 @@ export default function PartyTest() {
               <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)", background: "linear-gradient(180deg,rgba(251,243,228,0),#fbf3e4 22%)" }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 14, display: "flex", gap: 12 }}>
                   {/* Annuleren stopt alleen het aanpassen: het rondje blijft zoals het was. */}
-                  <button disabled={barEditBezig} onClick={() => { setBarEdit(null); setBarEditAdd(false) }}
+                  <button disabled={barEditBezig} onClick={() => { setBarEdit(null); setBarEditAdd(false); setWegVraag(null) }}
                     style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(192,85,74,0.55)", color: "#c0554a", borderRadius: 13, padding: "13px 6px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", opacity: barEditBezig ? 0.5 : 1 }}>
                     {L.cancel}
                   </button>
@@ -8106,7 +8138,7 @@ export default function PartyTest() {
         // Een drankje op nul blijft staan; met ✕ haal je het echt weg.
         const som = lijst.reduce((a, x) => a + x.n, 0)
         const zet = (did: string, delta: number) => setHerhaalLijst((c) => c ? { ...c, [did]: Math.max(0, (c[did] || 0) + delta) } : c)
-        const sluit = () => { if (!herhaalBezig) { setHerhaalLijst(null); setHerhaalBron(null) } }
+        const sluit = () => { if (!herhaalBezig) { setHerhaalLijst(null); setHerhaalBron(null); setWegVraag(null) } }
         const kiesBron = (i: number) => {
           const t: Record<string, number> = {}
           if (rounds[i]) drinksOf(rounds[i]).forEach(({ d, n }) => { t[d.id] = n })
@@ -8124,8 +8156,7 @@ export default function PartyTest() {
                 </span>
                 <button aria-label="✕" onClick={sluit} style={{ flexShrink: 0, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", height: 38, padding: "0 15px", borderRadius: 999, fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
               </div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: "#1d2942", lineHeight: 1.15, margin: "6px 2px 2px" }}>{L.drinksCount(som)}</div>
-              <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "0 2px 9px" }}>{L.repeatListSub(bronIdx + 1)}</div>
+              <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 700, margin: "4px 2px 9px" }}>{L.repeatListSub(bronIdx + 1)}</div>
               {/* Een ander rondje herhalen: tik zijn nummer. De lijst neemt dan de aantallen
                   van dat rondje over; wat je al aanpaste, vervalt. */}
               {rounds.length > 1 && (
@@ -8140,10 +8171,17 @@ export default function PartyTest() {
                   ))}
                 </div>
               )}
-              <div style={{ ...S.card, padding: "6px 16px", background: "#fcfdfe" }}>
+              <div style={{ ...S.card, padding: "0 16px 6px", background: "#fcfdfe" }}>
+                {/* Titel van de lijst: het aantal, en rechts het nummer dat dit rondje krijgt
+                    (het is nog niet besteld). */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "11px 0 9px", borderBottom: "1px solid rgba(29,41,66,0.14)" }}>
+                  <span style={{ fontSize: 23, fontWeight: 800, color: "#1d2942", whiteSpace: "nowrap" }}>{L.drinksCount(som)}</span>
+                  <span style={{ fontSize: 14.5, fontWeight: 800, color: "#6b7484", whiteSpace: "nowrap" }}>{L.roundLabel(rounds.length + 1)}</span>
+                </div>
                 {lijst.map(({ d, n }, i) => (
                   <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < lijst.length - 1 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
                     <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 20, fontWeight: 800, color: n > 0 ? "#1d2942" : "#a7b0bf" }}>{d.emoji} {d.name}</span>
+                    {wegVraag === `her:${d.id}` ? wegBevestig(() => setHerhaalLijst((c) => { if (!c) return c; const n = { ...c }; delete n[d.id]; return n })) : (
                     <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 8 }}>
                       <button aria-label="−" disabled={n <= 0} onClick={() => zet(d.id, -1)}
                         style={{ ...rondKnop, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", opacity: n <= 0 ? 0.35 : 1, cursor: n <= 0 ? "default" : "pointer" }}>−</button>
@@ -8151,9 +8189,10 @@ export default function PartyTest() {
                       <button aria-label="+" onClick={() => zet(d.id, 1)}
                         style={{ ...rondKnop, background: RAND, border: "none", color: RANDTEKST }}>+</button>
                       {/* Verwijderen haalt het drankje helemaal van de lijst. */}
-                      <button aria-label={L.removeWord} onClick={() => setHerhaalLijst((c) => { if (!c) return c; const n = { ...c }; delete n[d.id]; return n })}
+                      <button aria-label={L.removeWord} onClick={() => setWegVraag(`her:${d.id}`)}
                         style={{ ...rondKnop, width: 32, height: 32, fontSize: 15, background: "none", border: "none", color: "#c0554a" }}>✕</button>
                     </span>
+                    )}
                   </div>
                 ))}
               </div>
