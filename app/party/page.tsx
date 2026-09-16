@@ -1052,10 +1052,10 @@ const T = {
     shortestWay: "Zo min mogelijk overschrijvingen — de app zoekt de kortste weg.",
     fairInfoTitle: "Hoe verdelen we eerlijk?",
     fairInfoKey: "We gebruiken richtprijzen als verdeelsleutel, geen exacte prijzen.",
-    fairInfoExLead: "Kostten een gin-tonic en een cola samen €16, dan betaalt:",
-    fairInfoGt: "🍸 de gin-tonic",
+    fairInfoExLead: "Als een gin-tonic en een cola samen €16 kosten, dan wordt de verdeling als volgt:",
+    fairInfoGt: "🍸 Gin-tonic",
     fairInfoGtAmt: "€12,50",
-    fairInfoCola: "🥤 de cola",
+    fairInfoCola: "🥤 Cola",
     fairInfoColaAmt: "€3,50",
     fairInfoQ: "Niet altijd 100% correct?",
     fairInfoA: "Klopt! Maar wel veel eerlijker dan gelijk verdelen!",
@@ -1331,6 +1331,7 @@ const T = {
     repeatListTitle: "Rondje opnieuw",
     newRoundFresh: "Volledig nieuw rondje",
     newRoundPlain: "Nieuw rondje",
+    repeatOrderAdjustable: "🔁 Bestel opnieuw · aanpasbaar",
     barEditSub: (n: number) => `Rondje ${n} aanpassen`,
     roundLabel: (n: number) => `Rondje ${n}`,
     barEditNamesInfo: "Sommige drankjes staan al op iemands naam. Haal je er zo een weg, dan vraagt de app bij wie.",
@@ -2038,10 +2039,10 @@ const T = {
     shortestWay: "Le moins de virements possible — l’appli cherche le chemin le plus court.",
     fairInfoTitle: "Comment partager \u00e9quitablement\u00a0?",
     fairInfoKey: "On utilise des prix indicatifs comme cl\u00e9 de r\u00e9partition, pas les prix exacts.",
-    fairInfoExLead: "Si un gin tonic et un coca ont co\u00fbt\u00e9 16\u00a0€ ensemble, alors\u00a0:",
-    fairInfoGt: "🍸 le gin tonic paie",
+    fairInfoExLead: "Si un gin tonic et un coca co\u00fbtent 16\u00a0€ ensemble, la r\u00e9partition est la suivante\u00a0:",
+    fairInfoGt: "🍸 Gin tonic",
     fairInfoGtAmt: "12,50\u00a0€",
-    fairInfoCola: "🥤 le coca paie",
+    fairInfoCola: "🥤 Coca",
     fairInfoColaAmt: "3,50\u00a0€",
     fairInfoQ: "Pas toujours correct \u00e0 100\u00a0%\u00a0?",
     fairInfoA: "C\u2019est vrai\u00a0! Mais bien plus juste qu\u2019un partage \u00e9gal\u00a0!",
@@ -2314,6 +2315,7 @@ const T = {
     repeatListTitle: "Tourn\u00e9e \u00e0 refaire",
     newRoundFresh: "Toute nouvelle tourn\u00e9e",
     newRoundPlain: "Nouvelle tourn\u00e9e",
+    repeatOrderAdjustable: "🔁 Recommander · modifiable",
     barEditSub: (n: number) => `Modifier la tourn\u00e9e ${n}`,
     roundLabel: (n: number) => `Tourn\u00e9e ${n}`,
     barEditNamesInfo: "Certaines boissons sont d\u00e9j\u00e0 attribu\u00e9es. Si tu en retires une, l\u2019app te demande chez qui.",
@@ -2606,9 +2608,11 @@ export default function PartyTest() {
   // voor welk drankje de vraag "bij wie?" openstaat.
   const [barWeg, setBarWeg] = useState<Record<string, string[]>>({})
   const [barKies, setBarKies] = useState<string | null>(null)
+  const [barAnnuleerVraag, setBarAnnuleerVraag] = useState(false)
   // Uitleg bij eerlijk verdelen, als eigen venster met opbouw in plaats van één lap tekst.
   const [fairInfoOpen, setFairInfoOpen] = useState(false)
   const [nieuwKeuzeLijst, setNieuwKeuzeLijst] = useState(false)
+  const [nieuwKeuzeOpen, setNieuwKeuzeOpen] = useState<string | null>(null)
   // Stap 2 van het splitten: welke rondjes je zelf open- of dichtklapte (true = open).
   // Zonder eigen keuze staat een rondje open zolang er iets zonder naam is, en klapt het
   // dicht zodra alles een naam heeft.
@@ -7735,7 +7739,7 @@ export default function PartyTest() {
         // Na een bevestigd rondje is dit geen venster dat je wegtikt maar een stap: je
         // gaat ermee naar de toog. Vandaar geen sluitknop en geen wegtikken op de
         // achtergrond — één van beide knoppen onderaan brengt je verder.
-        const sluitBar = () => { setShowBarlijst(false); setBarNaRondje(null); setBarRondjeIdx(null); setBarEdit(null); setBarEditAdd(false); setBarWeg({}); setBarKies(null) }
+        const sluitBar = () => { setShowBarlijst(false); setBarNaRondje(null); setBarRondjeIdx(null); setBarEdit(null); setBarEditAdd(false); setBarWeg({}); setBarKies(null); setBarAnnuleerVraag(false) }
         const zetBarEdit = (did: string, n: number | null) => setBarEdit((c) => {
           if (!c) return c
           const nieuw = { ...c }
@@ -7800,25 +7804,19 @@ export default function PartyTest() {
         // Het net bevestigde rondje weer weghalen (zelf noteren). Het barlijstje met
         // Aanpassen en Klaar verschijnt alleen meteen na het bestellen, dus het laatste
         // rondje is het juiste.
-        const annuleerNetBesteld = () => {
+        // De vraag staat in het barlijstje zelf: een gewoon venster viel erachter, en dan
+        // leek de knop niets te doen.
+        const annuleerNetBesteld = async () => {
           const laatste = rounds[rounds.length - 1]
           if (!laatste || !groupId) return
-          setConfirmDlg({
-            variant: "dangerDirect",
-            msg: L.cancelRoundConfirm(rounds.length),
-            yes: L.yesCancel, no: L.ratherNot,
-            onYes: async () => {
-              setConfirmDlg(null)
-              const { error } = await supabase.from("party_rounds").delete().eq("id", laatste.id)
-              if (error) { setNotice(L.cancelRoundFailed); return }
-              const nogAndere = rounds.length > 1
-              sluitBar()
-              setLastRoundHandled(true)
-              await loadParty(groupId)
-              if (nogAndere) { setOverviewBackTo("hub"); setView("roundsOverview") }
-              else { setActiveCat(catsPresent[0]); setView("order") }
-            },
-          })
+          const { error } = await supabase.from("party_rounds").delete().eq("id", laatste.id)
+          if (error) { setBarAnnuleerVraag(false); setNotice(L.cancelRoundFailed); return }
+          const nogAndere = rounds.length > 1
+          sluitBar()
+          setLastRoundHandled(true)
+          await loadParty(groupId)
+          if (nogAndere) { setOverviewBackTo("hub"); setView("roundsOverview") }
+          else { setActiveCat(catsPresent[0]); setView("order") }
         }
         const naarOverzicht = (openKlappen: boolean) => {
           sluitBar()
@@ -8049,10 +8047,22 @@ export default function PartyTest() {
                 </div>
                 {/* Toch niet bestellen: het rondje dat je net bevestigde weer weghalen. */}
                 <div style={{ maxWidth: 430, margin: "0 auto", paddingTop: 12 }}>
-                  <button onClick={annuleerNetBesteld}
-                    style={{ width: "100%", background: "#fff", border: "1.5px solid rgba(192,85,74,0.5)", color: "#c0554a", borderRadius: 13, padding: "12px 6px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-                    {L.cancelRound}
-                  </button>
+                  {!barAnnuleerVraag ? (
+                    <button onClick={() => setBarAnnuleerVraag(true)}
+                      style={{ width: "100%", background: "#fff", border: "1.5px solid rgba(192,85,74,0.5)", color: "#c0554a", borderRadius: 13, padding: "12px 6px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                      {L.cancelRound}
+                    </button>
+                  ) : (
+                    <div style={{ background: "#fff", border: "1.5px solid rgba(192,85,74,0.55)", borderRadius: 13, padding: "12px 12px" }}>
+                      <div style={{ fontSize: 15.5, fontWeight: 700, color: "#1d2942", lineHeight: 1.45, marginBottom: 10 }}>{L.cancelRoundConfirm(roundNr)}</div>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <button onClick={() => setBarAnnuleerVraag(false)}
+                          style={{ flex: 1, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#1d2942", borderRadius: 12, padding: "11px 6px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.ratherNot}</button>
+                        <button onClick={() => { void annuleerNetBesteld() }}
+                          style={{ flex: 1, background: "#c0554a", border: "none", color: "#fff", borderRadius: 12, padding: "11px 6px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{L.yesCancel}</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -8119,40 +8129,46 @@ export default function PartyTest() {
               {nieuwKeuzeLijst && (
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 7 }}>
                   {zichtbaar.map(({ r, i }) => {
-                    const inhoud = drinksOf(r).sort((a, b) => b.n - a.n).map(({ d, n }) => `${n}× ${d.name}`).join(", ")
-                    const bezigHier = herhaalBezig && herhaalBron === i
-                    const exact = () => {
-                      if (herhaalBezig) return
-                      const t: Record<string, number> = {}
-                      drinksOf(r).forEach(({ d, n }) => { t[d.id] = n })
-                      setHerhaalBron(i)
-                      void (async () => { await bestelOpnieuw(t, i); sluit() })()
-                    }
+                    const rijen = drinksOf(r).sort((a, b) => b.n - a.n)
+                    const inhoud = rijen.map(({ d, n }) => `${n}× ${d.name}`).join(", ")
+                    const open = nieuwKeuzeOpen === r.id
                     return (
                       <div key={r.id}
-                        style={{ background: "#fff", border: "1.5px solid rgba(29,41,66,0.22)", borderRadius: 12, padding: "10px 12px" }}>
-                        <span style={{ display: "block", minWidth: 0 }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                            <span style={{ fontSize: 16, fontWeight: 800, color: "#1d2942" }}>{L.roundSummary(i + 1, drinksOf(r).reduce((a, x) => a + x.n, 0))}</span>
-                            {i === rounds.length - 1 && (
-                              <span style={{ fontSize: 12, fontWeight: 800, borderRadius: 12, padding: "2px 8px", color: "#fff", background: "#1f8a4c" }}>{L.lastRoundPill}</span>
+                        style={{ background: "#fff", border: `1.5px solid ${open ? RAND : "rgba(29,41,66,0.22)"}`, borderRadius: 12, padding: "10px 12px" }}>
+                        {/* Tik de kop (of het pijltje) om te zien wat er precies in zat. */}
+                        <div role="button" onClick={() => setNieuwKeuzeOpen(open ? null : r.id)}
+                          style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 16, fontWeight: 800, color: "#1d2942" }}>{L.roundSummary(i + 1, rijen.reduce((a, x) => a + x.n, 0))}</span>
+                              {i === rounds.length - 1 && (
+                                <span style={{ fontSize: 12, fontWeight: 800, borderRadius: 12, padding: "2px 8px", color: "#fff", background: "#1f8a4c" }}>{L.lastRoundPill}</span>
+                              )}
+                            </span>
+                            {!open && (
+                              <span style={{ display: "block", fontSize: 13.5, color: "#6b7484", fontWeight: 600, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inhoud}</span>
                             )}
                           </span>
-                          <span style={{ display: "block", fontSize: 13.5, color: "#6b7484", fontWeight: 600, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inhoud}</span>
-                        </span>
-                        {/* Twee wegen: exact hetzelfde meteen bestellen, of eerst aanpassen. */}
-                        <div style={{ display: "flex", gap: 7, marginTop: 8 }}>
-                          <button onClick={exact} disabled={herhaalBezig}
-                            style={{ flex: 1.3, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit", border: "none", borderRadius: 10, padding: "9px 6px",
-                              background: RAND, color: RANDTEKST, fontSize: 14.5, fontWeight: 800, opacity: herhaalBezig && !bezigHier ? 0.5 : 1 }}>
-                            {bezigHier ? "…" : L.repeatOrderBtn}
-                          </button>
-                          <button onClick={() => { if (!herhaalBezig) { sluit(); openHerhaal(i) } }} disabled={herhaalBezig}
-                            style={{ flex: 1, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit", borderRadius: 10, padding: "9px 6px",
-                              background: "#fff", border: "1.5px solid rgba(224,138,0,0.65)", color: "#8a5e0f", fontSize: 14.5, fontWeight: 800, opacity: herhaalBezig ? 0.5 : 1 }}>
-                            ✏️ {L.adjustOrderShort}
-                          </button>
+                          <span style={{ flexShrink: 0, width: 32, height: 32, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 15, fontWeight: 800, color: "#4a5567", background: "#f1f3f7" }}>{open ? "▴" : "▾"}</span>
                         </div>
+                        {open && (
+                          <div style={{ marginTop: 6 }}>
+                            {rijen.map(({ d, n }) => (
+                              <div key={d.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "5px 0", borderTop: "1px solid rgba(29,41,66,0.08)" }}>
+                                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#1d2942", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.emoji} {d.name}</span>
+                                <span style={{ fontSize: 16, fontWeight: 800, color: "#c98a00", flexShrink: 0 }}>{n}×</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Eén knop: naar het barlijstje van dit rondje, waar je nog kan
+                            aanpassen en dan bestelt. */}
+                        <button onClick={() => { if (!herhaalBezig) { sluit(); openHerhaal(i) } }} disabled={herhaalBezig}
+                          style={{ width: "100%", marginTop: 9, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit", border: "none", borderRadius: 11, padding: "11px 8px",
+                            background: RAND, color: RANDTEKST, fontSize: 15.5, fontWeight: 800, opacity: herhaalBezig ? 0.5 : 1 }}>
+                          {L.repeatOrderAdjustable}
+                        </button>
                       </div>
                     )
                   })}
@@ -9359,7 +9375,7 @@ export default function PartyTest() {
         </div>
       )}
       {notice && (
-        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => { setNotice(""); setNoticePot(false) }}>
+        <div style={{ ...S.overlay, zIndex: settle ? 70 : 90 }} onClick={() => { setNotice(""); setNoticePot(false) }}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <p style={{ fontSize: 18, color: "#1d2942", lineHeight: 1.55, marginBottom: 18, fontWeight: 600 }}>{notice}</p>
             <button style={{ ...S.btnP, ...(noticePot ? { background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", boxShadow: "0 4px 12px -4px rgba(47,111,181,0.55)" } : {}) }} onClick={() => { setNotice(""); setNoticePot(false) }}>OK</button>
@@ -13731,7 +13747,7 @@ export default function PartyTest() {
                   Buiten QR blijft hij staan: daar is er geen tabbalk om langs te gaan. */}
               {laatsteRondjeKlaar() && !tabsHier && (
                 <button onClick={() => {
-                  if (!settle && rounds.length >= 1) { setNieuwKeuzeLijst(false); setNieuwKeuze(true); return }
+                  if (!settle && rounds.length >= 1) { setNieuwKeuzeLijst(false); setNieuwKeuzeOpen(null); setNieuwKeuze(true); return }
                   nextRound()
                 }}
                   // Zelf noteren: witte knop met de klinkende glazen. QR houdt zijn amberen knop.
