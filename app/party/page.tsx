@@ -1332,6 +1332,7 @@ const T = {
     newRoundFresh: "Volledig nieuw rondje",
     newRoundPlain: "Nieuw rondje",
     fairSplitHeader: "Eerlijk splitten",
+    totalPaidPlain: "Totaal betaald",
     potLaidQ: "Pot gelegd?",
     repeatOrderAdjustable: "🔁 Bestel opnieuw · aanpasbaar",
     barEditSub: (n: number) => `Rondje ${n} aanpassen`,
@@ -2317,6 +2318,7 @@ const T = {
     newRoundFresh: "Toute nouvelle tourn\u00e9e",
     newRoundPlain: "Nouvelle tourn\u00e9e",
     fairSplitHeader: "Partager \u00e9quitablement",
+    totalPaidPlain: "Total pay\u00e9",
     potLaidQ: "Une cagnotte\u00a0?",
     repeatOrderAdjustable: "🔁 Recommander · modifiable",
     barEditSub: (n: number) => `Modifier la tourn\u00e9e ${n}`,
@@ -7187,6 +7189,23 @@ export default function PartyTest() {
   // Totaal aantal drankjes dat over ALLE afgeronde rondjes nog anoniem staat, plus de
   // index van het eerste rondje waar iets ontbreekt. Voor de waarschuwing op de hub.
   const unassignedAllRounds = rounds.reduce((s, r) => s + drinks.reduce((a, d) => a + (r.anon[d.id] ?? 0), 0), 0)
+  // Stap 2 (zelf noteren): zodra het laatste drankje een naam krijgt, klapt alles dicht
+  // en schuift de knop naar stap 3 in beeld als hij eronder viel.
+  const stap3Knop = useRef<HTMLButtonElement | null>(null)
+  const vorigeLos = useRef<number | null>(null)
+  useEffect(() => {
+    const vorige = vorigeLos.current
+    vorigeLos.current = unassignedAllRounds
+    if (view !== "fairAssign" || !fromQuick) return
+    if (vorige === null || vorige === 0 || unassignedAllRounds !== 0) return
+    setStap2Open({}); setPpOpen("__geen")
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const el = stap3Knop.current
+      if (!el) return
+      const box = el.getBoundingClientRect()
+      if (box.bottom > window.innerHeight - 8 || box.top < 0) el.scrollIntoView({ behavior: "smooth", block: "center" })
+    }))
+  }, [unassignedAllRounds, view, fromQuick]) // eslint-disable-line
   const firstUnassignedIdx = rounds.findIndex((r) => drinks.some((d) => (r.anon[d.id] ?? 0) > 0))
   const drinkTotalRound = (r: Round, did: string) => Object.values(r.orders[did] ?? {}).reduce((a, b) => a + b, 0) + (r.anon[did] ?? 0)
   const paidLabel = (r: Round) => {
@@ -13815,7 +13834,8 @@ export default function PartyTest() {
             if (hier) rUnassign(hier.idx, d.id, pid)
           }
           const eersteNietKlaar = people.find((p) => !ppKlaar.has(p.id))?.id ?? null
-          const openId = ppOpen ?? eersteNietKlaar
+          // Heeft alles een naam, dan staat er standaard geen naam meer open.
+          const openId = ppOpen ?? (unassignedAllRounds === 0 ? null : eersteNietKlaar)
           const rondKnop: React.CSSProperties = { width: 42, height: 42, borderRadius: "50%", flexShrink: 0, cursor: "pointer", fontFamily: "inherit",
             display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, lineHeight: 1 }
           return (
@@ -13960,7 +13980,7 @@ export default function PartyTest() {
             </div>
           )
         })()}
-        <button disabled={!klaar}
+        <button ref={stap3Knop} disabled={!klaar}
           style={{ ...S.btnP, width: "100%", marginTop: 4,
             background: klaar ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#c3c9d4",
             color: "#fff", cursor: klaar ? "pointer" : "default", boxShadow: "none" }}
@@ -14535,10 +14555,20 @@ export default function PartyTest() {
       {/* Zelfde kop als bij de gast: de tabbalk brengt je met één tik weg, de titel zegt
           waar je bent. Geen tabblad staat actief — de eindbalans is er geen. */}
       {settle && !fromQuick && <AdminTabs geenActief />}
+      {/* Zelf noteren: geen titel en geen totaalblok bovenaan. Je begint meteen bij
+          "Eerlijk vs gelijk verdelen"; het totaal staat onderaan de tabel. */}
+      {!(settle && !fromQuick) ? (
+        groepAf ? (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            <span style={{ background: "rgba(31,138,76,0.12)", borderRadius: 999, padding: "3px 10px", fontSize: 13, color: "#1f8a4c", fontWeight: 800 }}>{L.finalWord}</span>
+          </div>
+        ) : null
+      ) : (
       <div style={{ display: "flex", alignItems: "center", gap: 9, paddingBottom: 9, borderBottom: `1.5px solid ${koel ? MODUS_FAIR.lijnZacht : "rgba(29,41,66,0.15)"}`, marginBottom: 12 }}>
         <span style={{ fontSize: 20, fontWeight: 800, color: koel ? MODUS_FAIR.tekst : "#1d2942" }}>{L.toFinal}</span>
         {groepAf && <span style={{ marginLeft: "auto", background: "rgba(31,138,76,0.12)", borderRadius: 999, padding: "3px 10px", fontSize: 13, color: "#1f8a4c", fontWeight: 800 }}>{L.finalWord}</span>}
       </div>
+      )}
       {pay === "coin" && (
         <div style={{ ...S.row, justifyContent: "flex-end", gap: 6, marginBottom: 10 }}>
             <div style={{ ...S.seg(displayUnit === "eur"), flex: "none", padding: "6px 12px" }} onClick={() => setDisplayUnit("eur")}>€</div>
@@ -14557,6 +14587,7 @@ export default function PartyTest() {
         </div>
       )}
 
+      {settle && !fromQuick && (
       <div style={{ marginBottom: 13, padding: "0 2px" }}>
         <div style={{ ...S.row, justifyContent: "space-between", fontSize: 20 }}>
           <span style={{ fontWeight: 800 }}>{L.totalPaid}</span>
@@ -14594,7 +14625,7 @@ export default function PartyTest() {
           </div>
         )}
       </div>
-
+      )}
 
       <div style={S.card}>
         <div style={{ ...S.row, gap: 6, marginBottom: 8 }}>
@@ -14605,14 +14636,15 @@ export default function PartyTest() {
               <span onClick={() => setNotice(L.fairInfoQr)} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 19, height: 19, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 14, fontWeight: 800, cursor: "pointer", flexShrink: 0, lineHeight: 1 }}>i</span>
             </span>
             ) : (<>
-            <span style={{ display: "block", fontSize: 21.5, fontWeight: 800, color: "#1d2942", lineHeight: 1.25 }}>{L.fairVsEqual}</span>
-            {/* Zelf noteren: een echte knop onder de titel in plaats van een klein "i". */}
-            <button onClick={() => setFairInfoOpen(true)}
-              style={{ marginTop: 7, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontFamily: "inherit",
-                background: "#fff", border: "1.5px solid rgba(200,138,0,0.55)", color: "#8a5e0f", borderRadius: 999, padding: "6px 13px", fontSize: 14.5, fontWeight: 800 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 17, height: 17, borderRadius: "50%", border: "1.5px solid #c98a00", color: "#c98a00", fontSize: 12, lineHeight: 1 }}>?</span>
-              {L.whatIsThis}
-            </button>
+            {/* Zelf noteren: een vraagteken in een rondje naast de titel opent de uitleg
+                met het voorbeeld. Groot genoeg om met je duim te raken. */}
+            <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span style={{ fontSize: 21.5, fontWeight: 800, color: "#1d2942", lineHeight: 1.25 }}>{L.fairVsEqual}</span>
+              <button aria-label={L.whatIsThis} onClick={() => setFairInfoOpen(true)}
+                style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontFamily: "inherit",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", padding: 0,
+                  background: "#fff", border: "2px solid #c98a00", color: "#c98a00", fontSize: 17, fontWeight: 800, lineHeight: 1 }}>?</button>
+            </span>
             </>)}
           </span>
         </div>
@@ -14718,8 +14750,13 @@ export default function PartyTest() {
           )
         })}
         <div style={{ ...S.row, justifyContent: "space-between", padding: "9px 0 2px", borderTop: "2px solid rgba(29,41,66,0.25)", marginTop: 2 }}>
+          {settle && !fromQuick ? (<>
           <span style={{ flex: 1, minWidth: 0, fontSize: 17.5, fontWeight: 800 }}>{L.togetherDrank}</span>
           <span style={{ width: 78, textAlign: "right", fontSize: 17, fontWeight: 800, color: "#1f8a4c", flexShrink: 0 }}>{show(grandTotal)}</span>
+          </>) : (<>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 20, fontWeight: 800 }}>{L.totalPaidPlain}</span>
+          <span style={{ width: 78, textAlign: "right", fontSize: 19.5, fontWeight: 800, color: "#1f8a4c", flexShrink: 0 }}>{show(grandTotal)}</span>
+          </>)}
           {showEqual && <span style={{ width: 80, textAlign: "right", paddingLeft: 8, borderLeft: "1px solid rgba(29,41,66,0.18)", fontSize: 14, fontWeight: 800, color: "#6b7484", flexShrink: 0 }}>{show(equalShare * people.length)}</span>}
         </div>
         {isSchatting && (
