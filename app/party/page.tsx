@@ -1327,7 +1327,7 @@ const T = {
     barlistAdjust: "Aanpassen",
     barlistDone: "Klaar",
     repeatListSub: (n: number) => `Zelfde als rondje ${n}. Aanpassen mag, hoeft niet.`,
-    repeatOrderBtn: "Bestel opnieuw",
+    repeatOrderBtn: "OK, bestel opnieuw",
     repeatListTitle: "Rondje opnieuw",
     newRoundFresh: "Volledig nieuw rondje",
     newRoundPlain: "Nieuw rondje",
@@ -1342,7 +1342,7 @@ const T = {
     newRoundSameSub: "exact hetzelfde, of eerst aanpassen",
     adjustOrderShort: "Aanpassen",
     repeatThisRound: (n: number) => `🔁 Rondje ${n} opnieuw`,
-    repeatEditBtn: "Pas bestelling aan",
+    repeatEditBtn: "Drankje(s) toevoegen",
     repeatEmpty: "Zet minstens \u00e9\u00e9n drankje op de lijst.",
     fairAssignTitle: "Wie dronk wat?",
     fairAssignSub: "Tik onder elk drankje aan wie het nam.",
@@ -2311,7 +2311,7 @@ const T = {
     barlistAdjust: "Modifier",
     barlistDone: "Termin\u00e9",
     repeatListSub: (n: number) => `Comme la tourn\u00e9e ${n}. Ajuster est possible, pas obligatoire.`,
-    repeatOrderBtn: "Recommander",
+    repeatOrderBtn: "OK, recommander",
     repeatListTitle: "Tourn\u00e9e \u00e0 refaire",
     newRoundFresh: "Toute nouvelle tourn\u00e9e",
     newRoundPlain: "Nouvelle tourn\u00e9e",
@@ -2326,7 +2326,7 @@ const T = {
     newRoundSameSub: "exactement pareil, ou ajust\u00e9e d\u2019abord",
     adjustOrderShort: "Ajuster",
     repeatThisRound: (n: number) => `🔁 Tourn\u00e9e ${n} \u00e0 nouveau`,
-    repeatEditBtn: "Modifier la commande",
+    repeatEditBtn: "Ajouter des boissons",
     repeatEmpty: "Mets au moins une boisson sur la liste.",
     fairAssignTitle: "Qui a bu quoi\u00a0?",
     fairAssignSub: "Sous chaque boisson, touche qui l\u2019a prise.",
@@ -7014,9 +7014,9 @@ export default function PartyTest() {
     setHerhaalLijst(t)
   }
 
-  // "Bestel opnieuw": het rondje wegschrijven en afsluiten, zoals "Klaar" op het
-  // bestelscherm doet in Neem zelf op. Daarna volgt dezelfde bevestiging als bij elk
-  // ander rondje: het barlijstje met "Aanpassen" en "Klaar", en via Klaar het overzicht.
+  // "OK, bestel opnieuw": het rondje wegschrijven en afsluiten, zoals "Klaar" op het
+  // bestelscherm doet in Neem zelf op. Het lijstje zag je net, dus geen tweede
+  // bevestiging: meteen naar het rondjesoverzicht.
   const bestelOpnieuw = async (totalen: Record<string, number>, bronIdx?: number) => {
     const last = rounds[rounds.length - 1]
     const gekozen = bronIdx !== undefined ? bronIdx : herhaalBron
@@ -7042,13 +7042,10 @@ export default function PartyTest() {
       setCart({}); setCartAnon({}); setRepeated(false)
       setCupsChecked(false); setCupsTouched(false)
       await loadParty(groupId)
-      const snap: Record<string, number> = {}
-      Object.entries(totalen).forEach(([did, n]) => { if ((n || 0) > 0) snap[did] = n })
       setHerhaalLijst(null); setHerhaalBron(null)
-      setLastRoundHandled(false)
+      setLastRoundHandled(true)
       setRoundNr(rounds.length + 1)
-      setBarNaRondje(snap); setShowBarlijst(true)
-      setView("hub")
+      setOverviewBackTo("hub"); setFillMode(false); setView("roundsOverview")
     } finally {
       setHerhaalBezig(false)
     }
@@ -8077,10 +8074,12 @@ export default function PartyTest() {
                 </span>
               </button>
               {/* Even groot als de knop erboven, en de ondertekst zegt meteen dat je het
-                  eerst kan aanpassen: zo is "opnieuw" geen blinde herhaling. */}
+                  eerst kan aanpassen: zo is "opnieuw" geen blinde herhaling. Open staan de
+                  knop en alle rondjes samen in één oranje rand, met een witte binnenkant. */}
+              <div style={{ marginTop: 13, borderRadius: 14, background: "#fff",
+                border: `${nieuwKeuzeLijst ? 2 : 1.5}px solid rgba(224,138,0,${nieuwKeuzeLijst ? 0.85 : 0.7})` }}>
               <button onClick={() => setNieuwKeuzeLijst((v) => !v)}
-                style={{ ...knop, marginTop: 13, padding: "16px 14px", background: nieuwKeuzeLijst ? "#fffdf4" : "#fff", color: "#1d2942",
-                  border: `${nieuwKeuzeLijst ? 2 : 1.5}px solid rgba(224,138,0,${nieuwKeuzeLijst ? 0.85 : 0.7})` }}>
+                style={{ ...knop, padding: "16px 14px", background: "transparent", color: "#1d2942", border: "none" }}>
                 <span style={{ fontSize: 24, width: 30, textAlign: "center", flexShrink: 0 }}>🔁</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 17.5, fontWeight: 800 }}>{L.newRoundSame}</span>
@@ -8089,7 +8088,7 @@ export default function PartyTest() {
                 <span style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#6b7484" }}>{nieuwKeuzeLijst ? "▴" : "▾"}</span>
               </button>
               {nieuwKeuzeLijst && (
-                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 7 }}>
+                <div style={{ borderTop: "1px solid rgba(224,138,0,0.45)", margin: "0 12px", padding: "10px 0 12px", display: "flex", flexDirection: "column", gap: 7 }}>
                   {zichtbaar.map(({ r, i }) => {
                     const rijen = drinksOf(r).sort((a, b) => b.n - a.n)
                     const inhoud = rijen.map(({ d, n }) => `${n}× ${d.name}`).join(", ")
@@ -8136,6 +8135,7 @@ export default function PartyTest() {
                   })}
                 </div>
               )}
+              </div>
               <button onClick={wegtikken}
                 style={{ width: "100%", marginTop: 12, padding: "9px 0", background: "none", border: "none", fontSize: 15.5, fontWeight: 700, color: "#8b93a3", cursor: "pointer", fontFamily: "inherit" }}>{L.cancel}</button>
             </div>
