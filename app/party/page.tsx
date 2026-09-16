@@ -1052,11 +1052,14 @@ const T = {
     shortestWay: "Zo min mogelijk overschrijvingen — de app zoekt de kortste weg.",
     fairInfoTitle: "Hoe verdelen we eerlijk?",
     fairInfoKey: "We gebruiken richtprijzen als verdeelsleutel, geen exacte prijzen.",
-    fairInfoExLead: "Als een gin-tonic en een cola samen €16 kosten, dan wordt de verdeling als volgt:",
-    fairInfoGt: "🍸 Gin-tonic",
-    fairInfoGtAmt: "€12,50",
-    fairInfoCola: "🥤 Cola",
-    fairInfoColaAmt: "€3,50",
+    fairInfoExLead: "Jan nam een gin-tonic, Lisa een cola. Samen €14:",
+    fairInfoColFair: "Eerlijk",
+    fairInfoColEqual: "Gelijk",
+    fairInfoP1: "Jan",
+    fairInfoP2: "Lisa",
+    fairInfoP1Fair: "€11,00",
+    fairInfoP2Fair: "€3,00",
+    fairInfoEqualAmt: "€7,00",
     fairInfoQ: "Niet altijd 100% correct?",
     fairInfoA: "Klopt! Maar wel veel eerlijker dan gelijk verdelen!",
     moreInfoBtn: "Meer info",
@@ -1207,11 +1210,11 @@ const T = {
     fairIntroLead: "Verdeel eerlijk volgens wie wat dronk!",
     fairIntroHow: "Hoe? 3 korte stappen",
     fairIntroStep1: "Wie was erbij?",
-    fairIntroStep1Sub: "Het aantal volstaat. Namen mogen, maar hoeven niet.",
+    fairIntroStep1Sub: "Namen mogen, maar hoeven niet.",
     fairIntroStep2: "Wie dronk wat?",
-    fairIntroStep2Sub: "Per rondje tik je aan wie welk drankje nam.",
+    fairIntroStep2Sub: "Tik drankjes aan per persoon of per rondje.",
     fairIntroStep3: "Wat kostte elk rondje?",
-    fairIntroStep3Sub: "En wie het betaalde.",
+    fairIntroStep3Sub: "En wie heeft betaald?",
     fairIntroSafe: "Alles wat je invult blijft bewaard. Je kan tussendoor stoppen en later verder.",
     fairIntroStart: "Beginnen",
     fairIntroLater: "Later — ga terug",
@@ -1332,6 +1335,8 @@ const T = {
     newRoundFresh: "Volledig nieuw rondje",
     newRoundPlain: "Nieuw rondje",
     fairSplitHeader: "Eerlijk splitten",
+    toFinalShort: "⚖️ Eindbalans",
+    fairSplitAdjust: "Splitten aanpassen",
     totalPaidPlain: "Totaal betaald",
     potLaidQ: "Pot gelegd?",
     repeatOrderAdjustable: "🔁 Bestel opnieuw · aanpasbaar",
@@ -2041,11 +2046,14 @@ const T = {
     shortestWay: "Le moins de virements possible — l’appli cherche le chemin le plus court.",
     fairInfoTitle: "Comment partager \u00e9quitablement\u00a0?",
     fairInfoKey: "On utilise des prix indicatifs comme cl\u00e9 de r\u00e9partition, pas les prix exacts.",
-    fairInfoExLead: "Si un gin tonic et un coca co\u00fbtent 16\u00a0€ ensemble, la r\u00e9partition est la suivante\u00a0:",
-    fairInfoGt: "🍸 Gin tonic",
-    fairInfoGtAmt: "12,50\u00a0€",
-    fairInfoCola: "🥤 Coca",
-    fairInfoColaAmt: "3,50\u00a0€",
+    fairInfoExLead: "Jan a pris un gin tonic, Lisa un coca. Ensemble 14\u00a0€\u00a0:",
+    fairInfoColFair: "\u00c9quitable",
+    fairInfoColEqual: "\u00c9gal",
+    fairInfoP1: "Jan",
+    fairInfoP2: "Lisa",
+    fairInfoP1Fair: "11,00\u00a0€",
+    fairInfoP2Fair: "3,00\u00a0€",
+    fairInfoEqualAmt: "7,00\u00a0€",
     fairInfoQ: "Pas toujours correct \u00e0 100\u00a0%\u00a0?",
     fairInfoA: "C\u2019est vrai\u00a0! Mais bien plus juste qu\u2019un partage \u00e9gal\u00a0!",
     moreInfoBtn: "Plus d\u2019infos",
@@ -2197,11 +2205,11 @@ const T = {
     fairIntroLead: "Partage \u00e9quitablement selon qui a bu quoi\u00a0!",
     fairIntroHow: "Comment\u00a0? 3 \u00e9tapes rapides",
     fairIntroStep1: "Qui était là ?",
-    fairIntroStep1Sub: "Le nombre suffit. Les noms sont facultatifs.",
+    fairIntroStep1Sub: "Les noms sont facultatifs.",
     fairIntroStep2: "Qui a bu quoi ?",
-    fairIntroStep2Sub: "Attribution rapide, tournée par tournée.",
+    fairIntroStep2Sub: "Attribue les boissons par personne ou par tourn\u00e9e.",
     fairIntroStep3: "Combien coûtait chaque tournée ?",
-    fairIntroStep3Sub: "Et qui l’a payée.",
+    fairIntroStep3Sub: "Et qui a pay\u00e9\u00a0?",
     fairIntroSafe: "Tout ce que tu remplis est conservé. Tu peux t’arrêter et reprendre plus tard.",
     fairIntroStart: "Commencer",
     fairIntroLater: "Plus tard — retour",
@@ -2318,6 +2326,8 @@ const T = {
     newRoundFresh: "Toute nouvelle tourn\u00e9e",
     newRoundPlain: "Nouvelle tourn\u00e9e",
     fairSplitHeader: "Partager \u00e9quitablement",
+    toFinalShort: "⚖️ D\u00e9compte",
+    fairSplitAdjust: "Modifier le partage",
     totalPaidPlain: "Total pay\u00e9",
     potLaidQ: "Une cagnotte\u00a0?",
     repeatOrderAdjustable: "🔁 Recommander · modifiable",
@@ -3649,7 +3659,7 @@ export default function PartyTest() {
     // Hoeveel elke persoon al aantikte in dit rondje (voor de teller op de pill).
     const aantalVan = (pid: string) => drinks.reduce((a, d) => a + (cart[d.id]?.[pid] ?? 0), 0)
     return (
-      <div style={S.overlay} onClick={() => setWalkIdx(null)}>
+      <div style={S.overlay} onClick={tikNaast(() => setWalkIdx(null))}>
         <div style={{ ...S.sheet, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
             <h3 style={{ ...S.h3, margin: 0, fontSize: 21.5 }}>{L.walkTable}</h3>
@@ -5812,7 +5822,7 @@ export default function PartyTest() {
     if (!showAddDrink && !editDrinkKey) return null
     const mijne = customDrinks.filter((c) => c.by === me.current)
     return (
-      <div style={S.overlay} onClick={() => setShowAddDrink(false)}>
+      <div style={S.overlay} onClick={tikNaast(() => setShowAddDrink(false))}>
         <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
             <h3 style={{ ...S.h3, margin: 0 }}>{editDrinkKey ? L.editDrinkTitle(ndName.trim() || "") : L.ownDrinkTitle}</h3>
@@ -5928,7 +5938,7 @@ export default function PartyTest() {
   const renderVoice = () => {
     if (!voiceOpen) return null
     return (
-      <div style={S.overlay} onClick={() => { if (!voiceOn) setVoiceOpen(false) }}>
+      <div style={S.overlay} onClick={tikNaast(() => { if (!voiceOn) setVoiceOpen(false) })}>
         <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 10 }}>
             <h3 style={{ ...S.h3, margin: 0 }}>
@@ -6201,7 +6211,17 @@ export default function PartyTest() {
       onYes: () => { setConfirmDlg(null); terug() } })
   }
 
-  const goToFairSplit = () => {
+  // Staat alles al goed voor de eerlijke verdeling? Iedereen heeft een naam (of je
+  // doorliep stap 1 al eens; namen zijn niet verplicht), alle drankjes hebben een naam en
+  // elk rondje heeft een bedrag met betaler of pot.
+  const fairKlaar = () => {
+    const namenOk = people.length > 0 && people.every((pp) => (pp.name.trim() && !isGuestDefault(pp.name)) || !dronkIets(pp.id))
+    const betalersOk = rounds.every((r) => (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005)))
+    return rounds.length > 0 && (namenOk || hasSettled) && unassignedAllRounds === 0 && betalersOk
+  }
+  // stappen = true: altijd bij stap 1 beginnen, ook als alles al klaar is ("Splitten
+  // aanpassen"). Anders gaat een volledig ingevulde verdeling meteen naar de eindbalans.
+  const goToFairSplit = (stappen = false) => {
     // Losse rondjes zonder bedrag (overgeslagen — getrakteerd) tellen als €0 en houden
     // de overstap niet meer tegen; alleen als álle rondjes leeg zijn valt er niets te
     // verdelen. De eindbalans toont voor €0-rondjes een eigen regel met aanvul-knop.
@@ -6215,11 +6235,7 @@ export default function PartyTest() {
     // Dat gebeurt typisch de twééde keer: je paste een bedrag aan in het
     // rondjesoverzicht en tikt opnieuw op afrekenen; de drie stappen nóg eens lopen
     // voegt dan niets toe. Ontbreekt er wél iets, dan begint de flow gewoon bij stap 1.
-    const namenOk = people.length > 0 && people.every((pp) => (pp.name.trim() && !isGuestDefault(pp.name)) || !dronkIets(pp.id))
-    // Elk rondje heeft een bedrag én een betaler (of de pot). Een rondje op €0 laat de
-    // eerlijke verdeling niet toe, dus dan gewoon de stappen door.
-    const betalersOk = rounds.every((r) => (r.amount || 0) > 0.005 && ((r.potPart || 0) > 0.005 || Object.values(r.payers || {}).some((a) => (a || 0) > 0.005)))
-    if (namenOk && unassignedAllRounds === 0 && betalersOk) {
+    if (!stappen && fairKlaar()) {
       setSettle(true)
       // fq = "begon als snel opnemen": zo blijft de sessie ook na herladen of op een
       // ander toestel amber lezen met "Snel opnemen", in plaats van als QR-groep.
@@ -7266,7 +7282,7 @@ export default function PartyTest() {
     <span onClick={() => setShowPot(true)} style={{ ...S.pill, cursor: "pointer", padding: "5px 11px", fontSize: 15.5, display: "inline-flex", alignItems: "center", gap: 6, background: potZicht > 0 ? "rgba(31,138,76,0.14)" : "rgba(29,41,66,0.08)", color: potZicht > 0 ? "#1f8a4c" : "#6b7484" }}>{potRemaining < -0.005 && <span style={{ color: "#c0554a" }}>⚠️ </span>}{potIsCard ? <>💳 drankkaart </> : <><ZakjeIcoon size={15} /> pot </>}{euro(potZicht)}<span style={{ color: "#8a93ad", fontWeight: 700 }}> / {potInlegKort}</span><span style={{ color: "#c98a00", fontWeight: 800 }}> + toevoegen</span></span>
   )
   const renderPotModal = () => (
-    <div style={{ ...S.overlay, zIndex: 60 }} onClick={closePot}>
+    <div style={{ ...S.overlay, zIndex: 60 }} onClick={tikNaast(closePot)}>
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
         <div style={{ ...S.row, justifyContent: "space-between", margin: "0 0 8px" }}>
           <h3 style={{ ...S.h3, fontSize: 21.5, margin: 0, display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -7531,6 +7547,10 @@ export default function PartyTest() {
             </div>
   )
 
+  // Tik naast een venster: in QR sluit dat het venster, zoals altijd. In zelf noteren
+  // doet het niets meer: elk venster heeft zijn eigen knop om verder te gaan of te
+  // annuleren, en een tik ernaast mocht je niet ongemerkt naar een ander scherm sturen.
+  const tikNaast = (fn: () => void) => (settle && !fromQuick ? fn : undefined)
   const renderDialogs = () => (
     <>
         {assignIdx !== null && rounds[assignIdx] && (() => {
@@ -7544,7 +7564,7 @@ export default function PartyTest() {
           const naarVolgende = false
           const nogOpen = rounds.filter((rr) => drinks.some((d) => (rr.anon[d.id] ?? 0) > 0)).length
           return (
-            <div style={S.overlay} onClick={() => { settleNaToewijzen.current = false; setAssignIdx(null); setAssignAllMode(false) }}>
+            <div style={S.overlay} onClick={tikNaast(() => { settleNaToewijzen.current = false; setAssignIdx(null); setAssignAllMode(false) })}>
               <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                 <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.assignTitle}</h3>
                 <div style={{ fontSize: 15, color: "#6b7484", fontWeight: 700, marginBottom: 10 }}>
@@ -7675,7 +7695,7 @@ export default function PartyTest() {
           openstaan. Invullen is welkom maar nooit verplicht — de eindbalans rekent
           even goed met "Gast 2" als etiket. */}
       {naamVenster !== null && (
-        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setNaamVenster(null)}>
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={tikNaast(() => setNaamVenster(null))}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.guestsWhoTitle}</h3>
             <div style={{ fontSize: 15, color: "#6b7484", marginBottom: 12, lineHeight: 1.45 }}>{L.guestsWhoSub}</div>
@@ -7822,7 +7842,7 @@ export default function PartyTest() {
           setOverviewBackTo("hub"); setFillMode(false); setView("roundsOverview")
         }
         return (
-          <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={() => { if (!barNaRondje && !bewerk) sluitBar() }}>
+          <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={tikNaast(() => { if (!barNaRondje && !bewerk) sluitBar() })}>
             <div style={{ maxWidth: 430, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
               {/* De titel zit in de donkere balk, net als het rondjenummer op het
                   bestelscherm: dat scheelt de hoogte van een aparte kopregel. De groepsnaam
@@ -8037,17 +8057,23 @@ export default function PartyTest() {
         )
       })()}
       {fairInfoOpen && (
-        <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setFairInfoOpen(false)}>
+        <div style={{ ...S.overlay, zIndex: 72 }} onClick={tikNaast(() => setFairInfoOpen(false))}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#1d2942", lineHeight: 1.2, marginBottom: 10 }}>⚖️ {L.fairInfoTitle}</div>
             <p style={{ fontSize: 17, color: "#1d2942", lineHeight: 1.5, margin: "0 0 12px", fontWeight: 600 }}>{L.fairInfoKey}</p>
             <div style={{ background: "#f4f6fa", borderRadius: 13, padding: "12px 14px", marginBottom: 14 }}>
-              <div style={{ fontSize: 15, color: "#4a5567", fontWeight: 700, lineHeight: 1.4, marginBottom: 6 }}>{L.fairInfoExLead}</div>
-              {[[L.fairInfoGt, L.fairInfoGtAmt], [L.fairInfoCola, L.fairInfoColaAmt]].map(([wat, bedrag], i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "6px 0",
+              <div style={{ fontSize: 17, color: "#4a5567", fontWeight: 700, lineHeight: 1.4, marginBottom: 6 }}>{L.fairInfoExLead}</div>
+              {/* Twee gasten, eerlijk naast gelijk: zo zie je meteen waarom het verschil telt. */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em", marginBottom: 2 }}>
+                <span style={{ width: 72, textAlign: "right", color: "#1f8a4c" }}>{L.fairInfoColFair.toUpperCase()}</span>
+                <span style={{ width: 62, textAlign: "right", color: "#8b93a3" }}>{L.fairInfoColEqual.toUpperCase()}</span>
+              </div>
+              {([[L.fairInfoP1, "🍸", L.fairInfoP1Fair], [L.fairInfoP2, "🥤", L.fairInfoP2Fair]] as const).map(([wie, icoon, eerlijk], i) => (
+                <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 12, padding: "6px 0",
                   borderTop: i > 0 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
-                  <span style={{ fontSize: 17, fontWeight: 700, color: "#1d2942" }}>{wat}</span>
-                  <span style={{ fontSize: 21, fontWeight: 800, color: "#1f8a4c", whiteSpace: "nowrap" }}>{bedrag}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 700, color: "#1d2942" }}>{wie} <span style={{ fontSize: 15 }}>{icoon}</span></span>
+                  <span style={{ width: 72, textAlign: "right", fontSize: 20, fontWeight: 800, color: "#1f8a4c", whiteSpace: "nowrap" }}>{eerlijk}</span>
+                  <span style={{ width: 62, textAlign: "right", fontSize: 15.5, fontWeight: 700, color: "#8b93a3", whiteSpace: "nowrap" }}>{L.fairInfoEqualAmt}</span>
                 </div>
               ))}
             </div>
@@ -8068,7 +8094,7 @@ export default function PartyTest() {
         const knop: React.CSSProperties = { width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit", borderRadius: 13,
           padding: "12px 12px", display: "flex", alignItems: "center", gap: 11, textAlign: "left" }
         return (
-          <div style={{ ...S.overlay, zIndex: 78 }} onClick={wegtikken}>
+          <div style={{ ...S.overlay, zIndex: 78 }} onClick={tikNaast(wegtikken)}>
             <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 14 }}>{L.newRoundPlain}</h3>
               {/* Geen gevulde knop meer: beide keuzes wegen even zwaar. Hoger en met meer
@@ -8169,7 +8195,7 @@ export default function PartyTest() {
         const rondKnop: React.CSSProperties = { width: 40, height: 40, borderRadius: "50%", flexShrink: 0, cursor: "pointer", fontFamily: "inherit",
           display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, lineHeight: 1 }
         return (
-          <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={sluit}>
+          <div style={{ position: "fixed", inset: 0, zIndex: 80, background: "#fbf3e4", overflowY: "auto", padding: "18px 16px 28px" }} onClick={tikNaast(sluit)}>
             <div style={{ maxWidth: 430, margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, background: RAND, borderRadius: 15, padding: "11px 13px", marginBottom: 8 }}>
                 <span style={{ flexShrink: 0, display: "inline-flex" }}><RundoLogo size={58} /></span>
@@ -8235,7 +8261,7 @@ export default function PartyTest() {
         )
       })()}
       {waarGebleven && (
-        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setWaarGebleven(null)}>
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={tikNaast(() => setWaarGebleven(null))}>
           <div style={{ ...S.sheet, maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
             <button aria-label="✕" onClick={() => setWaarGebleven(null)}
               style={{ float: "right", margin: "-4px -4px 0 0", width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(29,41,66,0.08)", color: "#6b7484", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>✕</button>
@@ -8271,7 +8297,7 @@ export default function PartyTest() {
         // gebeurt pas met de knop onderaan de kaart.
         const k = kiesWeg
         return (
-          <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setKiesWeg(null)}>
+          <div style={{ ...S.overlay, zIndex: 72 }} onClick={tikNaast(() => setKiesWeg(null))}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, fontSize: 20 }}>{L.removeFromWho(k.naam)}</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
@@ -8301,7 +8327,7 @@ export default function PartyTest() {
           if (handoverTo) {
             const naam = people.find((p) => p.id === handoverTo)?.name || "?"
             return (
-              <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setLeaveStep(null)}>
+              <div style={{ ...S.overlay, zIndex: 72 }} onClick={tikNaast(() => setLeaveStep(null))}>
                 <div style={{ ...S.sheet, border: "1.5px solid rgba(224,138,0,0.6)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ fontSize: 26, marginBottom: 4 }}>⏳</div>
                   <div style={{ fontSize: 18.5, fontWeight: 800, color: "#8a5e0f" }}>{L.handoverWaitTitle(naam)}</div>
@@ -8314,7 +8340,7 @@ export default function PartyTest() {
             )
           }
           return (
-            <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setLeaveStep(null)}>
+            <div style={{ ...S.overlay, zIndex: 72 }} onClick={tikNaast(() => setLeaveStep(null))}>
               <div style={{ ...S.sheet, border: "1.5px solid rgba(224,138,0,0.6)" }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ fontSize: 18.5, fontWeight: 800, color: "#8a5e0f", marginBottom: 4 }}>{L.adminLeaveWarnTitle}</div>
                 <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.5, marginBottom: 13 }}>{L.adminLeaveWarnBody}</div>
@@ -8344,7 +8370,7 @@ export default function PartyTest() {
             .filter((v, i, arr): v is string => !!v && arr.indexOf(v) === i)
           const namen = halers.map((pid) => people.find((p) => p.id === pid)?.name).filter(Boolean).join(" en ")
           return (
-            <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
+            <div style={{ ...S.overlay }} onClick={tikNaast(() => setLeaveStep(null))}>
               <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
                 <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.leaveMissingTitle}</div>
                 <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.45, marginBottom: 12 }}>{L.leaveMissingBody(mijnOpen.seq)}</div>
@@ -8363,7 +8389,7 @@ export default function PartyTest() {
               .filter((v, i, arr): v is string => !!v && arr.indexOf(v) === i)
             const namen = halers.map((pid) => people.find((p) => p.id === pid)?.name).filter(Boolean).join(" en ") || "de beheerder"
             return (
-              <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
+              <div style={{ ...S.overlay }} onClick={tikNaast(() => setLeaveStep(null))}>
                 <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
                   <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.leaveMissingTitle}</div>
                   <div style={{ fontSize: 14.5, color: "#4a5560", lineHeight: 1.45, marginBottom: 12 }}>{L.leaveMissingBody(wacht.seq)}</div>
@@ -8383,7 +8409,7 @@ export default function PartyTest() {
         // veilige uitkomst wanneer iemand mistikt.
         if (leaveStep === "ask") {
           return (
-            <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setLeaveStep(null)}>
+            <div style={{ ...S.overlay, zIndex: 72 }} onClick={tikNaast(() => setLeaveStep(null))}>
               <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
                 <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.leaveAskTitle}</div>
                 <div style={{ fontSize: 15, color: "#4a5560", lineHeight: 1.5, marginBottom: 14 }}>{L.leaveAskBody}</div>
@@ -8402,7 +8428,7 @@ export default function PartyTest() {
         const krijgt = mijnTx.filter((t) => t.to === mijnGroep?.label)
         const betaalt = mijnTx.filter((t) => t.to !== mijnGroep?.label)
         return (
-          <div style={{ ...S.overlay }} onClick={() => setLeaveStep(null)}>
+          <div style={{ ...S.overlay }} onClick={tikNaast(() => setLeaveStep(null))}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
               <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 10 }}>{L.guestSettlementTitle}</div>
               <div style={{ background: "#f4fbfc", border: "1.5px solid rgba(13,124,140,0.3)", borderRadius: 12, padding: 14, textAlign: "center", marginBottom: 12 }}>
@@ -8446,7 +8472,7 @@ export default function PartyTest() {
           setGastSluit(false); setGastSluitTekst(""); setGastSluitPot(false); setHaalInfo(null); setGuestTab("me")
         }
         return (
-          <div style={S.overlay} onClick={() => setGastSluit(false)}>
+          <div style={S.overlay} onClick={tikNaast(() => setGastSluit(false))}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, fontSize: 21.5 }}>{L.confirmRoundTitle(r.seq)}</h3>
               <div style={{ fontSize: 14.5, color: "#6b7484", lineHeight: 1.45, marginBottom: 12 }}>{L.youFetchedFillIn}</div>
@@ -8610,7 +8636,7 @@ export default function PartyTest() {
         </div>
       )}
       {confirmDlg && (
-        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setConfirmDlg(null)}>
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={tikNaast(() => setConfirmDlg(null))}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ ...S.h3, fontSize: 20 }}>{L.confirmTitle}</h3>
             <p style={{ fontSize: 17.5, color: "#1d2942", lineHeight: 1.55, marginBottom: 16, whiteSpace: "pre-line" }}>{confirmDlg.msg}</p>
@@ -8665,7 +8691,7 @@ export default function PartyTest() {
         </div>
       )}
       {zitNaam && (
-        <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setZitNaam(null)}>
+        <div style={{ ...S.overlay, zIndex: 72 }} onClick={tikNaast(() => setZitNaam(null))}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.seatNameTitle}</div>
             <div style={{ fontSize: 16, color: "#6b7484", lineHeight: 1.45, marginBottom: 13 }}>{L.seatNameSub}</div>
@@ -8729,7 +8755,7 @@ export default function PartyTest() {
         )
       })()}
       {geenRondje && (
-        <div style={{ ...S.overlay, zIndex: 75 }} onClick={() => setGeenRondje(false)}>
+        <div style={{ ...S.overlay, zIndex: 75 }} onClick={tikNaast(() => setGeenRondje(false))}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 7 }}>{L.noRoundTitle}</div>
             <div style={{ fontSize: 16, color: MODUS_FAIR.tekst, lineHeight: 1.5, marginBottom: 15, maxWidth: 290, marginLeft: "auto", marginRight: "auto" }}>{L.noRoundBody}</div>
@@ -8742,7 +8768,7 @@ export default function PartyTest() {
       )}
       {/* Kreeg je een duwtje terwijl je nog niets koos? Eén venster, met beide uitwegen. */}
       {herinnering && (
-        <div style={{ ...S.overlay, zIndex: 75 }} onClick={() => setHerinnering(false)}>
+        <div style={{ ...S.overlay, zIndex: 75 }} onClick={tikNaast(() => setHerinnering(false))}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 21.5, fontWeight: 800, color: "#1d2942", marginBottom: 6 }}>{L.reminderTitle}</div>
             <div style={{ fontSize: 17, color: "#6b7484", lineHeight: 1.5, marginBottom: 15 }}>{L.reminderBody(runnerName())}</div>
@@ -8773,7 +8799,7 @@ export default function PartyTest() {
           setView("confirmed")
         }
         return (
-        <div style={{ ...S.overlay, zIndex: 81 }} onClick={() => setBetaalVraag(false)}>
+        <div style={{ ...S.overlay, zIndex: 81 }} onClick={tikNaast(() => setBetaalVraag(false))}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 18.5, fontWeight: 800, color: "#1d2942", marginBottom: 3 }}>{L.payNowTitle(rounds.length)}</div>
             <div style={{ fontSize: 14, color: "#6b7484", lineHeight: 1.45, marginBottom: 13 }}>{L.payNowSub}</div>
@@ -8792,7 +8818,7 @@ export default function PartyTest() {
         )
       })()}
       {barFull && (
-        <div style={{ ...S.overlay, zIndex: 80 }} onClick={sluitBarLijst}>
+        <div style={{ ...S.overlay, zIndex: 80 }} onClick={tikNaast(sluitBarLijst)}>
           <div onClick={(e) => e.stopPropagation()}
             style={{ width: "100%", maxWidth: 420, background: MODUS_FAIR.tekst, borderRadius: 18, padding: "22px 18px", textAlign: "center" }}>
             <div style={{ fontSize: 14.5, fontWeight: 800, color: "rgba(255,255,255,0.7)", letterSpacing: "0.08em", marginBottom: 14 }}>{L.roundWord} {roundNr} · {L.forTheBar}</div>
@@ -8819,7 +8845,7 @@ export default function PartyTest() {
         const totaal = items.reduce((a, b) => a + b.n, 0)
         const namen = wachten.slice(0, 3).map((pp) => pp.name).join(", ") + (wachten.length > 3 ? ` +${wachten.length - 3}` : "")
         return (
-        <div style={{ ...S.overlay, zIndex: 79 }} onClick={() => setAfsluitCheck(false)}>
+        <div style={{ ...S.overlay, zIndex: 79 }} onClick={tikNaast(() => setAfsluitCheck(false))}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 11, textAlign: "center" }}>{L.closeRoundQ}</div>
             <div style={{ background: MODUS_FAIR.vlak, border: `1px solid ${MODUS_FAIR.lijnZacht}`, borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
@@ -8863,7 +8889,7 @@ export default function PartyTest() {
           </button>
         )
         return (
-        <div style={{ ...S.overlay, zIndex: 78 }} onClick={() => setAdminBlad(false)}>
+        <div style={{ ...S.overlay, zIndex: 78 }} onClick={tikNaast(() => setAdminBlad(false))}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#1d2942", marginBottom: 3 }}>{L.adminSheetTitle}</div>
             <div style={{ fontSize: 13, color: "#6b7484", lineHeight: 1.45, marginBottom: 12 }}>{L.adminSheetSub(runnerName())}</div>
@@ -8878,7 +8904,7 @@ export default function PartyTest() {
         )
       })()}
       {openMelding && (
-        <div style={{ ...S.overlay, zIndex: 77 }} onClick={() => { setOpenMelding(false); naarDrankjes() }}>
+        <div style={{ ...S.overlay, zIndex: 77 }} onClick={tikNaast(() => { setOpenMelding(false); naarDrankjes() })}>
           <div style={{ ...S.sheet, textAlign: "center", cursor: "pointer" }} onClick={() => { setOpenMelding(false); naarDrankjes() }}>
             <div style={{ fontSize: 30, marginBottom: 6 }}>🍻</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: MODUS_FAIR.tekst, marginBottom: 14 }}>{L.everyoneCanTapNow}</div>
@@ -8893,7 +8919,7 @@ export default function PartyTest() {
         </div>
       )}
       {naamWijzig !== null && (
-        <div style={{ ...S.overlay, zIndex: 76 }} onClick={() => setNaamWijzig(null)}>
+        <div style={{ ...S.overlay, zIndex: 76 }} onClick={tikNaast(() => setNaamWijzig(null))}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.changeNameTitle}</div>
             <div style={{ fontSize: 15.5, color: "#6b7484", lineHeight: 1.5, marginBottom: 12 }}>{L.changeNameSub}</div>
@@ -8910,7 +8936,7 @@ export default function PartyTest() {
         </div>
       )}
       {noteerKeuze && (
-        <div style={{ ...S.overlay, zIndex: 78 }} onClick={() => { setNoteerKeuze(false); setNoteerPick(null); setNoteerInfo(null) }}>
+        <div style={{ ...S.overlay, zIndex: 78 }} onClick={tikNaast(() => { setNoteerKeuze(false); setNoteerPick(null); setNoteerInfo(null) })}>
           <div style={{ ...S.sheet, maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 19.5, fontWeight: 800, color: "#16203a", textAlign: "center", marginBottom: 2 }}>{L.howNoteTitle}</div>
             <div style={{ fontSize: 14, color: "#8b93a3", textAlign: "center", lineHeight: 1.5, marginBottom: 13 }}>{L.howNoteSub}</div>
@@ -9008,7 +9034,7 @@ export default function PartyTest() {
         </div>
       )}
       {walkCheck && (
-        <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setWalkCheck(false)}>
+        <div style={{ ...S.overlay, zIndex: 74 }} onClick={tikNaast(() => setWalkCheck(false))}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 30, marginBottom: 5 }}>✍️</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#1d2942", marginBottom: 12 }}>{L.youWalkTitle}</div>
@@ -9041,7 +9067,7 @@ export default function PartyTest() {
         // is genoeg om te beslissen of je hetzelfde nog eens wil.
         const herhaalAantal = stuks.reduce((a, x) => a + x.n, 0)
         return (
-        <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setStartCheck(false)}>
+        <div style={{ ...S.overlay, zIndex: 74 }} onClick={tikNaast(() => setStartCheck(false))}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 13 }}>
               <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942", marginBottom: 5 }}>{L.roundForN(people.length)}</div>
@@ -9081,7 +9107,7 @@ export default function PartyTest() {
         // haler op "Zelfde weer" en hoef ik enkel nog te bevestigen.
         const mijnAlKlaar = meId ? drinks.map((d) => ({ d, n: cart[d.id]?.[meId] ?? 0 })).filter((x) => x.n > 0) : []
         return (
-        <div style={{ ...S.overlay, zIndex: 74 }} onClick={() => setRondjeMelding(null)}>
+        <div style={{ ...S.overlay, zIndex: 74 }} onClick={tikNaast(() => setRondjeMelding(null))}>
           <div style={{ ...S.sheet, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             {/* Herhaalt de haler het vorige rondje, dan staan mijn drankjes al ingevuld.
                 Dan is de stappenlijst overbodig en moet er iets anders staan: wát er voor
@@ -9321,7 +9347,7 @@ export default function PartyTest() {
         </div>
       )}
       {naamPrompt !== null && (
-        <div style={{ ...S.overlay, zIndex: 72 }} onClick={() => setNaamPrompt(null)}>
+        <div style={{ ...S.overlay, zIndex: 72 }} onClick={tikNaast(() => setNaamPrompt(null))}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 20, fontWeight: 800, color: "#1d2942", marginBottom: 4 }}>{L.newGroupNameTitle}</div>
             <div style={{ fontSize: 17, color: "#6b7484", lineHeight: 1.45, marginBottom: 13 }}>{L.newGroupNameSub}</div>
@@ -9352,7 +9378,7 @@ export default function PartyTest() {
         </div>
       )}
       {notice && (
-        <div style={{ ...S.overlay, zIndex: settle ? 70 : 90 }} onClick={() => { setNotice(""); setNoticePot(false) }}>
+        <div style={{ ...S.overlay, zIndex: settle ? 70 : 90 }} onClick={tikNaast(() => { setNotice(""); setNoticePot(false) })}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <p style={{ fontSize: 18, color: "#1d2942", lineHeight: 1.55, marginBottom: 18, fontWeight: 600 }}>{notice}</p>
             <button style={{ ...S.btnP, ...(noticePot ? { background: "linear-gradient(135deg,#3f7fc4,#2f6fb5)", boxShadow: "0 4px 12px -4px rgba(47,111,181,0.55)" } : {}) }} onClick={() => { setNotice(""); setNoticePot(false) }}>OK</button>
@@ -9360,7 +9386,7 @@ export default function PartyTest() {
         </div>
       )}
       {showPeoplePop && (
-        <div style={{ ...S.overlay, zIndex: 70 }} onClick={() => setShowPeoplePop(false)}>
+        <div style={{ ...S.overlay, zIndex: 70 }} onClick={tikNaast(() => setShowPeoplePop(false))}>
           <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ ...S.h3, fontSize: 20, marginBottom: 4 }}>👤 {L.howManyPeople}</h3>
             <p style={{ fontSize: 16, color: "#6b7484", lineHeight: 1.5, marginBottom: 16 }}>{view === "quickSettle" ? L.headcountNotRetro : L.headcountForward}</p>
@@ -9499,7 +9525,7 @@ export default function PartyTest() {
   // er nog in zit. Kijken mag, aanraken niet — inleggen, bewerken en wissen blijven bij
   // de beheerder, want die staat aan de toog en houdt het geld bij.
   const renderGastPot = () => (
-    <div style={{ ...S.overlay, zIndex: 60 }} onClick={() => setGastPotOpen(false)}>
+    <div style={{ ...S.overlay, zIndex: 60 }} onClick={tikNaast(() => setGastPotOpen(false))}>
       <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
         <div style={{ ...S.row, justifyContent: "space-between", margin: "0 0 10px" }}>
           <h3 style={{ ...S.h3, fontSize: 21.5, margin: 0 }}>{potIsCard ? L.drinkCard : L.potTitle}</h3>
@@ -11055,7 +11081,7 @@ export default function PartyTest() {
         {showPot && renderPotModal()}
         {renderDialogs()}
         {beginPrompt && (
-          <div style={{ ...S.overlay, zIndex: 65 }} onClick={() => setBeginPrompt(false)}>
+          <div style={{ ...S.overlay, zIndex: 65 }} onClick={tikNaast(() => setBeginPrompt(false))}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, fontSize: 21.5, marginTop: 0, marginBottom: 4 }}>{bpSettle === null ? L.beforeWeStart : L.beforeQrTitle}</h3>
 
@@ -11906,7 +11932,7 @@ export default function PartyTest() {
 
 
         {showAssignAll && (
-          <div style={S.overlay} onClick={() => setShowAssignAll(false)}>
+          <div style={S.overlay} onClick={tikNaast(() => setShowAssignAll(false))}>
             <div style={{ ...S.sheet, maxHeight: "82vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
                 <h3 style={{ ...S.h3, margin: "0 0 10px", fontSize: 21.5, textAlign: "center" }}>{L.assign}</h3>
                 <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
@@ -11984,7 +12010,7 @@ export default function PartyTest() {
         )}
 
         {showCups && (
-          <div style={{ ...S.overlay, zIndex: 55 }} onClick={() => setShowCups(false)}>
+          <div style={{ ...S.overlay, zIndex: 55 }} onClick={tikNaast(() => setShowCups(false))}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, fontSize: 21.5 }}>🫙 Bekers — ronde {roundNr}</h3>
               <p style={{ ...S.sub }}>{L.howMuchEach} <b>terug</b>? Standaard = ruil. Iedereen kan teruggeven — ook wie niks bestelde of een beker van elders binnenbrengt (gaat dan negatief = krijgt waarborg).</p>
@@ -12014,7 +12040,7 @@ export default function PartyTest() {
         )}
 
         {showClose && (
-          <div style={S.overlay} onClick={() => setShowClose(false)}>
+          <div style={S.overlay} onClick={tikNaast(() => setShowClose(false))}>
             <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ ...S.h3, fontSize: 21.5 }}>{L.confirmRoundTitle(roundNr)}</h3>
               {unassignedTotal > 0 && (
@@ -12904,7 +12930,7 @@ export default function PartyTest() {
         {settleChoice === "fair" && !nietsTeVerdelen && zonderBedrag.length === 0 && (
           <div style={{ ...S.card, background: "rgba(31,138,76,0.06)", border: "1.5px solid rgba(31,138,76,0.3)" }}>
             <div style={{ fontSize: 16, color: "#4a6b57", lineHeight: 1.55, marginBottom: 14, textAlign: "center" }}>{L.fairSplitExplain}</div>
-            <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", color: "#fff" }} onClick={goToFairSplit}>{L.switchToFairBtn}</button>
+            <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", color: "#fff" }} onClick={() => goToFairSplit()}>{L.switchToFairBtn}</button>
             <button style={{ width: "100%", marginTop: 8, padding: "9px 0", background: "none", border: "none", fontSize: 15.5, fontWeight: 700, color: "#8b93a3", cursor: "pointer" }} onClick={() => setSettleChoice(null)}>{L.later}</button>
           </div>
         )}
@@ -13042,7 +13068,7 @@ export default function PartyTest() {
         {renderDialogs()}
         {/* Het pijltje is weg: onderaan staat "Later — ga terug", en dat is duidelijker
             dan een klein teken linksboven. */}
-        <h2 style={{ fontSize: 23, fontWeight: 800, lineHeight: 1.15, margin: "0 0 6px" }}>{L.fairIntroTitle}</h2>
+        <h2 style={{ fontSize: 25, fontWeight: 800, lineHeight: 1.15, margin: "0 0 6px" }}>⚖️ {L.fairIntroTitle}</h2>
         <p style={{ fontSize: 17, color: "#1d2942", fontWeight: 700, lineHeight: 1.45, margin: "0 0 8px" }}>{L.fairIntroLead}</p>
         <button onClick={() => setFairInfoOpen(true)}
           style={{ marginBottom: 14, display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontFamily: "inherit",
@@ -13072,7 +13098,7 @@ export default function PartyTest() {
           {L.fairIntroSafe}
         </p>
         <button style={{ ...S.btnP, width: "100%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "none" }}
-          onClick={goToFairSplit}>{L.fairIntroStart}</button>
+          onClick={() => goToFairSplit()}>{L.fairIntroStart}</button>
         <button onClick={() => { setOverviewBackTo("hub"); setView("roundsOverview") }}
           style={{ width: "100%", marginTop: 8, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "12px",
             fontSize: 15.5, fontWeight: 800, background: "#fff", color: "#1d2942", border: "1.5px solid rgba(29,41,66,0.25)" }}>
@@ -13752,7 +13778,23 @@ export default function PartyTest() {
             </div>
             {/* Eerlijk splitten zweeft mee onderaan: je ziet hem altijd, ook als je door de
                 rondjes scrolt. Geen "avond" in de tekst: het kan ook een namiddag zijn. */}
-            {!settle && rounds.length > 0 && (
+            {!settle && rounds.length > 0 && fairKlaar() && (
+              // Alles staat al goed: in één tik naar de eindbalans, of de stappen openen
+              // om nog iets bij te sturen.
+              <div style={{ display: "flex", gap: 9, marginTop: 10 }}>
+                <button onClick={() => { setSettleChoice("fair"); goToFairSplit() }}
+                  style={{ flex: 1.2, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit", borderRadius: 14, padding: "12px 8px",
+                    border: "none", background: "linear-gradient(135deg,#2fae6a,#1f8a4c)", color: "#fff", fontSize: 16.5, fontWeight: 800 }}>
+                  {L.toFinalShort}
+                </button>
+                <button onClick={() => { setSettleChoice("fair"); goToFairSplit(true) }}
+                  style={{ flex: 1, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit", borderRadius: 14, padding: "8px 6px",
+                    border: "2px dashed rgba(13,124,140,0.55)", background: "#f2fafb", color: "#0d7c8c", fontSize: 14.5, fontWeight: 800, lineHeight: 1.25 }}>
+                  {L.fairSplitAdjust}
+                </button>
+              </div>
+            )}
+            {!settle && rounds.length > 0 && !fairKlaar() && (
               <button onClick={() => { setSettleChoice("fair"); setView("fairIntro") }}
                 style={{ width: "100%", marginTop: 10, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
                   borderRadius: 14, padding: "9px 10px", border: "2px dashed rgba(13,124,140,0.55)",
