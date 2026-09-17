@@ -13929,7 +13929,10 @@ export default function PartyTest() {
                 duim zit. */}
             {/* Rustige rij: doorgaan-acties naast elkaar, afrekenen eronder. Geen
                 gevulde knoppen — één amber kader markeert de gewone volgende stap. */}
-            <div style={{ position: "sticky", bottom: 0, marginTop: 16, paddingTop: 14, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)", background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 22%)" }}>
+            {/* Nieuw rondje hoort bij de lijst erboven, niet bij de splitten-sectie: dus
+                korter erboven en ruimer eronder. Het blok blijft onderaan plakken, zodat
+                beide keuzes in beeld blijven terwijl je door de rondjes scrolt. */}
+            <div style={{ position: "sticky", bottom: 0, marginTop: 4, paddingTop: 10, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)", background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 22%)" }}>
             <div style={{ display: "flex", gap: 8 }}>
               {/* "Zelfde opnieuw" wordt in QR al aangeboden op het moment dat je een rondje
                   start: het startCheck-venster toont dan het gestippelde blokje met de
@@ -13958,12 +13961,13 @@ export default function PartyTest() {
                     ? { flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
                       display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", minHeight: 62,
                       background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }
-                    : { flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 17, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 9, textAlign: "center", minHeight: 58,
-                      // Zwaarder kader met een donkere rand eronder: hij hoort bij de kop
-                      // en oogt indrukbaar, zonder de aandacht van Eerlijk splitten weg te nemen.
-                      background: "#fff", color: RAND, border: `2px solid ${RAND}`, boxShadow: `0 3px 0 0 ${RAND}` }}>
-                  {settle ? (openRoundId ? L.continueRound(roundNr) : L.newRoundBtn) : (<><ProostIcoon size={28} />{L.newRoundPlain}</>)}
+                    : { flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 999, padding: "13px 8px", fontSize: 17, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 9, textAlign: "center", minHeight: 54,
+                      // Een wit kader met dezelfde afronding als de rondjeskaartjes las als
+                      // "Rondje 3". Vandaar de pilvorm van de tabs, gevuld in het blauw van de
+                      // kop, met de glazen in goud: onmiskenbaar een knop, en geen kaartje.
+                      background: RAND, color: "#fff", border: "none", boxShadow: "0 5px 14px -6px rgba(29,41,66,0.8)" }}>
+                  {settle ? (openRoundId ? L.continueRound(roundNr) : L.newRoundBtn) : (<><ProostIcoon size={28} kleur={RANDTEKST} />{L.newRoundPlain}</>)}
                 </button>
               )}
             </div>
@@ -13972,7 +13976,7 @@ export default function PartyTest() {
             {!settle && rounds.length > 0 && fairKlaar() && (
               // Alles staat al goed: in één tik naar de eindbalans, of de stappen openen
               // om nog iets bij te sturen.
-              <div style={{ marginTop: 13, boxSizing: "border-box", borderRadius: 14, padding: "9px 10px 10px",
+              <div style={{ marginTop: 19, boxSizing: "border-box", borderRadius: 14, padding: "9px 10px 10px",
                 border: "2px dashed rgba(13,124,140,0.55)", background: "#f2fafb" }}>
                 {/* Zelfde kader als "Eerlijk splitten", met een klaar-label: de naam blijft
                     zichtbaar, en binnenin de twee keuzes. */}
@@ -14004,7 +14008,7 @@ export default function PartyTest() {
                 niets te verrekenen. Staat alles al ingevuld, dan neemt het kader hierboven
                 het over met de eindbalans, en is afsluiten hier overbodig. */}
             {!settle && rounds.length > 0 && !fairKlaar() && (
-              <div style={{ width: "100%", marginTop: 13, boxSizing: "border-box",
+              <div style={{ width: "100%", marginTop: 19, boxSizing: "border-box",
                 borderRadius: 14, padding: "10px 11px 11px", border: "2px dashed rgba(13,124,140,0.55)", background: "#f2fafb" }}>
                 {/* Eerst de vraag, dan groter wat je doet. */}
                 <div style={{ fontSize: 15.5, fontWeight: 700, color: "#0d7c8c", textAlign: "center", marginBottom: 8 }}>{L.doneWithRounds}</div>
