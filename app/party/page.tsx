@@ -2723,6 +2723,11 @@ export default function PartyTest() {
   const [sluitBewaar, setSluitBewaar] = useState(true)
   const [sluitControle, setSluitControle] = useState(true)
   const [nietBewaren, setNietBewaren] = useState(false)
+  // Hoe hoog het turkooizen kader onderaan het rondjesoverzicht is. "Nieuw rondje"
+  // klikt daar net boven vast zodra de lijst langer wordt dan het scherm; meten in
+  // plaats van gokken, want het kader verschilt per taal en per toestand.
+  const kaderRef = useRef<HTMLDivElement | null>(null)
+  const [kaderH, setKaderH] = useState(0)
   const [sluitNaamVeld, setSluitNaamVeld] = useState("")
   // Aanvulkaart na een afgerond rondje: bedrag, betaler en toewijzing. Alles mag
   // overgeslagen worden — turven blijft turven.
@@ -3276,6 +3281,19 @@ export default function PartyTest() {
   const [cart, setCart] = useState<Assign>({})
   const [cartAnon, setCartAnon] = useState<Anon>({})
   const [rounds, setRounds] = useState<Round[]>([])
+  useEffect(() => {
+    const el = kaderRef.current
+    if (!el) { setKaderH(0); return }
+    const meet = () => setKaderH(el.offsetHeight)
+    meet()
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(meet) : null
+    if (ro) ro.observe(el)
+    window.addEventListener("resize", meet)
+    return () => { if (ro) ro.disconnect(); window.removeEventListener("resize", meet) }
+    // Het kader komt en gaat met het scherm en het aantal rondjes; groeit het van binnen
+    // (andere taal, extra knop), dan vangt de ResizeObserver dat op.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, rounds.length, lang, settle, groupId])
   const [gaveBackDraft, setGaveBackDraft] = useState<Record<string, number>>({})
   const [displayUnit, setDisplayUnit] = useState<"eur" | "coin">("eur")
   const [showEqual, setShowEqual] = useState(true)
@@ -13353,6 +13371,9 @@ export default function PartyTest() {
   if (view === "roundsOverview") {
     // Hoeveel rondjes tellen echt mee in het totaal: die met een bedrag erop.
     const metBedrag = rounds.filter((r) => (r.amount || 0) > 0.005).length
+    // Alleen in "Neem zelf op" zakt het turkooizen kader naar onderen; in QR blijft de
+    // onderkant zoals ze was.
+    const heeftKader = !settle && rounds.length > 0
     // Oudste rondje bovenaan, zoals je ze besteld hebt. Open als het in openRounds zit.
     const laatsteId = rounds.length ? rounds[rounds.length - 1].id : ""
     // Standaard staat alles dicht — je opent zelf wat je wil bekijken.
@@ -13362,8 +13383,12 @@ export default function PartyTest() {
       if (n.has(id)) n.delete(id); else n.add(id)
       return n
     })
+    // In "Neem zelf op" reikt de kolom tot onderaan het scherm, zodat het turkooizen
+    // kader naar beneden kan zakken wanneer er maar één of twee rondjes zijn.
     return (
-      <div style={S.page}><div style={S.wrap}>
+      <div style={!settle ? { ...S.page, padding: "0" } : S.page}><div style={!settle
+        ? { ...S.wrap, boxSizing: "border-box", display: "flex", flexDirection: "column", minHeight: "100dvh" }
+        : S.wrap}>
         <Header titel={!settle && rounds.length > 0 ? (
           <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", whiteSpace: "nowrap" }}>{L.roundCount(rounds.length)}</span>
         ) : undefined} />
@@ -13929,10 +13954,12 @@ export default function PartyTest() {
                 duim zit. */}
             {/* Rustige rij: doorgaan-acties naast elkaar, afrekenen eronder. Geen
                 gevulde knoppen — één amber kader markeert de gewone volgende stap. */}
-            {/* Nieuw rondje hoort bij de lijst erboven, niet bij de splitten-sectie: dus
-                korter erboven en ruimer eronder. Het blok blijft onderaan plakken, zodat
-                beide keuzes in beeld blijven terwijl je door de rondjes scrolt. */}
-            <div style={{ position: "sticky", bottom: 0, marginTop: 4, paddingTop: 10, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)", background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 22%)" }}>
+            {/* Nieuw rondje hoort bij de lijst erboven, niet bij de splitten-sectie: hij
+                blijft er dus vlak onder staan. Wordt de lijst langer dan het scherm, dan
+                klikt hij vast nét boven het kader, zodat beide keuzes in beeld blijven. */}
+            <div style={heeftKader
+              ? { position: "sticky", bottom: kaderH + 8, zIndex: 1, marginTop: 6, paddingTop: 9, paddingBottom: 7, background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 22%)" }
+              : { position: "sticky", bottom: 0, marginTop: 4, paddingTop: 10, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)", background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 22%)" }}>
             <div style={{ display: "flex", gap: 8 }}>
               {/* "Zelfde opnieuw" wordt in QR al aangeboden op het moment dat je een rondje
                   start: het startCheck-venster toont dan het gestippelde blokje met de
@@ -13971,12 +13998,20 @@ export default function PartyTest() {
                 </button>
               )}
             </div>
+            </div>
+            {/* De rek zit tussen de knop en het kader: bij weinig rondjes duwt ze het kader
+                naar de onderkant van het scherm, bij een lange lijst valt ze weg. */}
+            {heeftKader && <div style={{ flex: 1, minHeight: 19 }} />}
+            {heeftKader && (
+            <div ref={kaderRef} style={{ position: "sticky", bottom: 0,
+              paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 26px)",
+              background: "linear-gradient(180deg,rgba(250,247,236,0),#faf7ec 18%)" }}>
             {/* Eerlijk splitten zweeft mee onderaan: je ziet hem altijd, ook als je door de
                 rondjes scrolt. Geen "avond" in de tekst: het kan ook een namiddag zijn. */}
             {!settle && rounds.length > 0 && fairKlaar() && (
               // Alles staat al goed: in één tik naar de eindbalans, of de stappen openen
               // om nog iets bij te sturen.
-              <div style={{ marginTop: 19, boxSizing: "border-box", borderRadius: 14, padding: "9px 10px 10px",
+              <div style={{ boxSizing: "border-box", borderRadius: 14, padding: "9px 10px 10px",
                 border: "2px dashed rgba(13,124,140,0.55)", background: "#f2fafb" }}>
                 {/* Zelfde kader als "Eerlijk splitten", met een klaar-label: de naam blijft
                     zichtbaar, en binnenin de twee keuzes. */}
@@ -14008,7 +14043,7 @@ export default function PartyTest() {
                 niets te verrekenen. Staat alles al ingevuld, dan neemt het kader hierboven
                 het over met de eindbalans, en is afsluiten hier overbodig. */}
             {!settle && rounds.length > 0 && !fairKlaar() && (
-              <div style={{ width: "100%", marginTop: 19, boxSizing: "border-box",
+              <div style={{ width: "100%", boxSizing: "border-box",
                 borderRadius: 14, padding: "10px 11px 11px", border: "2px dashed rgba(13,124,140,0.55)", background: "#f2fafb" }}>
                 {/* Eerst de vraag, dan groter wat je doet. */}
                 <div style={{ fontSize: 15.5, fontWeight: 700, color: "#0d7c8c", textAlign: "center", marginBottom: 8 }}>{L.doneWithRounds}</div>
@@ -14041,6 +14076,7 @@ export default function PartyTest() {
                 staat wat je nodig hebt als je het tóch wil verdelen. De streepjesrand zegt
                 dat dit iets anders is dan de gewone weg: jij betaalde, en dit is optioneel. */}
             </div>
+            )}
           </>
         )}
       </div></div>
