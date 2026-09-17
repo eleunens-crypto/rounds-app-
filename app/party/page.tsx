@@ -10018,10 +10018,12 @@ export default function PartyTest() {
           {settle && !fromQuick ? (
             <button style={{ ...S.btn, flex: 1, padding: "13px 4px", fontSize: 16, fontWeight: 800, borderRadius: 13, opacity: (view === "hub" || ((settle || opNaam) && unassignedAllRounds > 0)) ? 0.45 : 1 }} onClick={() => { if ((settle || opNaam) && unassignedAllRounds > 0) { setNotice(L.assignFirstNote); return } goHub() }}>{L.overview}</button>
           ) : rounds.length === 0 || (fromQuick && view === "final") ? null : (
-            <button style={{ flex: 1.2, padding: "11px 4px", fontSize: 17, fontWeight: 700, borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
+            <button style={{ flex: 1.35, minWidth: 0, boxSizing: "border-box", padding: "11px 10px", fontSize: 16, fontWeight: 700, borderRadius: 999, cursor: "pointer", fontFamily: "inherit",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               border: `1.5px solid ${RAND}`,
               background: view === "roundsOverview" ? RAND : "#fff",
-              color: view === "roundsOverview" ? RANDTEKST : RAND }}
+              // Wit in plaats van het goud: dat blijft nu van het logo en het geldzakje.
+              color: view === "roundsOverview" ? "#fff" : RAND }}
               onClick={() => { if (view === "payers" || view === "fairAssign" || view === "fairSetup") { setConfirmDlg({ msg: L.leaveSettleMsg, yes: L.leaveSettleYes, onYes: () => { setConfirmDlg(null); if (fromQuick) verlaatSplitten(); else { setOverviewBackTo("hub"); setView("roundsOverview") } } }); return } if (rounds.length >= 1) { setOverviewBackTo(view === "order" ? "order" : "hub"); setView("roundsOverview") } else setNotice(L.noRoundsYet) }}>{L.roundsOverviewBtn}</button>
           )}
           {/* Op het rondjesoverzicht zelf: Barlijstje naast Rondjes. Het opent het lijstje van
@@ -13958,7 +13960,9 @@ export default function PartyTest() {
                       background: "#fffdf4", color: "#8a5e0f", border: "2px solid rgba(240,165,0,0.7)" }
                     : { flex: 1, minWidth: 0, boxSizing: "border-box", cursor: "pointer", borderRadius: 12, padding: "12px 8px", fontSize: 17, fontWeight: 800, fontFamily: "inherit", lineHeight: 1.25,
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 9, textAlign: "center", minHeight: 58,
-                      background: "#fff", color: RAND, border: `1.5px solid ${RAND}` }}>
+                      // Zwaarder kader met een donkere rand eronder: hij hoort bij de kop
+                      // en oogt indrukbaar, zonder de aandacht van Eerlijk splitten weg te nemen.
+                      background: "#fff", color: RAND, border: `2px solid ${RAND}`, boxShadow: `0 3px 0 0 ${RAND}` }}>
                   {settle ? (openRoundId ? L.continueRound(roundNr) : L.newRoundBtn) : (<><ProostIcoon size={28} />{L.newRoundPlain}</>)}
                 </button>
               )}
@@ -13968,7 +13972,7 @@ export default function PartyTest() {
             {!settle && rounds.length > 0 && fairKlaar() && (
               // Alles staat al goed: in één tik naar de eindbalans, of de stappen openen
               // om nog iets bij te sturen.
-              <div style={{ marginTop: 10, boxSizing: "border-box", borderRadius: 14, padding: "9px 10px 10px",
+              <div style={{ marginTop: 13, boxSizing: "border-box", borderRadius: 14, padding: "9px 10px 10px",
                 border: "2px dashed rgba(13,124,140,0.55)", background: "#f2fafb" }}>
                 {/* Zelfde kader als "Eerlijk splitten", met een klaar-label: de naam blijft
                     zichtbaar, en binnenin de twee keuzes. */}
@@ -13994,27 +13998,39 @@ export default function PartyTest() {
                 </div>
               </div>
             )}
+            {/* Eén vraag met twee antwoorden in plaats van twee losse knoppen: splitten
+                krijgt de volle knop, afsluiten blijft de stille uitweg eronder. Klaar maar
+                niet van plan te verdelen? Dan hoeft er geen bedrag ingevuld — er valt
+                niets te verrekenen. Staat alles al ingevuld, dan neemt het kader hierboven
+                het over met de eindbalans, en is afsluiten hier overbodig. */}
             {!settle && rounds.length > 0 && !fairKlaar() && (
-              <button onClick={() => { setSettleChoice("fair"); setView("fairIntro") }}
-                style={{ width: "100%", marginTop: 10, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
-                  borderRadius: 14, padding: "9px 10px", border: "2px dashed rgba(13,124,140,0.55)",
-                  background: "#f2fafb", color: "#0d7c8c", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+              <div style={{ width: "100%", marginTop: 13, boxSizing: "border-box",
+                borderRadius: 14, padding: "10px 11px 11px", border: "2px dashed rgba(13,124,140,0.55)", background: "#f2fafb" }}>
                 {/* Eerst de vraag, dan groter wat je doet. */}
-                <span style={{ fontSize: 15.5, fontWeight: 700, color: "#0d7c8c" }}>{L.doneWithRounds}</span>
-                <span style={{ fontSize: 19, fontWeight: 800 }}>{L.fairSplitTitleNew}</span>
-              </button>
-            )}
-            {/* Klaar maar niet van plan te verdelen? Dan hoeft er geen bedrag ingevuld:
-                er valt niets te verrekenen. Gestreepte rand en gedempt, net als op de
-                eindbalans: dit is het einde, geen gewone stap. Staat alles al ingevuld,
-                dan biedt het kader hierboven de eindbalans en is dit overbodig. */}
-            {!settle && rounds.length > 0 && !!groupId && !fairKlaar() && (
-              <button onClick={() => openAfsluiten(false)}
-                style={{ width: "100%", marginTop: 11, boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
-                  borderRadius: 13, padding: "12px 8px", fontSize: 16, fontWeight: 800,
-                  background: "#fff", color: "#6b7484", border: "1.5px dashed rgba(29,41,66,0.3)" }}>
-                🔒 {L.closeWithoutSplit}
-              </button>
+                <div style={{ fontSize: 15.5, fontWeight: 700, color: "#0d7c8c", textAlign: "center", marginBottom: 8 }}>{L.doneWithRounds}</div>
+                <button onClick={() => { setSettleChoice("fair"); setView("fairIntro") }}
+                  style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
+                    borderRadius: 11, padding: "11px 6px", border: "none", fontSize: 18, fontWeight: 800,
+                    background: "linear-gradient(135deg,#159cb0,#0d7c8c)", color: "#fff",
+                    boxShadow: "0 4px 12px -5px rgba(13,124,140,0.7)" }}>
+                  {L.fairSplitTitleNew}
+                </button>
+                {!!groupId && (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: 9, margin: "9px 0 8px", color: "#7f96a0", fontSize: 12.5, fontWeight: 700 }}>
+                      <span style={{ flex: 1, height: 1, background: "rgba(13,124,140,0.25)" }} />
+                      {L.orWord}
+                      <span style={{ flex: 1, height: 1, background: "rgba(13,124,140,0.25)" }} />
+                    </div>
+                    <button onClick={() => openAfsluiten(false)}
+                      style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
+                        borderRadius: 11, padding: "10px 6px", fontSize: 15.5, fontWeight: 800,
+                        background: "#fff", color: "#6b7484", border: "1.5px dashed rgba(217,112,95,0.7)" }}>
+                      🔒 {L.closeWithoutSplit}
+                    </button>
+                  </>
+                )}
+              </div>
             )}
             {/* De enige plek waar het verdelen nog begint. In "Neem zelf op" vraagt de app
                 onderweg niets meer — geen bedragen, geen namen, geen toewijzing — dus hier
