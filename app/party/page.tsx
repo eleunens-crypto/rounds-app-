@@ -848,6 +848,13 @@ const T = {
     closeGoneSub: "Dit groepje wordt niet bewaard. Deel de afrekening nu als je ze wil houden.",
     thanksClosedGone: "🍻 Bedankt en tot de volgende! Dit groepje is verwijderd.",
     closeWithoutSplit: "Afsluiten zonder splitten",
+    closeNameHint: "⚠️ nodig om te bewaren",
+    backToChoice: "‹ Terug naar het keuzescherm",
+    whoPaidShort: "Wie betaalde dit?",
+    leaveChooseSub: "Je hebt al iets genoteerd. Wat doen we met dit groepje?",
+    leaveDropTitle: "Weggaan zonder bewaren",
+    leaveDropDesc: "Het groepje verdwijnt, met alle rondjes en bedragen erin.",
+    leaveSureBody: "Dit groepje wordt definitief verwijderd, met alle rondjes en bedragen erin. Dit kan niet ongedaan gemaakt worden.",
     potIn: "ingelegd",
     potOut: "besteed",
     potLeft: "nog",
@@ -1859,6 +1866,13 @@ const T = {
     closeGoneSub: "Ce groupe ne sera pas enregistré. Partage le décompte maintenant si tu veux le garder.",
     thanksClosedGone: "🍻 Merci et à la prochaine\u00a0! Ce groupe a été supprimé.",
     closeWithoutSplit: "Clôturer sans partager",
+    closeNameHint: "⚠️ nécessaire pour enregistrer",
+    backToChoice: "‹ Retour à l'écran de choix",
+    whoPaidShort: "Qui a payé\u00a0?",
+    leaveChooseSub: "Tu as déjà noté quelque chose. Que fait-on de ce groupe\u00a0?",
+    leaveDropTitle: "Partir sans enregistrer",
+    leaveDropDesc: "Le groupe disparaît, avec toutes les tournées et les montants.",
+    leaveSureBody: "Ce groupe sera définitivement supprimé, avec toutes les tournées et les montants. C'est irréversible.",
     potIn: "misé",
     potOut: "dépensé",
     potLeft: "reste",
@@ -2713,6 +2727,8 @@ export default function PartyTest() {
   // Stand bij het openen van het personenvenster, zodat "Annuleren" alles terugzet.
   const [persSnap, setPersSnap] = useState<{ id: string; name: string }[] | null>(null)
   const [verlaatNaam, setVerlaatNaam] = useState<null | (() => void)>(null)
+  const [verlaatStap, setVerlaatStap] = useState<"keuze" | "naam" | "weg">("keuze")
+  const [verlaatBewaar, setVerlaatBewaar] = useState(true)
   const [verlaatVeld, setVerlaatVeld] = useState("")
   // Afsluiten kan alleen met een naam: anders is de groep straks onvindbaar.
   const [sluitNaam, setSluitNaam] = useState(false)
@@ -5590,7 +5606,10 @@ export default function PartyTest() {
   // venster meer tonen, dus laten we de browser zijn standaardwaarschuwing geven.
   // Een naamloze groep is altijd het waarschuwen waard: ook zonder drankjes kan er
   // al werk in zitten (namen, personen, pot) — en anders kost "toch weggaan" één tik.
-  const heeftInhoud = !!groupId
+  // Waarschuwen doe je voor werk dat verloren gaat. Een groepje waarin nog geen enkel
+  // rondje en geen inleg zit, is leeg: daar hoort geen bewaarvraag bij, en ook geen
+  // browserwaarschuwing bij het sluiten van het tabblad.
+  const heeftInhoud = !!groupId && (rounds.length > 0 || potContribTotal > 0.005)
   useEffect(() => {
     const naamloos = !settle && !!groupId && heeftInhoud && isAutoNaam(groupName)
     if (!naamloos) return
@@ -5600,7 +5619,8 @@ export default function PartyTest() {
     // een extra stap in de geschiedenis en vangen het terugstappen op.
     const terug = () => {
       history.pushState(null, "", location.href)
-      setVerlaatVeld((v) => v || L.autoName())
+      setVerlaatVeld("")
+      setVerlaatStap("keuze"); setVerlaatBewaar(true)
       setVerlaatNaam(() => () => { window.location.href = "/" })
     }
     history.pushState(null, "", location.href)
@@ -5609,7 +5629,9 @@ export default function PartyTest() {
   }, [settle, groupId, heeftInhoud, groupName]) // eslint-disable-line
 
   const verlaatMetNaamcheck = (doe: () => void) => {
-    if (!settle && groupId && heeftInhoud && isAutoNaam(groupName)) { setVerlaatVeld((v) => v || L.autoName()); setVerlaatNaam(() => doe); return }
+    if (!settle && groupId && heeftInhoud && isAutoNaam(groupName)) {
+      setVerlaatVeld(""); setVerlaatStap("keuze"); setVerlaatBewaar(true); setVerlaatNaam(() => doe); return
+    }
     doe()
   }
   const goSiteHome = () => {
@@ -9396,15 +9418,15 @@ export default function PartyTest() {
               <div style={{ fontSize: 20, fontWeight: 800, color: "#1d2942" }}>{L.closeNameQ}</div>
               <div style={{ fontSize: 15, color: "#6b7484", lineHeight: 1.45, marginTop: 5 }}>{L.closeNameSub}</div>
               <input autoFocus value={sluitNaamVeld} onChange={(e) => setSluitNaamVeld(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { const nm = sluitNaamVeld.trim(); if (nm) { setGroupName(nm); persistSettings({ name: nm }) } void sluitAvondAf(true, sluitControle) } }}
+                onKeyDown={(e) => { if (e.key === "Enter" && sluitNaamVeld.trim()) { const nm = sluitNaamVeld.trim(); setGroupName(nm); persistSettings({ name: nm }); void sluitAvondAf(true, sluitControle) } }}
                 placeholder={L.namePh3}
                 style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 11, border: `1.5px solid ${AMB}` }} />
-              <div style={{ display: "flex", gap: 9, marginTop: 13 }}>
-                <button style={{ ...S.btn, flex: 1, fontSize: 15.5, fontWeight: 800 }}
-                  onClick={() => { void sluitAvondAf(true, sluitControle) }}>{L.closeSkipName}</button>
-                <button style={{ ...knopAmber, flex: 1.3, fontSize: 15.5 }}
-                  onClick={() => { const nm = sluitNaamVeld.trim(); if (nm) { setGroupName(nm); persistSettings({ name: nm }) } void sluitAvondAf(true, sluitControle) }}>{L.closeSaveBtn}</button>
-              </div>
+              {/* Wie voor bewaren koos, hoort hier geen "overslaan" meer te krijgen: dat las
+                  als "toch niet bewaren". De uitweg is de stap terug, niet deze knop. */}
+              <div style={{ fontSize: 13.5, color: "#c0554a", fontWeight: 700, marginTop: 7 }}>{L.closeNameHint}</div>
+              <button disabled={!sluitNaamVeld.trim()}
+                style={{ ...knopAmber, width: "100%", marginTop: 12, opacity: sluitNaamVeld.trim() ? 1 : 0.45 }}
+                onClick={() => { const nm = sluitNaamVeld.trim(); if (!nm) return; setGroupName(nm); persistSettings({ name: nm }); void sluitAvondAf(true, sluitControle) }}>{L.closeSaveBtn}</button>
               <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15.5, padding: "9px 6px", color: "#8b93a3" }}
                 onClick={() => setSluitStap("keuze")}>‹ {L.back}</button>
             </>)}
@@ -9421,59 +9443,98 @@ export default function PartyTest() {
         </div>
         )
       })()}
-      {verlaatNaam && (
+      {/* Weggaan terwijl er werk staat: dezelfde keuze als bij het afsluiten van een
+          groepje. Eerst bewaren of niet, dan pas de naam, en bij "niet bewaren" een
+          bevestiging — want daarna is het groepje echt weg. Dit venster verschijnt bij
+          het logo, bij de terugknop van de telefoon, en bij elke andere manier om het
+          scherm te verlaten. */}
+      {verlaatNaam && (() => {
+        const AMB = "#e8a812", AMBT = "#8a5e0f", AMBV = "#fbf6ec"
+        const knopAmber = { ...S.btnP, background: "linear-gradient(135deg,#f7cb5c,#eab117)", color: "#1d2942", boxShadow: "0 5px 14px -6px rgba(232,168,18,0.85)" }
+        const kaart = (aan: boolean) => ({
+          width: "100%", boxSizing: "border-box" as const, textAlign: "left" as const, cursor: "pointer", fontFamily: "inherit",
+          borderRadius: 13, padding: "11px 12px", marginBottom: 8,
+          background: aan ? AMBV : "#fff", border: aan ? `2px solid ${AMB}` : "1px solid rgba(29,41,66,0.14)",
+        })
+        const sluitVenster = () => { setVerlaatNaam(null); setVerlaatVeld(""); setVerlaatStap("keuze") }
+        const gaWeg = () => { const doe = verlaatNaam; sluitVenster(); doe?.() }
+        return (
         <div style={{ ...S.overlay, zIndex: 74 }}>
           <div style={{ ...S.sheet, padding: 0, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
-            {(() => {
-              const drankjesTot = rounds.reduce((a: number, r0) => a
-                + Object.values(r0.orders || {}).reduce((x: number, m) => x + Object.values(m || {}).reduce((p: number, q) => p + Number(q || 0), 0), 0)
-                + Object.values(r0.anon || {}).reduce((x: number, q) => x + Number(q || 0), 0), 0)
-              const bewaar = () => { const nm = verlaatVeld.trim(); if (!nm) return nm; setGroupName(nm); persistSettings({ name: nm }); return nm }
-              return (<>
-                {/* Het kruisje doet hetzelfde als "Nee, ik blijf hier": weg met dit venster,
-                    blijf waar je was. Twee wegen naar dezelfde uitkomst, want de een zoekt
-                    rechtsboven en de ander onderaan. */}
-                <div style={{ background: "linear-gradient(135deg,#e0725c,#c0554a)", color: "#fff", padding: "13px 16px", fontSize: 18, fontWeight: 800, lineHeight: 1.3, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <span>⚠️ {L.leaveNoNameTitle}</span>
-                  <span onClick={() => { setVerlaatNaam(null); setVerlaatVeld("") }}
-                    aria-label={L.stayHere} style={{ flexShrink: 0, cursor: "pointer", fontSize: 20, lineHeight: 1, opacity: 0.85, padding: "0 2px" }}>✕</span>
+            {/* Het kruisje doet hetzelfde als "Nee, ik blijf hier": weg met dit venster,
+                blijf waar je was. Twee wegen naar dezelfde uitkomst, want de een zoekt
+                rechtsboven en de ander onderaan. */}
+            <div style={{ background: "linear-gradient(135deg,#e0725c,#c0554a)", color: "#fff", padding: "13px 16px", fontSize: 18, fontWeight: 800, lineHeight: 1.3, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <span>⚠️ {L.leaveNoNameTitle}</span>
+              <span onClick={sluitVenster}
+                aria-label={L.stayHere} style={{ flexShrink: 0, cursor: "pointer", fontSize: 20, lineHeight: 1, opacity: 0.85, padding: "0 2px" }}>✕</span>
+            </div>
+            <div style={{ padding: "14px 16px 16px" }}>
+            {verlaatStap === "keuze" && (<>
+              {/* Wat er op het spel staat, zwart op wit: dat maakt de keuze hieronder pas
+                  een echte keuze. */}
+              {(rounds.length > 0 || potContribTotal > 0.005) && (
+                <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 11, padding: "10px 12px", fontSize: 15, color: "#b0402f", fontWeight: 700, lineHeight: 1.7 }}>
+                  {rounds.map((r0, i0) => (
+                    <div key={r0.id}>{L.leaveRoundLine(i0 + 1, Object.values(r0.orders || {}).reduce((x: number, m) => x + Object.values(m || {}).reduce((a: number, b) => a + Number(b || 0), 0), 0) + Object.values(r0.anon || {}).reduce((a: number, b) => a + Number(b || 0), 0))}</div>
+                  ))}
+                  {potContribTotal > 0.005 && <div style={{ display: "flex", alignItems: "center", gap: 6 }}><ZakjeIcoon size={15} /> {L.potWord} {euro(potContribTotal)}</div>}
                 </div>
-                <div style={{ padding: "14px 16px 16px" }}>
-                {(rounds.length > 0 || potContribTotal > 0.005) && (
-                  <div style={{ background: "rgba(224,104,92,0.08)", border: "1px solid rgba(224,104,92,0.35)", borderRadius: 11, padding: "10px 12px", marginTop: 10, fontSize: 15, color: "#b0402f", fontWeight: 700, lineHeight: 1.7 }}>
-                    {rounds.map((r0, i0) => (
-                      <div key={r0.id}>{L.leaveRoundLine(i0 + 1, Object.values(r0.orders || {}).reduce((x: number, m) => x + Object.values(m || {}).reduce((a: number, b) => a + Number(b || 0), 0), 0) + Object.values(r0.anon || {}).reduce((a: number, b) => a + Number(b || 0), 0))}</div>
-                    ))}
-                    {potContribTotal > 0.005 && <div>🪙 {L.potWord} {euro(potContribTotal)}</div>}
-                  </div>
-                )}
-                <div style={{ fontSize: 15, color: "#6b7484", lineHeight: 1.45, marginTop: 10 }}>{L.leaveAutoSub}</div>
-                <input autoFocus value={verlaatVeld} onChange={(e) => setVerlaatVeld(e.target.value)}
-                  placeholder={L.namePh3}
-                  style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 12, border: "2px solid rgba(240,165,0,0.6)" }} />
-                {/* Bewaren en weggaan, of bewaren en gewoon verder doen — dat laatste
-                    kon nergens anders. Zonder naam blijft alleen "toch weggaan" over. */}
-                <button disabled={!verlaatVeld.trim()}
-                  style={{ ...S.btnP, width: "100%", marginTop: 12, opacity: verlaatVeld.trim() ? 1 : 0.45 }}
-                  onClick={() => { if (!bewaar()) return; const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}>{L.saveAndLeave}</button>
-                {/* Weggaan zonder bewaren blijft mogelijk, maar als kleine link: het is de
-                    uitzondering, niet een van drie gelijkwaardige keuzes. */}
-                {/* Er was geen weg terug: je kon bewaren en weggaan, of weggaan zonder
-                    bewaren, maar niet gewoon blijven. Terwijl dit venster vaak opent omdat
-                    je per ongeluk één stap te ver terugtikte. */}
-                <button onClick={() => { setVerlaatNaam(null); setVerlaatVeld("") }}
-                  style={{ width: "100%", marginTop: 10, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "12px",
-                    fontSize: 16, fontWeight: 800, background: "#fff", color: "#1d2942", border: "1.5px solid rgba(29,41,66,0.25)" }}>
-                  {L.stayHere}
-                </button>
-                <div onClick={() => { const doe = verlaatNaam; setVerlaatNaam(null); setVerlaatVeld(""); doe?.() }}
-                  style={{ textAlign: "center", marginTop: 13, fontSize: 13.5, fontWeight: 700, color: "#8b93a3", textDecoration: "underline", cursor: "pointer" }}>{L.leaveNoSaveBtn}</div>
+              )}
+              <div style={{ fontSize: 15, color: "#6b7484", lineHeight: 1.45, margin: "11px 0 11px" }}>{L.leaveChooseSub}</div>
+              <button style={kaart(verlaatBewaar)} onClick={() => setVerlaatBewaar(true)}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: "#1d2942" }}>💾 {L.closeKeepTitle}</span>
+                  <span style={{ marginLeft: "auto", flexShrink: 0, fontSize: 13, fontWeight: 800, color: AMBT, background: "rgba(232,168,18,0.18)", borderRadius: 999, padding: "3px 9px" }}>{L.closeKeepDays}</span>
                 </div>
-              </>)
-            })()}
+                <div style={{ fontSize: 14, color: "#6b7484", lineHeight: 1.45, marginTop: 4 }}>{L.closeKeepDesc}</div>
+              </button>
+              <button style={kaart(!verlaatBewaar)} onClick={() => setVerlaatBewaar(false)}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#1d2942" }}>🚪 {L.leaveDropTitle}</div>
+                <div style={{ fontSize: 14, color: "#6b7484", lineHeight: 1.45, marginTop: 4 }}>{L.leaveDropDesc}</div>
+              </button>
+              <button style={{ ...knopAmber, width: "100%", marginTop: 6 }}
+                onClick={() => setVerlaatStap(verlaatBewaar ? "naam" : "weg")}>{L.closeNextBtn}</button>
+              {/* Er moet een weg terug zijn: dit venster opent vaak omdat je per ongeluk
+                  één stap te ver terugtikte. */}
+              <button onClick={sluitVenster}
+                style={{ width: "100%", marginTop: 9, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "11px",
+                  fontSize: 16, fontWeight: 800, background: "#fff", color: "#1d2942", border: "1.5px solid rgba(29,41,66,0.25)" }}>
+                {L.stayHere}
+              </button>
+            </>)}
+            {verlaatStap === "naam" && (<>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#1d2942" }}>{L.closeNameQ}</div>
+              <div style={{ fontSize: 15, color: "#6b7484", lineHeight: 1.45, marginTop: 5 }}>{L.closeNameSub}</div>
+              <input autoFocus value={verlaatVeld} onChange={(e) => setVerlaatVeld(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && verlaatVeld.trim()) { const nm = verlaatVeld.trim(); setGroupName(nm); persistSettings({ name: nm }); gaWeg() } }}
+                placeholder={L.namePh3}
+                style={{ ...S.input, width: "100%", boxSizing: "border-box", textAlign: "left", fontWeight: 700, fontSize: 18, marginTop: 11, border: `1.5px solid ${AMB}` }} />
+              <div style={{ fontSize: 13.5, color: "#c0554a", fontWeight: 700, marginTop: 7 }}>{L.closeNameHint}</div>
+              <button disabled={!verlaatVeld.trim()}
+                style={{ ...knopAmber, width: "100%", marginTop: 12, opacity: verlaatVeld.trim() ? 1 : 0.45 }}
+                onClick={() => { const nm = verlaatVeld.trim(); if (!nm) return; setGroupName(nm); persistSettings({ name: nm }); gaWeg() }}>{L.closeSaveBtn}</button>
+              <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15.5, padding: "9px 6px", color: "#8b93a3" }}
+                onClick={() => setVerlaatStap("keuze")}>‹ {L.back}</button>
+            </>)}
+            {verlaatStap === "weg" && (<>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#c0554a" }}>⚠️ {L.closeSureTitle}</div>
+              <div style={{ fontSize: 15.5, color: "#4a5567", lineHeight: 1.5, marginTop: 7 }}>{L.leaveSureBody}</div>
+              <button style={{ width: "100%", marginTop: 14, padding: "13px 6px", borderRadius: 13, fontSize: 16.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+                background: "linear-gradient(135deg,#d9705f,#c0554a)", color: "#fff", border: "none", boxShadow: "0 5px 14px -6px rgba(192,85,74,0.7)" }}
+                onClick={async () => {
+                  const gid = groupId
+                  if (gid) { try { await wisGroepNaSluit(gid) } catch { /* al weg */ } }
+                  gaWeg()
+                }}>{L.closeSureYes}</button>
+              <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15.5, fontWeight: 800 }}
+                onClick={() => setVerlaatStap("keuze")}>‹ {L.back}</button>
+            </>)}
+            </div>
           </div>
         </div>
-      )}
+        )
+      })()}
       {naamPlicht && (
         <div style={{ ...S.overlay, zIndex: 72 }}>
           <div style={{ ...S.sheet, maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
@@ -12135,6 +12196,17 @@ export default function PartyTest() {
               // het scherm, en vroeger belandde je zonder waarschuwing op een leeg overzicht
               // als dit je eerste rondje was.
               onClick={cancelOrder}>{L.cancelRoundShort}</button>}
+        {/* Zolang er nog geen enkel rondje genoteerd is, kan je terug naar de keuze tussen
+            zelf opnemen en via QR. Daarna niet meer: dan staat er werk, en is weggaan iets
+            anders dan van gedacht veranderen. Stil gehouden — wie wil bestellen, moet er
+            niet over struikelen. */}
+        {!settle && rounds.length === 0 && (
+          <button onClick={() => verlaatMetNaamcheck(goSiteHome)}
+            style={{ display: "block", width: "100%", marginTop: 11, background: "none", border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, color: "#6b7484", textDecoration: "underline" }}>
+            {L.backToChoice}
+          </button>
+        )}
         {roundItems > 0 && <div style={{ height: 66 }} />}
 
 
@@ -14051,8 +14123,12 @@ export default function PartyTest() {
                   style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit",
                     borderRadius: 11, padding: "11px 6px", border: "none", fontSize: 18, fontWeight: 800,
                     background: "linear-gradient(135deg,#159cb0,#0d7c8c)", color: "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
                     boxShadow: "0 4px 12px -5px rgba(13,124,140,0.7)" }}>
-                  {L.fairSplitTitleNew}
+                  {/* De weegschaal op een wit rondje: als donkere emoji op turkoois was hij
+                      niet te zien. Zelfde oplossing als op de groene Eindbalans-knop. */}
+                  <span style={{ flexShrink: 0, width: 27, height: 27, borderRadius: "50%", background: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>⚖️</span>
+                  <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{L.fairSplitHeader}</span>
                 </button>
                 {!!groupId && (
                   <>
@@ -14575,7 +14651,10 @@ export default function PartyTest() {
     return (
       <div style={S.page}><div style={S.wrap}>
         <style>{`@keyframes rundoPilWenk{0%,100%{border-color:rgba(224,138,0,0.35);box-shadow:0 0 0 0 rgba(224,138,0,0)}50%{border-color:rgba(224,138,0,0.95);box-shadow:0 0 0 4px rgba(224,138,0,0.13)}}
-          .rundo-pil-wenk{animation:rundoPilWenk 1.9s ease-in-out infinite}`}</style>
+          .rundo-pil-wenk{animation:rundoPilWenk 1.9s ease-in-out infinite}
+          @keyframes rundoBedragWenk{0%,100%{border-color:rgba(192,85,74,0.45);box-shadow:0 0 0 0 rgba(192,85,74,0)}50%{border-color:rgba(192,85,74,1);box-shadow:0 0 0 5px rgba(192,85,74,0.14)}}
+          .rundo-bedrag-wenk{animation:rundoBedragWenk 1.6s ease-in-out infinite}
+          @media (prefers-reduced-motion: reduce){.rundo-bedrag-wenk{animation:none;border-color:rgba(192,85,74,0.9)}}`}</style>
         <Header />
         {showPot && renderPotModal()}
         {renderDialogs()}
@@ -14753,8 +14832,11 @@ export default function PartyTest() {
             )
           }
           return (
+            // Een leeg bedrag laat de kaart rustig: het pulserende veld hieronder trekt de
+            // aandacht, en een knipperende rand erbij maakt er kermis van zodra er twee of
+            // drie rondjes leeg staan.
             <div key={r.id} style={{ ...S.card, position: "relative", padding: "13px 14px", ...(geenBedrag
-              ? { border: "1.5px dashed rgba(224,138,0,0.7)", background: "#fffaf0" }
+              ? {}
               : mist ? { border: "2px solid rgba(224,104,92,0.6)", background: "rgba(224,104,92,0.05)" }
               : {}) }}>
               {/* Het vinkje verschijnt pas als een rondje rond is: zo blijft je oog hangen
@@ -14769,6 +14851,7 @@ export default function PartyTest() {
                 <span style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
                   <span style={{ fontSize: 17, color: "#6b7484", fontWeight: 700 }}>€</span>
                   <input type="text" inputMode="decimal" placeholder="0,00" aria-label={L.roundSummary(idx + 1, items)}
+                    className={geenBedrag ? "rundo-bedrag-wenk" : undefined}
                     {...bedragVeld(`betaal-${r.id}`, r.amount || 0, (v) => zetBedragZN(idx, v))}
                     onFocus={() => setBetaalFocus(r.id)}
                     onBlur={() => {
@@ -14777,9 +14860,13 @@ export default function PartyTest() {
                       // die tik nog landen voor het rondje eventueel dichtklapt.
                       setTimeout(() => setBetaalFocus((f) => f === r.id ? null : f), 300)
                     }}
-                    style={{ ...S.input, width: 98, padding: "8px 10px", fontSize: 19, fontWeight: 800, boxSizing: "border-box",
-                      border: geenBedrag ? "1.5px solid rgba(224,138,0,0.75)" : "1px solid rgba(29,41,66,0.22)",
-                      background: geenBedrag ? "#fffaf0" : "#fff" }} />
+                    style={{ ...S.input, boxSizing: "border-box", fontWeight: 800,
+                      // Leeg? Dan groter en rood: dat is het gat dat je moet vullen.
+                      width: geenBedrag ? 120 : 98,
+                      padding: geenBedrag ? "10px 12px" : "8px 10px",
+                      fontSize: geenBedrag ? 23 : 19,
+                      border: geenBedrag ? "2px solid rgba(192,85,74,0.5)" : "1px solid rgba(29,41,66,0.22)",
+                      background: geenBedrag ? "#fffafa" : "#fff" }} />
                   {!mist && (
                     <span role="button" aria-label="▴" onClick={() => setBetaalOpen((c) => ({ ...c, [r.id]: false }))}
                       style={{ marginLeft: 4, fontSize: 15, fontWeight: 800, color: "#6b7484", cursor: "pointer", padding: "6px 4px" }}>▴</span>
@@ -14791,7 +14878,9 @@ export default function PartyTest() {
                 {drinksOf(r).map(({ d, n }) => `${n}× ${d.name}`).join(", ")}
               </div>
                   {geenBedrag ? (
-                    <div style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", marginBottom: 9, lineHeight: 1.4 }}>{L.fillAmountFirstShort}</div>
+                    // Dat het bedrag ontbreekt, zegt het veld hierboven al. Deze regel vraagt
+                    // meteen het volgende: een naam aanduiden kan namelijk al zonder bedrag.
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#8a5e0f", marginBottom: 9, lineHeight: 1.4 }}>{L.whoPaidShort}</div>
                   ) : tekort > 0.005 ? (
                     <div style={{ fontSize: 14.5, fontWeight: 800, color: "#a8720a", marginBottom: 9 }}>{L.tapNameBelow} 👇</div>
                   ) : null}
