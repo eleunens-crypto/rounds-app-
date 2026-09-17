@@ -851,6 +851,7 @@ const T = {
     closeNameHint: "⚠️ nodig om te bewaren",
     backToChoice: "‹ Terug naar het keuzescherm",
     whoPaidShort: "Wie betaalde dit?",
+    missLine: (a: number, b: number) => `Nog ${[a > 0 ? `${a} ${a === 1 ? "bedrag" : "bedragen"}` : "", b > 0 ? `${b} ${b === 1 ? "betaler" : "betalers"}` : ""].filter(Boolean).join(" en ")} in te vullen`,
     leaveChooseSub: "Je hebt al iets genoteerd. Wat doen we met dit groepje?",
     leaveDropTitle: "Weggaan zonder bewaren",
     leaveDropDesc: "Het groepje verdwijnt, met alle rondjes en bedragen erin.",
@@ -1869,6 +1870,7 @@ const T = {
     closeNameHint: "⚠️ nécessaire pour enregistrer",
     backToChoice: "‹ Retour à l'écran de choix",
     whoPaidShort: "Qui a payé\u00a0?",
+    missLine: (a: number, b: number) => `Encore ${[a > 0 ? `${a} ${a === 1 ? "montant" : "montants"}` : "", b > 0 ? `${b} ${b === 1 ? "payeur" : "payeurs"}` : ""].filter(Boolean).join(" et ")} à compléter`,
     leaveChooseSub: "Tu as déjà noté quelque chose. Que fait-on de ce groupe\u00a0?",
     leaveDropTitle: "Partir sans enregistrer",
     leaveDropDesc: "Le groupe disparaît, avec toutes les tournées et les montants.",
@@ -6402,9 +6404,13 @@ export default function PartyTest() {
     clearTimeout(bedragTimers.current[r.id])
     bedragTimers.current[r.id] = setTimeout(() => { void opslaanZN(nieuw) }, 600)
   }
+  // Zelf een naam aantikken maakt de belofte "voor alle rondjes" ongeldig: de schakelaar
+  // springt terug naar neen en de namenrij gaat dicht. Wat al toegewezen is, blijft staan.
+  const brekeZelfdeBetaler = () => { if (zbAan) { setZbAan(false); setZbBetaler(null) } }
   const wisselBetalerZN = (idx: number, pid: string) => {
     const r = rounds[idx]
     if (!r) return
+    brekeZelfdeBetaler()
     const cur = Object.keys(r.payers || {})
     const persons = cur.includes(pid) ? cur.filter((x) => x !== pid) : [...cur, pid]
     const usePot = (r.potPart || 0) > 0.005
@@ -14644,7 +14650,11 @@ export default function PartyTest() {
     // Eerlijk verdelen kan alleen als elk rondje een bedrag heeft: een rondje op €0 zou
     // de drankjes erin gratis maken voor wie erin zat. En elk rondje moet gedekt zijn.
     const zonderBedragHier = rounds.filter((r) => (r.amount || 0) <= 0.005)
-    const zonderBetaler = rounds.filter((r) => (r.amount || 0) > 0.005 && rPaidSum(r) < (r.amount || 0) - 0.005)
+    // "Wie" telt apart van "hoeveel". Vroeger telden alleen rondjes mee die al een bedrag
+    // hadden, dus een rondje zonder bedrag én zonder naam verscheen enkel bij de bedragen —
+    // en pas nadat je het bedrag invulde, hoorde je dat de betaler ook nog ontbrak.
+    const zonderBetaler = rounds.filter((r) => (Object.keys(r.payers || {}).length === 0 && (r.potPart || 0) <= 0.005)
+      || ((r.amount || 0) > 0.005 && rPaidSum(r) < (r.amount || 0) - 0.005))
     const klaar = zonderBedragHier.length === 0 && zonderBetaler.length === 0 && !potZonderNamen
     // Geen standaardbetaler: niets staat vanzelf aangetikt. Wie snel één betaler voor
     // alles wil, heeft "Zelfde betaler voor alle rondjes".
@@ -14671,12 +14681,17 @@ export default function PartyTest() {
             <div style={{ ...S.row, justifyContent: "space-between", gap: 10 }}>
               <span style={{ fontSize: 16.5, fontWeight: 800, color: "#1d2942", minWidth: 0 }}>{L.sameForAllQ}</span>
               <span role="radiogroup" style={{ display: "inline-flex", flexShrink: 0, border: `1.5px solid ${RAND}`, borderRadius: 999, overflow: "hidden" }}>
-                {([[false, L.noWordZb], [true, L.yesWordZb]] as const).map(([waarde, label]) => (
-                  <span key={label} role="radio" aria-checked={zbAan === waarde}
-                    onClick={() => { setZbAan(waarde); if (!waarde) setZbBetaler(null) }}
-                    style={{ padding: "8px 16px", fontSize: 15.5, fontWeight: 800, cursor: "pointer",
-                      background: zbAan === waarde ? RAND : "#fff", color: zbAan === waarde ? "#fff" : RAND }}>{label}</span>
-                ))}
+                {/* De niet-gekozen kant werd zwart op wit getekend en las als een tweede knop.
+                    Nu grijs op grijs, met een vinkje op de kant die aanstaat. */}
+                {([[false, L.noWordZb], [true, L.yesWordZb]] as const).map(([waarde, label]) => {
+                  const aan = zbAan === waarde
+                  return (
+                    <span key={label} role="radio" aria-checked={aan}
+                      onClick={() => { setZbAan(waarde); if (!waarde) setZbBetaler(null) }}
+                      style={{ padding: "8px 15px", fontSize: 15.5, fontWeight: 800, cursor: "pointer",
+                        background: aan ? RAND : "#eef1f6", color: aan ? "#fff" : "#93a0b5" }}>{aan ? `✓ ${label}` : label}</span>
+                  )
+                })}
               </span>
             </div>
             {zbAan && (
@@ -14887,7 +14902,7 @@ export default function PartyTest() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {/* De pot is een betaler zoals een persoon: hij heeft geld en geeft het uit. */}
                 {potContribTotal > 0.005 && (
-                  <span onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } rTogglePot(idx) }}
+                  <span onClick={() => { if (geenBedrag) { setNotice(L.fillAmountFirst); return } brekeZelfdeBetaler(); rTogglePot(idx) }}
                     style={{ ...S.chip(uitPot ? 1 : 0), opacity: geenBedrag ? 0.5 : 1,
                       ...(uitPot ? { background: "#2f6fb5", border: "1.5px solid #2f6fb5", color: "#fff" } : {}) }}>
                     {/* Gekozen: wat de pot voor dít rondje draagt. Niet gekozen: wat er nog
@@ -14920,8 +14935,19 @@ export default function PartyTest() {
           </div>
         )}
 
-        {/* De knop laat altijd door: ontbreekt er iets, dan verschijnt een melding die
-               zegt wát er nog ontbreekt en blijft de knop dof. */}
+        {/* Wat er nog ontbreekt staat bóven de knop: je leest het vóór je erop tikt, niet
+               erna. Groot en rood in plaats van klein en amber, en het noemt bedragen en
+               betalers allebei wanneer allebei ontbreken. */}
+            {!klaar && (
+              <div style={{ textAlign: "center", marginBottom: 10 }}>
+                <span style={{ display: "inline-block", background: "rgba(192,85,74,0.12)", color: "#c0554a",
+                  borderRadius: 999, padding: "8px 16px", fontSize: 16, fontWeight: 800, lineHeight: 1.4 }}>
+                  {zonderBedragHier.length > 0 || zonderBetaler.length > 0
+                    ? L.missLine(zonderBedragHier.length, zonderBetaler.length)
+                    : L.potNotSplit}
+                </span>
+              </div>
+            )}
             <button disabled={!klaar}
               style={{ ...S.btnP, width: "100%", padding: "16px 12px", fontSize: 18,
                 background: klaar ? "linear-gradient(135deg,#2fae6a,#1f8a4c)" : "#c3c9d4",
@@ -14933,12 +14959,6 @@ export default function PartyTest() {
                 // fromQuick blijft staan: zo kan je vanaf de eindbalans nog stap voor stap terug.
                 setHasSettled(true); setView("final")
               }}>{L.toFinalFair}</button>
-            {!klaar && (
-              <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700, color: "#a8720a", marginTop: 7, lineHeight: 1.4 }}>
-                {zonderBedragHier.length > 0 ? L.missingAmount(zonderBedragHier.length)
-                  : zonderBetaler.length > 0 ? L.missingPayer(zonderBetaler.length) : L.potNotSplit}
-              </div>
-            )}
         {fromQuick && (
           <>
             <button style={{ ...S.btn, width: "100%", marginTop: 10, padding: "14px 16px", fontSize: 17.5, fontWeight: 800 }}
