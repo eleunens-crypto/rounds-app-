@@ -7783,7 +7783,11 @@ export default function PartyTest() {
   // Tik naast een venster: in QR sluit dat het venster, zoals altijd. In zelf noteren
   // doet het niets meer: elk venster heeft zijn eigen knop om verder te gaan of te
   // annuleren, en een tik ernaast mocht je niet ongemerkt naar een ander scherm sturen.
-  const tikNaast = (fn: () => void) => (settle && !fromQuick ? fn : undefined)
+  // Naast een venster tikken sluit het nergens meer — in geen enkele modus. Een venster
+  // gaat dicht met zijn eigen knop of kruisje, en elk venster heeft er een. Een duim die
+  // net naast de rand van een blad landt, hoort geen scherm weg te gooien.
+  // De parameter blijft staan zodat elk venster zijn eigen sluitactie bij zich houdt.
+  const tikNaast = (_fn: () => void) => undefined
   const renderDialogs = () => (
     <>
         {assignIdx !== null && rounds[assignIdx] && (() => {
@@ -9297,6 +9301,10 @@ export default function PartyTest() {
                 background: noteerPick === "named" ? "linear-gradient(135deg,#5a6a94,#3b486a)" : noteerPick === "quick" ? "linear-gradient(135deg,#f7cb5c,#eab117)" : "linear-gradient(135deg,#e3d9c2,#cfc3a6)",
                 color: noteerPick === "named" ? "#fff" : noteerPick === "quick" ? "#1d2942" : "#6b7484",
                 boxShadow: "none" }}>{L.nextBtn}</button>
+            {/* Zonder keuze bleef de knop dof en was ernaast tikken de enige uitweg.
+                Nu dat nergens meer werkt, hoort deze knop erbij. */}
+            <button style={{ width: "100%", marginTop: 9, padding: "10px 6px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 15.5, fontWeight: 700, color: "#8b93a3" }}
+              onClick={() => { setNoteerKeuze(false); setNoteerPick(null); setNoteerInfo(null) }}>{L.cancel}</button>
           </div>
         </div>
       )}
@@ -11543,6 +11551,10 @@ export default function PartyTest() {
                 onClick={applyBeginChoices}>
                 {bpSettle === true ? L.toQrStep : L.quickStart}
               </button>
+              {/* Dit venster had geen eigen uitweg: je kon het alleen kwijt door ernaast te
+                  tikken. Nu dat nergens meer werkt, hoort die knop hier te staan. */}
+              <button style={{ width: "100%", marginTop: 9, padding: "10px 6px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 15.5, fontWeight: 700, color: "#8b93a3" }}
+                onClick={() => setBeginPrompt(false)}>{L.cancel}</button>
             </div>
           </div>
         )}
