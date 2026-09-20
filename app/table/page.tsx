@@ -1165,8 +1165,13 @@ const STRINGS = {
     fullyClaimed: "volledig",
     removeOne: "verwijder er één",
     notSelectedAdd: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch toevoegen?`,
-    assignToQrGuest: (name: string | undefined) => `${name} kwam via de link binnen en duidt normaal zelf aan. Toch voor ${name} invullen?`,
-    assignToFreeSpot: (name: string | undefined) => `${name} is nog een vrije plaats zonder naam. Wat je hier toewijst, hoort straks bij wie die plaats inneemt. Doorgaan?`,
+    assignQrTitle: (name: string | undefined) => `${name} duidt zelf aan`,
+    assignToQrGuest: (name: string | undefined, item: string) => `${name} kwam via de QR binnen en tikt op de eigen gsm aan wat hij nam. Vul jij het hier in, dan staat het er misschien dubbel.\n\nToch “${item}” voor ${name} aanduiden?`,
+    assignQrYes: "Ja, toch invullen",
+    assignOwnTitle: (name: string | undefined) => `Jij duidt aan voor ${name}`,
+    assignOwnBody: (name: string | undefined) => `${name} kwam niet via de QR binnen, dus jij tikt aan wat hij nam. Dat is hier de gewone gang van zaken.\n\nDit vragen we maar één keer — daarna gaat het meteen door.`,
+    assignOwnYes: "Ja, doorgaan",
+    assignToFreeSpot: (name: string | undefined) => `${name} is nog een vrije plaats zonder naam. Wat je hier toewijst, hoort straks bij wie die plaats inneemt.\n\nDit vragen we maar één keer.`,
     unitsClaimed: "Stuks geclaimd",
     sharedItemsHandled: "Gedeelde items geregeld",
     billTotalLabel: "Totaal rekening",
@@ -1873,8 +1878,13 @@ const STRINGS = {
     fullyClaimed: "complet",
     removeOne: "en retirer un",
     notSelectedAdd: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. L'ajouter quand même ?`,
-    assignToQrGuest: (name: string | undefined) => `${name} est arrivé via le lien et attribue normalement lui-même. Remplir quand même pour ${name} ?`,
-    assignToFreeSpot: (name: string | undefined) => `${name} est encore une place libre sans nom. Ce que tu attribues ici ira à celui qui prendra cette place. Continuer ?`,
+    assignQrTitle: (name: string | undefined) => `${name} attribue lui-même`,
+    assignToQrGuest: (name: string | undefined, item: string) => `${name} est arrivé via le QR et coche sur son propre téléphone ce qu'il a pris. Si tu le remplis ici, ça risque d'y figurer deux fois.\n\nAttribuer quand même « ${item} » à ${name} ?`,
+    assignQrYes: "Oui, remplir quand même",
+    assignOwnTitle: (name: string | undefined) => `Tu attribues pour ${name}`,
+    assignOwnBody: (name: string | undefined) => `${name} n'est pas arrivé via le QR, c'est donc toi qui coches ce qu'il a pris. C'est le fonctionnement normal ici.\n\nOn ne te le demande qu'une seule fois — ensuite ça passe directement.`,
+    assignOwnYes: "Oui, continuer",
+    assignToFreeSpot: (name: string | undefined) => `${name} est encore une place libre sans nom. Ce que tu attribues ici ira à celui qui prendra cette place.\n\nOn ne te le demande qu'une seule fois.`,
     unitsClaimed: "Unités attribuées",
     sharedItemsHandled: "Articles partagés réglés",
     billTotalLabel: "Total de l'addition",
@@ -7616,19 +7626,19 @@ function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confir
   // Alle namen meteen zichtbaar — niets meer verstopt achter "andere persoon". Wie via de
   // link binnenkwam staat achteraan en gedimd: die duidt normaal zelf aan. Aantikken kan
   // nog altijd, want er loopt wel eens iets mis en dan moet jij kunnen bijspringen.
-  const heeftZelfAangemeld = participants.some((p) => p.self_joined)
   const gesorteerd = [...participants].sort((a, b) => Number(!!a.self_joined) - Number(!!b.self_joined))
   const eersteViaLink = gesorteerd.findIndex((p) => p.self_joined)
   return (
-    <div style={{ marginTop: 8, marginLeft: 25, padding: 10, borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontSize: 15.5, fontWeight: 800, color: vol ? "#1f8a4c" : "#4a6e73" }}>{vol ? L.assignFullTap : L.assignToWhom}</span>
+    <div style={{ marginTop: 8, marginLeft: 25, padding: "9px 10px", borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+        <span style={{ fontSize: 14.5, fontWeight: 800, color: vol ? "#1f8a4c" : "#4a6e73" }}>{vol ? L.assignFullTap : L.assignToWhom}</span>
         <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16.5, color: "#8aa3a6", fontWeight: 800 }}>✕</button>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
         {gesorteerd.map((p, i) => {
           const klaar = confirmedFn(p.id)
           const viaQr = !!p.self_joined
+          const nogVrij = vrijFn(p)
           const mij = qtyFn(p.id)   // hoeveel dit item al op zijn naam staat
           // Wie zelf aanduidde of via de link binnenkwam, verdient een vraag vóór je het
           // voor hem invult. Een nog vrije plaats óók, maar één keer volstaat — daarna weet
@@ -7642,20 +7652,30 @@ function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confir
               )}
               {/* Deze knop voegt toe, altijd één stuk per tik. Weghalen gebeurt met de min
                   op de chips erboven: dat kan per stuk, en het is de handeling die je
-                  níét per ongeluk wil doen. */}
+                  níét per ongeluk wil doen.
+                  Drie soorten in één rij, elk met een eigen rand: vol geel = staat al op
+                  zijn naam, turkoois = jij duidt voor hem aan, stippellijn met gsm = hij
+                  duidt zelf aan. Een nog naamloze plaats krijgt een lichte rand en schuine
+                  letters — anders lijkt ze op de stippellijn van de QR-gasten. */}
               <button disabled={vol} onClick={() => onAssign(p.id, reden)} style={{
-                fontSize: 16, fontWeight: viaQr ? 700 : 800, borderRadius: 10, padding: "7px 11px",
+                display: "inline-flex", alignItems: "center", gap: 5,
+                fontSize: 15, fontWeight: viaQr ? 700 : 800, borderRadius: 9, padding: "7px 10px",
                 cursor: vol ? "not-allowed" : "pointer",
-                border: mij > 0 ? "1px solid rgba(196,152,32,0.5)" : viaQr ? "1.5px solid rgba(18,58,66,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
-                background: mij > 0 ? "linear-gradient(135deg,#f3d27c,#ecc564)" : viaQr ? "#fff" : "rgba(20,153,176,0.06)",
-                color: mij > 0 ? "#5a4a1a" : viaQr ? "#8aa3a6" : "#123a42",
-                opacity: vol ? 0.45 : mij > 0 ? 1 : klaar ? 0.75 : viaQr ? 0.8 : 1,
-              }}>{mij <= 0 && viaQr && "📱 "}{naamVan(p)}{mij > 0 ? ` ×${mij}` : klaar ? " ✓" : ""}</button>
+                fontStyle: mij <= 0 && !viaQr && nogVrij ? "italic" : "normal",
+                border: mij > 0 ? "1px solid rgba(196,152,32,0.5)"
+                  : viaQr ? "1.5px dashed rgba(18,58,66,0.3)"
+                  : nogVrij ? "1.5px solid rgba(18,58,66,0.14)"
+                  : "1.5px solid rgba(20,153,176,0.45)",
+                background: mij > 0 ? "linear-gradient(135deg,#f3d27c,#ecc564)" : viaQr ? "transparent" : nogVrij ? "#fff" : "rgba(20,153,176,0.06)",
+                color: mij > 0 ? "#5a4a1a" : viaQr ? "#8aa3a6" : nogVrij ? "#6b8489" : "#123a42",
+                opacity: vol ? 0.45 : mij > 0 ? 1 : klaar ? 0.75 : viaQr ? 0.85 : 1,
+              }}>{mij <= 0 && viaQr && <GsmIcon />}{naamVan(p)}{mij > 0 ? ` ×${mij}` : klaar ? " ✓" : ""}</button>
             </span>
           )
         })}
       </div>
-      {heeftZelfAangemeld && <div style={{ fontSize: 15.5, color: "#0f7488", marginTop: 7, lineHeight: 1.45 }}>{L.qrJoinedLegend}</div>}
+      {/* De uitlegregel is weg: het gsm-teken staat nu op de pil zelf, en op een telefoon
+          is die regel puur verloren hoogte. */}
     </div>
   )
 }
@@ -7698,6 +7718,15 @@ function ClaimScreen(props: {
   const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
+  // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
+  // een volgend gezelschap krijg je ze opnieuw — dan zit er ook een ander gezelschap.
+  const uitlegSleutel = (soort: string) => `rundo_table_uitleg_${soort}_${meId ?? ""}`
+  const uitlegGezien = (soort: string) => {
+    try { return localStorage.getItem(uitlegSleutel(soort)) === "1" } catch { return false }
+  }
+  const markUitleg = (soort: string) => {
+    try { localStorage.setItem(uitlegSleutel(soort), "1") } catch { /* geen opslag beschikbaar */ }
+  }
   // De uitleg bij het invullen voor een nog vrije plaats hoeft maar één keer.
   const [disputeOpen, setDisputeOpen] = useState(false)
   const [disputeText, setDisputeText] = useState("")
@@ -7939,8 +7968,9 @@ function ClaimScreen(props: {
                                           ? () => setLedenOpen(`${it.id}:${p.id}`)
                                           : () => toggleShareClaim(it.id, p.id)
                                         if (explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(p.name), L.yes, doe); return }
-                                        if (viaLink) { askConfirm(L.assignToQrGuest(naamVan(p)), L.yes, doe); return }
-                                        askConfirm(L.assignForOther(naamVan(p)), L.yes, doe); return
+                                        if (viaLink) { askConfirm(L.assignToQrGuest(naamVan(p), it.name), L.assignQrYes, doe, { title: L.assignQrTitle(naamVan(p)) }); return }
+                                        if (uitlegGezien("ander")) { doe(); return }
+                                        askConfirm(L.assignOwnBody(naamVan(p)), L.assignOwnYes, () => { markUitleg("ander"); doe() }, { title: L.assignOwnTitle(naamVan(p)) }); return
                                       }
                                       // Staat er al iemand van deze plaats op? Dan haalt deze tik ze
                                       // er allemaal af en sluit het keuzeblokje — anders bleef er een
@@ -7950,12 +7980,13 @@ function ClaimScreen(props: {
                                       toggleShareClaim(it.id, p.id)
                                     }} style={{
                                       fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "5px 10px", cursor: "pointer",
-                                      border: on ? "none" : viaLink ? "1px solid rgba(18,58,66,0.12)" : "1.5px solid rgba(20,153,176,0.45)",
-                                      background: on ? (p.id === adminPid ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : viaLink ? "#fff" : "rgba(20,153,176,0.06)",
+                                      display: "inline-flex", alignItems: "center", gap: 5,
+                                      border: on ? "none" : viaLink ? "1.5px dashed rgba(18,58,66,0.3)" : "1.5px solid rgba(20,153,176,0.45)",
+                                      background: on ? (p.id === adminPid ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : viaLink ? "transparent" : "rgba(20,153,176,0.06)",
                                       color: on ? "#5a4a1a" : viaLink ? "#8aa3a6" : "#123a42",
                                       opacity: on ? 1 : viaLink ? 0.8 : 1,
                                     }}>
-                                {on ? "✓ " : ""}{viaLink && !on ? "📱 " : ""}{naamVan(p)}
+                                {on ? "✓ " : ""}{viaLink && !on && <GsmIcon />}{naamVan(p)}
                                 {/* Een plaats met meerdere personen telt voor meerdere delers. Zonder
                                     deze teller zie je niet of er nul, één of allebei meedoen — en dan
                                     klopt het totaal in de badge wel, maar weet je niet waarvandaan. */}
@@ -8057,10 +8088,22 @@ function ClaimScreen(props: {
                             const wie = participants.find((x) => x.id === pid)
                             const naam = wie ? naamVan(wie) : ""
                             const doe = () => { setClaim(it.id, pid, myQty(it.id, pid) + 1); setAssignItem(null) }
+                            // Wie zelf aanduidt, krijgt telkens een vraag: elke tik van jou kan
+                            // dubbel komen te staan met wat hij op zijn eigen gsm doet. Bij je
+                            // eigen gasten is invullen net de bedoeling — daar volstaat één keer
+                            // uitleg, en daarna zou de vraag alleen nog in de weg zitten.
                             if (reden === "bevestigd") { askConfirm(L.notSelectedAdd(naam), L.yes, doe); return }
-                            if (reden === "qr") { askConfirm(L.assignToQrGuest(naam), L.yes, doe); return }
-                            if (reden === "vrij") { askConfirm(L.assignToFreeSpot(naam), L.yes, doe); return }
-                            if (reden === "ander") { askConfirm(L.assignForOther(naam), L.yes, doe); return }
+                            if (reden === "qr") { askConfirm(L.assignToQrGuest(naam, it.name), L.assignQrYes, doe, { title: L.assignQrTitle(naam) }); return }
+                            if (reden === "vrij") {
+                              if (uitlegGezien("vrij")) { doe(); return }
+                              askConfirm(L.assignToFreeSpot(naam), L.yes, () => { markUitleg("vrij"); doe() })
+                              return
+                            }
+                            if (reden === "ander") {
+                              if (uitlegGezien("ander")) { doe(); return }
+                              askConfirm(L.assignOwnBody(naam), L.assignOwnYes, () => { markUitleg("ander"); doe() }, { title: L.assignOwnTitle(naam) })
+                              return
+                            }
                             doe()
                           }}
                           onClose={() => setAssignItem(null)} />
@@ -8601,6 +8644,18 @@ function ClaimScreen(props: {
         </div>
       )}
     </div>
+  )
+}
+
+// Een gsm-silhouet blijft op 12px leesbaar waar een QR-vierkantje een vlekje wordt.
+// Het staat op de knop zelf, dus de uitlegregel onder de lijst kan weg.
+function GsmIcon({ size = 12, kleur = "currentColor" }: { size?: number; kleur?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={kleur} strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0 }} aria-hidden="true">
+      <rect x="7" y="2" width="10" height="20" rx="2.5" />
+      <path d="M11 18.5h2" />
+    </svg>
   )
 }
 
