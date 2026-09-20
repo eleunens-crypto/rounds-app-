@@ -595,6 +595,14 @@ const STRINGS = {
     clearNameTitle: "Naam wissen?",
     clearNameYes: "Wissen",
     clearNameConfirm: (naam: string) => `${naam} wordt weer een vrije plaats. Wat er voor deze persoon al aangeduid was, gaat mee weg.`,
+    // Wissen en verwijderen zijn niet hetzelfde, en het verschil zit in de teller:
+    // wissen laat de plaats open staan, verwijderen haalt ze van tafel.
+    removeGuestBtn: "🗑️ Gast van tafel halen",
+    removeGuestTitle: "Gast van tafel halen?",
+    removeGuestYes: "Verwijderen",
+    confirmRemoveGuest: (naam: string, van: number, naar: number) => `${naam} verdwijnt van de tafel en het aantal personen gaat van ${van} naar ${naar}. Wat voor deze persoon aangeduid was, gaat mee weg.`,
+    guestRemoved: (naam: string) => `${naam} staat niet meer aan tafel.`,
+    seatAsks: (n: number) => n === 1 ? "1 gast vraagt een plaats — zie bovenaan" : `${n} gasten vragen een plaats — zie bovenaan`,
     seatsCapped: (n: number) => n === 1
       ? "Er is nog één vrije plaats, dus dit kan alleen voor één persoon. Verhoog eerst het aantal personen bovenaan."
       : `Er zijn nog ${n} plaatsen vrij op deze plek. Verhoog eerst het aantal personen bovenaan als je er meer nodig hebt.`,
@@ -1308,6 +1316,12 @@ const STRINGS = {
     clearNameTitle: "Effacer le nom ?",
     clearNameYes: "Effacer",
     clearNameConfirm: (naam: string) => `${naam} redevient une place libre. Ce qui était déjà coché pour cette personne disparaît aussi.`,
+    removeGuestBtn: "🗑️ Retirer de la table",
+    removeGuestTitle: "Retirer cet invité ?",
+    removeGuestYes: "Retirer",
+    confirmRemoveGuest: (naam: string, van: number, naar: number) => `${naam} quitte la table et le nombre de personnes passe de ${van} à ${naar}. Ce qui était coché pour cette personne disparaît aussi.`,
+    guestRemoved: (naam: string) => `${naam} n'est plus à table.`,
+    seatAsks: (n: number) => n === 1 ? "1 invité demande une place — voir en haut" : `${n} invités demandent une place — voir en haut`,
     seatsCapped: (n: number) => n === 1
       ? "Il ne reste qu’une place libre, donc ceci ne vaut que pour une personne. Augmente d’abord le nombre de personnes en haut."
       : `Il reste ${n} places disponibles ici. Augmente d’abord le nombre de personnes en haut s’il t’en faut plus.`,
@@ -2960,6 +2974,25 @@ export default function RundoTable() {
       await loadAll(group.id)
       setToast(L.spotReleased)
     }, { danger: true })
+  }
+
+  // Vrijgeven laat de plaats bestaan; verwijderen haalt ze weg. Dat tweede heeft de
+  // beheerder nodig voor wie per ongeluk scande, dubbel binnenkwam of toch niet mee-eet:
+  // anders blijft er een plaats open staan waar niemand ooit nog op komt.
+  const removeSpot = async (id: string) => {
+    if (!group) return
+    if (group.finalized) { setToast(isAdmin ? L.finalizedReopenFirst : L.finalizedAskAdmin); return }
+    const p = participants.find((x) => x.id === id)
+    if (!p || p.id === meId) return
+    const zit = Math.max(1, p.seats ?? 1)
+    askConfirm(L.confirmRemoveGuest(p.name, totalPersons, Math.max(0, totalPersons - zit)), L.removeGuestYes, async () => {
+      await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", id)
+      await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", id)
+      await supabase.from("table_participants").delete().eq("id", id)
+      setFillingSpots((cur) => cur.filter((x) => x !== id))
+      await loadAll(group.id)
+      setToast(L.guestRemoved(p.name))
+    }, { title: L.removeGuestTitle, danger: true })
   }
 
   // Zet het aantal gasten in één beweging. Omhoog = extra gasten aanmaken.
@@ -5389,6 +5422,15 @@ export default function RundoTable() {
                         </span>
                       ))}
                     </span>
+                    {/* Een gast die scande terwijl alles bezet was, vraagt een plaats. Dat
+                        venster staat bovenaan het scherm, maar dat is weggescrold tegen dat
+                        je hier kijkt — en hier is precies waar je je afvraagt waarom het
+                        niet klopt. */}
+                    {seatRequests.length > 0 && (
+                      <span style={{ display: "block", marginTop: 9, fontSize: 13.5, fontWeight: 800, color: "#8a4514", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 9, padding: "7px 9px" }}>
+                        {L.seatAsks(seatRequests.length)}
+                      </span>
+                    )}
                   </button>
 
                   {showNamesBlock && (
@@ -6411,6 +6453,12 @@ export default function RundoTable() {
                   }, { title: L.clearNameTitle, danger: true })
                 }}
                   style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#c0392b" }}>{L.clearNameBtn}</button>
+              )}
+              {/* Twee verschillende dingen, dus twee knoppen: de naam wissen houdt de plaats
+                  open voor iemand anders, van tafel halen laat het gezelschap krimpen. */}
+              {guestTarget && doelNu && doelNu.id !== meId && (
+                <button onClick={() => { setShowGuestModal(false); setGuestTarget(null); void removeSpot(doelNu.id) }}
+                  style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#c0392b" }}>{L.removeGuestBtn}</button>
               )}
               <button onClick={() => { setShowGuestModal(false); setGuestTarget(null) }} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#8aa3a6" }}>{L.cancel}</button>
             </div>
