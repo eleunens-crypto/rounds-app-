@@ -816,6 +816,8 @@ const T = {
     chipDays: (n: number) => `nog ${n} ${n === 1 ? "dag" : "dagen"}`,
     filterSaved: "bewaard",
     statusOpen: "🟡 open",
+    statusOpenPlain: "open",
+    statusKept: "bewaard",
     statusClosed: "✓ afgesloten",
     filterAll: "Alle",
     moreGroups: (n: number) => `meer groepen (${n}) ▾`,
@@ -847,6 +849,11 @@ const T = {
     closeSureYes: "Ja, verwijderen",
     closeGoneSub: "Dit groepje wordt niet bewaard. Deel de afrekening nu als je ze wil houden.",
     thanksClosedGone: "🍻 Bedankt en tot de volgende! Dit groepje is verwijderd.",
+    byeTitle: "Tot de volgende!",
+    byeDayPlain: "Nog een fijne dag.",
+    byeEvePlain: "Nog een fijne avond.",
+    byeClose: "Sluiten",
+    dropRoundsWarn: (n: number) => `Er ${n === 1 ? "staat" : "staan"} nog ${n} ${n === 1 ? "rondje" : "rondjes"} in dit groepje. Die ${n === 1 ? "verdwijnt" : "verdwijnen"} mee, met alle drankjes en bedragen erin. Dit kan niet ongedaan gemaakt worden.`,
     closeWithoutSplit: "Afsluiten zonder splitten",
     closeNameHint: "⚠️ nodig om te bewaren",
     backToChoice: "‹ Terug naar het keuzescherm",
@@ -861,7 +868,17 @@ const T = {
     potLeft: "nog",
     eveClosedTitle: "🍻 Alles verrekend ✓",
     eveClosedSub: "Je groepje staat 7 dagen bij Opgeslagen groepen. Wil je het langer houden, deel de afrekening dan nu.",
+    eveClosedTitlePlain: "🍻 Groepje afgesloten",
+    eveClosedSubPlain: "Je rondjes staan 7 dagen bij Opgeslagen groepen. Wil je ze langer houden, deel ze dan nu.",
+    shareRoundsBtn: "📤 Rondjes delen",
+    closeSureYesClose: "Ja, afsluiten",
     shareBillBtn: "📤 Afrekening delen",
+    shareEach: "Ieder zijn deel",
+    shareTransfers: "Over te schrijven",
+    shareRoundsTitle: "De rondjes",
+    sharePersons: (n: number) => `${n} ${n === 1 ? "persoon" : "personen"}`,
+    sharePotLine: (inleg: string, uit: string, over: string) => `🪙 Pot ${inleg} in · ${uit} uit · *${over} over*`,
+    shareKeepUntil: (datum: string) => `📅 Groepje en afrekening herbekijken tot ${datum}`,
     shareRoundsHead: (n: number) => `De ${n} ${n === 1 ? "ronde" : "rondjes"}:`,
     shareRoundLabel: (n: number) => `Rondje ${n}`,
     shareFetchedBy: (naam: string) => `${naam} haalde`,
@@ -1277,6 +1294,7 @@ const T = {
     youNoteSelf2: "…jij betaalt of schiet voor",
     youNote1: "jij tikt alle drankjes aan",
     youNote2: "handig barlijstje",
+    youNote3: "eerlijk splitten (optioneel)",
     modeSnelTitle: "Zelf noteren",
     modeNaamShort: "Ik neem zelf op",
     showToFriend: "📱 QR-code van de groep",
@@ -1376,6 +1394,7 @@ const T = {
     barEditNamesInfo: "Sommige drankjes staan al op iemands naam. Haal je er zo een weg, dan vraagt de app bij wie.",
     lockedNamed: (n: number) => `${n} op naam`,
     barEditEmpty: "Er moet minstens één drankje in het rondje blijven.",
+    emptyRoundDelete: "Er blijft geen enkel drankje over in dit rondje. Het rondje wordt dan verwijderd, met alles wat erin zat.",
     newRoundFreshSub: "begin met een lege bestelling",
     newRoundSame: "Zelfde rondje opnieuw",
     newRoundSameSub: "exact hetzelfde, of eerst aanpassen",
@@ -1842,6 +1861,8 @@ const T = {
     chipDays: (n: number) => `encore ${n} jour${n === 1 ? "" : "s"}`,
     filterSaved: "gardés",
     statusOpen: "🟡 ouvert",
+    statusOpenPlain: "ouvert",
+    statusKept: "enregistré",
     statusClosed: "✓ clôturé",
     filterAll: "Tous",
     moreGroups: (n: number) => `plus de groupes (${n}) ▾`,
@@ -1866,6 +1887,11 @@ const T = {
     closeSureYes: "Oui, supprimer",
     closeGoneSub: "Ce groupe ne sera pas enregistré. Partage le décompte maintenant si tu veux le garder.",
     thanksClosedGone: "🍻 Merci et à la prochaine\u00a0! Ce groupe a été supprimé.",
+    byeTitle: "À la prochaine\u00a0!",
+    byeDayPlain: "Bonne journée encore.",
+    byeEvePlain: "Bonne soirée encore.",
+    byeClose: "Fermer",
+    dropRoundsWarn: (n: number) => `Il reste ${n} tournée${n === 1 ? "" : "s"} dans ce groupe. Elle${n === 1 ? "" : "s"} disparaîtra${n === 1 ? "" : "ient"} aussi, avec toutes les boissons et les montants. C'est irréversible.`,
     closeWithoutSplit: "Clôturer sans partager",
     closeNameHint: "⚠️ nécessaire pour enregistrer",
     backToChoice: "‹ Retour à l'écran de choix",
@@ -1880,7 +1906,17 @@ const T = {
     potLeft: "reste",
     eveClosedTitle: "🍻 Tout est réglé ✓",
     eveClosedSub: "Ton groupe reste 7 jours dans Groupes enregistrés. Tu veux le garder plus longtemps ? Partage le décompte maintenant.",
+    eveClosedTitlePlain: "🍻 Groupe clôturé",
+    eveClosedSubPlain: "Tes tournées restent 7 jours dans Groupes enregistrés. Tu veux les garder plus longtemps\u00a0? Partage-les maintenant.",
+    shareRoundsBtn: "📤 Partager les tournées",
+    closeSureYesClose: "Oui, clôturer",
     shareBillBtn: "📤 Partager le décompte",
+    shareEach: "La part de chacun",
+    shareTransfers: "À rembourser",
+    shareRoundsTitle: "Les tournées",
+    sharePersons: (n: number) => `${n} personne${n === 1 ? "" : "s"}`,
+    sharePotLine: (inleg: string, uit: string, over: string) => `🪙 Cagnotte ${inleg} dedans · ${uit} dépensé · *${over} restant*`,
+    shareKeepUntil: (datum: string) => `📅 Revoir le groupe et le décompte jusqu'au ${datum}`,
     shareRoundsHead: (n: number) => `Les ${n} ${n === 1 ? "tournée" : "tournées"} :`,
     shareRoundLabel: (n: number) => `Tournée ${n}`,
     shareFetchedBy: (naam: string) => `${naam} a payé`,
@@ -2293,6 +2329,7 @@ const T = {
     youNoteSelf2: "…tu paies ou tu avances",
     youNote1: "tu coches toutes les boissons",
     youNote2: "liste pratique pour le bar",
+    youNote3: "partage équitable (optionnel)",
     modeSnelTitle: "Je note moi-m\u00eame",
     modeNaamShort: "Je note pour tous",
     showToFriend: "📱 QR-code du groupe",
@@ -2392,6 +2429,7 @@ const T = {
     barEditNamesInfo: "Certaines boissons sont d\u00e9j\u00e0 attribu\u00e9es. Si tu en retires une, l\u2019app te demande chez qui.",
     lockedNamed: (n: number) => `${n} attribu\u00e9e${n === 1 ? "" : "s"}`,
     barEditEmpty: "Il doit rester au moins une boisson dans la tourn\u00e9e.",
+    emptyRoundDelete: "Il ne reste plus aucune boisson dans cette tournée. La tournée sera supprimée, avec tout ce qu'elle contenait.",
     newRoundFreshSub: "commencer avec une commande vide",
     newRoundSame: "M\u00eame tourn\u00e9e",
     newRoundSameSub: "exactement pareil, ou ajust\u00e9e d\u2019abord",
@@ -2741,6 +2779,9 @@ export default function PartyTest() {
   const [sluitBewaar, setSluitBewaar] = useState(true)
   const [sluitControle, setSluitControle] = useState(true)
   const [nietBewaren, setNietBewaren] = useState(false)
+  // Het afscheidsscherm: een groet en de verwijzing naar Resto, ná het afrekenen of het
+  // verlaten van de app. Houdt vast wat er moet gebeuren zodra je het sluit.
+  const [afscheid, setAfscheid] = useState<null | (() => void)>(null)
   // Hoe hoog het turkooizen kader onderaan het rondjesoverzicht is. "Nieuw rondje"
   // klikt daar net boven vast zodra de lijst langer wordt dan het scherm; meten in
   // plaats van gokken, want het kader verschilt per taal en per toestand.
@@ -3046,8 +3087,21 @@ export default function PartyTest() {
     // rondje wél als betaald geldt. Een bedrag wissen mag wél — dan valt het rondje
     // terug op "geen bedrag ingevuld", wat een geldige toestand is.
     if (editDraft.usePot && (editDraft.amount || 0) <= 0.005) { setNotice(L.needAmountOrCancel); return }
-    // Zelf noteren: net als in het barlijstje moet er minstens één drankje overblijven.
-    if (!settle && Object.values(editDraft.drinks).reduce((a, b) => a + (b || 0), 0) <= 0) { setNotice(L.barEditEmpty); return }
+    // Alles weghalen mag: dan is er geen rondje meer, en dat zeggen we ook zo. Vroeger
+    // hield een melding je tegen bij het laatste drankje, en zat je vast.
+    if (!settle && Object.values(editDraft.drinks).reduce((a, b) => a + (b || 0), 0) <= 0) {
+      setConfirmDlg({
+        variant: "danger", msg: L.emptyRoundDelete, yes: L.closeSureYes, no: L.cancel,
+        onYes: async () => {
+          setConfirmDlg(null); cancelEditRound()
+          if (!groupId) return
+          const { error } = await supabase.from("party_rounds").delete().eq("id", r.id)
+          if (error) { setNotice(L.cancelRoundFailed); return }
+          await loadParty(groupId)
+        },
+      })
+      return
+    }
     const idx = rounds.indexOf(r)
     const huidig: Record<string, number> = {}
     drinksOf(r).forEach(({ d, n }) => { huidig[d.id] = n })
@@ -6178,7 +6232,15 @@ export default function PartyTest() {
     // het oranje bezig-blok ("verder waar je gebleven was") én onderaan bij afgesloten.
     setSavedGroups((gs) => gs.map((g) => (g.id === groupId ? { ...g, finalized: true, ...(terugNaarZelf ? { settle: false, uitgebreid: true } : {}) } : g)))
     setSluitStap(null)
-    setNietBewaren(!bewaren)
+    setNietBewaren(false)
+    if (!bewaren) {
+      // Niet bewaren betekent weg. Dan valt er ook niets meer te delen — het groepje
+      // bestaat niet meer — dus gaat het rechtstreeks naar het afscheidsscherm.
+      try { await wisGroepNaSluit(groupId) } catch { /* al weg */ }
+      setNotice(L.thanksClosedGone)
+      setAfscheid(() => goSiteHome)
+      return
+    }
     setAfsluitKaart(true)
   }
   // De eindafrekening als deelbaar tekstje: per persoon het eerlijke bedrag, plus wie
@@ -6186,34 +6248,63 @@ export default function PartyTest() {
   // Wat je deelt, is ook wat je overhoudt: het groepje zelf verdwijnt na zeven dagen.
   // Daarom staat het rondjesoverzicht er nu bij — anders blijft er van een lange avond
   // niets over dan "Lisa → Wim: €6,25", en weet niemand later nog waar het over ging.
-  const deelAfrekening = async () => {
-    const regels: string[] = [`🍻 ${groupName.trim() || L.autoName()}`]
-    people.forEach((pp) => { const b = consumption(pp.id) + cupOwn(pp.id) + cardLossPer; regels.push(`• ${pp.name}: ${euro(Math.round(b * 100) / 100)}`) })
-    if (settlement.tx.length > 0) {
-      regels.push("")
-      settlement.tx.forEach((t) => regels.push(`${t.from} → ${t.to}: ${euro(t.amount)}`))
+  // De afrekening als deelbaar tekstje, in WhatsApp-opmaak: sterretjes worden daar vet.
+  // Alles wat je later nog eens wil nakijken zit erin — wat ieder betaalt, wie aan wie
+  // overschrijft, wie welk rondje voorschoot en wat erin zat — plus tot wanneer het
+  // groepje online blijft staan en waar.
+  const deelAfrekening = async (): Promise<boolean> => {
+    const maand = (d: Date) => { try { return d.toLocaleDateString(lang === "fr" ? "fr-BE" : "nl-BE", { day: "numeric", month: "long" }) } catch { return `${d.getDate()}/${d.getMonth() + 1}` } }
+    const tot = hasSettled
+      ? people.reduce((a0, pp) => a0 + consumption(pp.id) + cupOwn(pp.id) + cardLossPer, 0)
+      : rounds.reduce((a0, r) => a0 + (r.amount || 0), 0)
+    const regels: string[] = [`🍻 *${groupName.trim() || L.autoName()}*`,
+      `${maand(new Date())} · ${L.sharePersons(people.length)} · ${euro(Math.round(tot * 100) / 100)}`]
+
+    // Werd er niet gesplit, dan staat er niets te verrekenen en zouden "ieder zijn deel"
+    // en de overschrijvingen allemaal op nul uitkomen. Dan delen we gewoon de rondjes.
+    if (hasSettled) {
+      regels.push("", `*${L.shareEach}*`)
+      regels.push(people.map((pp) => `${pp.name} ${euro(Math.round((consumption(pp.id) + cupOwn(pp.id) + cardLossPer) * 100) / 100)}`).join(" · "))
+      if (settlement.tx.length > 0) {
+        regels.push("", `*${L.shareTransfers}*`)
+        settlement.tx.forEach((t) => regels.push(`${t.from} → ${t.to} ${euro(t.amount)}`))
+      }
     }
-    // De rondjes, in volgorde: wie haalde, wat het kostte, en wat erin zat. Wie niets
-    // aanduidde krijgt geen lege regel — dan staat er alleen het rondje.
+
+    // Per rondje: het bedrag, wie het voorschoot (of de pot), en wat erin zat. De betaler
+    // komt uit r.payers — "wie het rondje startte" staat in zelf noteren meestal leeg,
+    // waardoor die regel vroeger gewoon wegviel.
+    const cijfers = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
     const echte = rounds.filter((r) => (r.amount || 0) > 0.005 || drinks.some((d) => drinkTotalRound(r, d.id) > 0))
     if (echte.length > 0) {
-      regels.push(""); regels.push(L.shareRoundsHead(echte.length))
+      regels.push("", `*${L.shareRoundsTitle}*`)
       echte.forEach((r, i) => {
-        const haler = people.find((pp) => pp.id === r.startedBy)?.name
-        const kop = [`${L.shareRoundLabel(r.seq || i + 1)}`, haler ? L.shareFetchedBy(haler) : null, euro(Math.round((r.amount || 0) * 100) / 100)]
-          .filter(Boolean).join(" · ")
-        regels.push(kop)
-        const inhoud = drinks
-          .map((d) => ({ naam: d.name, n: drinkTotalRound(r, d.id) }))
-          .filter((x) => x.n > 0)
+        const nr = r.seq || i + 1
+        const wie = Object.keys(r.payers || {})
+          .map((pid) => people.find((pp) => pp.id === pid)?.name)
+          .filter(Boolean) as string[]
+        if ((r.potPart || 0) > 0.005) wie.unshift(`🪙 ${L.potWord}`)
+        const delen = [cijfers[nr - 1] ?? `${nr}.`, euro(Math.round((r.amount || 0) * 100) / 100)]
+        if (wie.length > 0) delen.push(wie.join(" + "))
+        const inhoud = drinks.map((d) => ({ naam: d.name, n: drinkTotalRound(r, d.id) })).filter((x) => x.n > 0)
           .map((x) => `${x.n}× ${x.naam}`)
-        if (inhoud.length > 0) regels.push(`   ${inhoud.join(", ")}`)
+        if (inhoud.length > 0) delen.push(inhoud.join(", "))
+        regels.push(delen.join(" · "))
       })
     }
-    regels.push(""); regels.push("— Rundo")
+
+    if (potContribTotal > 0.005) {
+      regels.push("", L.sharePotLine(euro(potContribTotal), euro(potSpent), euro(potRemaining)))
+    }
+
+    // Tot wanneer het online blijft staan, en waar. Zonder die zin is het gedeelde
+    // tekstje alles wat er van de avond overblijft.
+    regels.push("", L.shareKeepUntil(maand(new Date(Date.now() + AUTO_WIS))), "👉 https://www.rundo.be")
     const tekst = regels.join("\n")
-    try { if (navigator.share) { await navigator.share({ text: tekst }); return } } catch { return }
-    try { await navigator.clipboard.writeText(tekst); setNotice(L.copiedNote) } catch { /* niets */ }
+    // Weggetikt deelvenster geeft false terug: dan blijft dit scherm staan en kan je
+    // het opnieuw proberen, in plaats van meteen bij het afscheid te belanden.
+    try { if (navigator.share) { await navigator.share({ text: tekst }); return true } } catch { return false }
+    try { await navigator.clipboard.writeText(tekst); setNotice(L.copiedNote); return true } catch { return false }
   }
   // De eindsprong van uitgebreid: betalers registreren en naar de eindbalans, in de
   // eigen amber-stijl (de modus blijft uitgebreid).
@@ -7823,21 +7914,39 @@ export default function PartyTest() {
       {afsluitKaart && (
         <div style={{ ...S.overlay, zIndex: 75 }}>
           <div style={S.sheet}>
-            <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{L.eveClosedTitle}</h3>
-            <div style={{ fontSize: 15, color: nietBewaren ? "#c0554a" : "#6b7484", marginBottom: 14, lineHeight: 1.5, fontWeight: nietBewaren ? 700 : 400 }}>{nietBewaren ? L.closeGoneSub : L.eveClosedSub}</div>
+            {/* Sloot je af zonder te splitten, dan is er niets verrekend en klopt de kop
+                "Alles verrekend" niet. Dan gaat het gewoon over de rondjes die je bewaart. */}
+            <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 4 }}>{hasSettled ? L.eveClosedTitle : L.eveClosedTitlePlain}</h3>
+            <div style={{ fontSize: 15, color: "#6b7484", marginBottom: 14, lineHeight: 1.5 }}>{hasSettled ? L.eveClosedSub : L.eveClosedSubPlain}</div>
+            {/* Alleen delen en klaar. De verwijzing naar Resto stond hier tussen, terwijl
+                je op dit scherm nog met de rekening bezig bent; die komt nu op het
+                afscheidsscherm hierna. */}
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1, fontSize: 15.5, fontWeight: 800 }} onClick={() => { void deelAfrekening() }}>{L.shareBillBtn}</button>
-              <button style={{ ...S.btnP, flex: 1, fontSize: 15.5, fontWeight: 800 }} onClick={async () => {
-                // Pas hier verdwijnt het groepje echt: zo kon de afrekening hierboven
-                // nog gedeeld worden nadat je koos om niet te bewaren.
-                const weg = nietBewaren && !!groupId
-                const gid = groupId
-                setAfsluitKaart(false); setNietBewaren(false)
-                if (weg && gid) { try { await wisGroepNaSluit(gid) } catch { /* al weg */ } }
-                setNotice(weg ? L.thanksClosedGone : L.thanksClosed); goSiteHome()
+              <button style={{ ...S.btn, flex: 1, fontSize: 15.5, fontWeight: 800 }}
+                onClick={async () => { if (await deelAfrekening()) { setAfsluitKaart(false); setAfscheid(() => goSiteHome) } }}>{hasSettled ? L.shareBillBtn : L.shareRoundsBtn}</button>
+              <button style={{ ...S.btnP, flex: 1, fontSize: 15.5, fontWeight: 800 }} onClick={() => {
+                setAfsluitKaart(false); setNotice(L.thanksClosed); setAfscheid(() => goSiteHome)
               }}>{L.ready}</button>
             </div>
-              <div style={{ marginTop: 12 }}>{renderRestoVerwijzing(false)}</div>
+          </div>
+        </div>
+      )}
+      {/* Het afscheidsscherm. Komt na het afrekenen (delen of klaar), na het afsluiten
+          van een groepje, en na het verlaten van de app — bewaard of niet. Hier staat de
+          verwijzing naar Resto wél op haar plaats: je bent klaar, niet bezig. */}
+      {afscheid !== null && (
+        <div style={{ ...S.overlay, zIndex: 78 }}>
+          <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 36, lineHeight: 1 }}>🍻</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#1d2942", marginTop: 7 }}>{L.byeTitle}</div>
+              <div style={{ fontSize: 15.5, color: "#6b7484", marginTop: 5, lineHeight: 1.45 }}>
+                {new Date().getHours() >= 18 ? L.byeEvePlain : L.byeDayPlain}
+              </div>
+            </div>
+            {renderRestoVerwijzing(false)}
+            <button style={{ ...S.btn, width: "100%", marginTop: 13, fontSize: 16, fontWeight: 800 }}
+              onClick={() => { const doe = afscheid; setAfscheid(null); setRestoInfo(false); doe?.() }}>{L.byeClose}</button>
           </div>
         </div>
       )}
@@ -7916,7 +8025,9 @@ export default function PartyTest() {
         const bewaarBarEdit = async () => {
           const r = rounds[bekekenIdx]
           if (!barEdit || !r || !groupId || barEditBezig) return
-          if (Object.values(barEdit).reduce((a, b) => a + (b || 0), 0) <= 0) { setNotice(L.barEditEmpty); return }
+          // Leeg gemaakt? Dan is dit geen aanpassing meer maar een annulering, en die
+          // vraag staat hier al — inline, want een gewoon venster valt achter dit scherm.
+          if (Object.values(barEdit).reduce((a, b) => a + (b || 0), 0) <= 0) { setBarAnnuleerVraag(true); return }
           setBarEditBezig(true)
           try {
             // Eerst wat je bewust bij iemand weghaalde; de rest van de verschillen komt
@@ -7971,7 +8082,9 @@ export default function PartyTest() {
         // De vraag staat in het barlijstje zelf: een gewoon venster viel erachter, en dan
         // leek de knop niets te doen.
         const annuleerNetBesteld = async () => {
-          const laatste = rounds[rounds.length - 1]
+          // Het rondje dat je bekijkt, niet blind het laatste: uit het rondjesoverzicht
+          // kan je hier ook met een ouder rondje binnenkomen.
+          const laatste = rounds[bekekenIdx] ?? rounds[rounds.length - 1]
           if (!laatste || !groupId) return
           const { error } = await supabase.from("party_rounds").delete().eq("id", laatste.id)
           if (error) { setBarAnnuleerVraag(false); setNotice(L.cancelRoundFailed); return }
@@ -8294,8 +8407,10 @@ export default function PartyTest() {
                               <span style={{ display: "block", fontSize: 13.5, color: "#6b7484", fontWeight: 600, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inhoud}</span>
                             )}
                           </span>
-                          <span style={{ flexShrink: 0, width: 32, height: 32, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 15, fontWeight: 800, color: "#4a5567", background: "#f1f3f7" }}>{open ? "▴" : "▾"}</span>
+                          {/* Groter raakvlak: het pijltje en de knop eronder zaten zo dicht bij
+                              elkaar dat je er met een duim gemakkelijk naast tikte. */}
+                          <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 20, fontWeight: 800, color: "#4a5567", background: "#f1f3f7" }}>{open ? "▴" : "▾"}</span>
                         </div>
                         {open && (
                           <div style={{ marginTop: 6 }}>
@@ -8310,7 +8425,9 @@ export default function PartyTest() {
                         {/* Eén knop: naar het barlijstje van dit rondje, waar je nog kan
                             aanpassen en dan bestelt. */}
                         <button onClick={() => { if (!herhaalBezig) { sluit(); openHerhaal(i) } }} disabled={herhaalBezig}
-                          style={{ width: "100%", marginTop: 9, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit", border: `1.5px solid ${RAND}`, borderRadius: 11, padding: "11px 8px",
+                          // Niet over de volle breedte: zo eindigt de knop vóór de pijltjeskolom
+                          // en kan je er niet meer naast tikken.
+                          style={{ width: "calc(100% - 48px)", boxSizing: "border-box", marginTop: 9, cursor: herhaalBezig ? "default" : "pointer", fontFamily: "inherit", border: `1.5px solid ${RAND}`, borderRadius: 11, padding: "11px 8px",
                             background: "#fff", color: RAND, fontSize: 15.5, fontWeight: 800, opacity: herhaalBezig ? 0.5 : 1 }}>
                           {L.repeatOrderAdjustable}
                         </button>
@@ -9438,10 +9555,10 @@ export default function PartyTest() {
             </>)}
             {sluitStap === "weg" && (<>
               <div style={{ fontSize: 20, fontWeight: 800, color: "#c0554a" }}>⚠️ {L.closeSureTitle}</div>
-              <div style={{ fontSize: 15.5, color: "#4a5567", lineHeight: 1.5, marginTop: 7 }}>{L.closeSureBody}</div>
+              <div style={{ fontSize: 15.5, color: "#4a5567", lineHeight: 1.5, marginTop: 7 }}>{rounds.length > 0 ? L.dropRoundsWarn(rounds.length) : L.closeSureBody}</div>
               <button style={{ width: "100%", marginTop: 14, padding: "13px 6px", borderRadius: 13, fontSize: 16.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
                 background: "linear-gradient(135deg,#d9705f,#c0554a)", color: "#fff", border: "none", boxShadow: "0 5px 14px -6px rgba(192,85,74,0.7)" }}
-                onClick={() => { void sluitAvondAf(false, sluitControle) }}>{L.closeSureYes}</button>
+                onClick={() => { void sluitAvondAf(false, sluitControle) }}>{L.closeSureYesClose}</button>
               <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15.5, fontWeight: 800 }}
                 onClick={() => setSluitStap("keuze")}>‹ {L.back}</button>
             </>)}
@@ -9463,7 +9580,7 @@ export default function PartyTest() {
           background: aan ? AMBV : "#fff", border: aan ? `2px solid ${AMB}` : "1px solid rgba(29,41,66,0.14)",
         })
         const sluitVenster = () => { setVerlaatNaam(null); setVerlaatVeld(""); setVerlaatStap("keuze") }
-        const gaWeg = () => { const doe = verlaatNaam; sluitVenster(); doe?.() }
+        const gaWeg = () => { const doe = verlaatNaam; sluitVenster(); setAfscheid(() => (doe ?? (() => { /* niets */ }))) }
         return (
         <div style={{ ...S.overlay, zIndex: 74 }}>
           <div style={{ ...S.sheet, padding: 0, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
@@ -9532,7 +9649,7 @@ export default function PartyTest() {
                   const gid = groupId
                   if (gid) { try { await wisGroepNaSluit(gid) } catch { /* al weg */ } }
                   gaWeg()
-                }}>{L.closeSureYes}</button>
+                }}>{L.closeSureYesClose}</button>
               <button style={{ ...S.btn, width: "100%", marginTop: 8, fontSize: 15.5, fontWeight: 800 }}
                 onClick={() => setVerlaatStap("keuze")}>‹ {L.back}</button>
             </>)}
@@ -11076,8 +11193,8 @@ export default function PartyTest() {
                     en blijft hij op een gewone telefoon gewoon 22. */}
                 <span style={{ display: "block", fontSize: "min(22px, calc((100vw - 80px) / 12.2))", fontWeight: 800, color: MODUS_SNEL.rand, lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf2}</span>
                 <span style={{ display: "block", textAlign: "left", marginTop: 12, paddingLeft: 6 }}>
-                  {[L.youNote1, L.youNote2].map((t, i2) => (
-                    <span key={i2} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i2 < 1 ? 5 : 0 }}>
+                  {[L.youNote1, L.youNote2, L.youNote3].map((t, i2) => (
+                    <span key={i2} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i2 < 2 ? 5 : 0 }}>
                       <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 17 }}>✓</span>
                       <span style={{ fontSize: 18, color: "#4a5567", lineHeight: 1.4 }}>{t}</span>
                     </span>
@@ -11152,61 +11269,54 @@ export default function PartyTest() {
           const fmt = (iso: string) => { const d = new Date(iso); return isNaN(d.getTime()) ? "" : `${d.getDate()}/${d.getMonth() + 1}` }
           const open = savedGroups.filter((g) => !g.finalized)
           const dicht = savedGroups.filter((g) => g.finalized)
-          const rij = (g: SavedGroup) => (
-            <div key={g.id} style={{ display: "flex", alignItems: "stretch", gap: 7, marginBottom: 7 }}>
+          const rij = (g: SavedGroup) => {
+            // Hoelang dit groepje nog blijft staan. Bewaarde (vastgepinde) groepen
+            // hebben geen vervaldatum; die krijgen geen teller.
+            const qr = g.settle && !g.fq
+            const rest = Math.max(0, Math.ceil((Math.max(new Date(g.last_active).getTime() + AUTO_WIS, keepUntil(g.id)) - Date.now()) / DAG))
+            const verlengd = keepUntil(g.id) > Date.now()
+            const toonDagen = g.owned && !g.pinned
+            return (
+            <div key={g.id} style={{ display: "flex", alignItems: "stretch", gap: 7, marginBottom: 8 }}>
               <button onClick={() => openSavedGroup(g.id)} disabled={busy}
-                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "12px 14px", borderRadius: 12, cursor: "pointer",
-                  /* De linkerrand draagt de status: amber = open, goud = blijft staan,
-                     groen-grijs = afgesloten. Herkenbaar nog vóór je de chip leest. */
-                  background: g.pinned ? "#fcfdfe" : "#fff",
-                  border: "1px solid rgba(29,41,66,0.15)",
-                  borderLeft: `4px solid ${!g.finalized ? "#e8a812" : g.pinned ? "#c98a00" : "#9db8a4"}` }}>
-                {/* Aan de kleur en het icoon zie je in één oogopslag welke modus het was. */}
-                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21.5, background: g.settle && !g.fq ? MODUS_FAIR.tint : MODUS_SNEL.tint }}>{g.settle && !g.fq ? "⚖️" : g.uitgebreid ? "👥" : "🍻"}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 17.5, fontWeight: 800, color: "#1d2942", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()} <span style={{ fontWeight: 700, color: "#8b93a3", fontSize: 14.5 }}>({datumKort(g.last_active)})</span></div>
-                  <div style={{ fontSize: 14.5, color: "#8b93a3", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <span style={{ color: g.settle && !g.fq ? MODUS_FAIR.tekst : MODUS_SNEL.tekst, fontWeight: 800 }}>{g.settle && !g.fq ? L.modeFairShort : g.uitgebreid ? L.modeNaamShort : L.modeSnelTitle}</span> · {fmt(g.last_active)}{g.owned ? "" : ` · ${L.asGuest}`}
-                  </div>
-                </div>
-                <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, borderRadius: 9, padding: "3px 8px", whiteSpace: "nowrap",
-                  color: !g.finalized ? "#8a5e0f" : "#5d7a66",
-                  background: !g.finalized ? "rgba(240,165,0,0.14)" : "rgba(157,184,164,0.18)",
-                  border: !g.finalized ? "1px solid rgba(240,165,0,0.55)" : "1px solid rgba(157,184,164,0.6)" }}>{!g.finalized ? L.statusOpen : L.statusClosed}</span>
+                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 11, textAlign: "left", padding: "12px 13px", borderRadius: 13, cursor: "pointer",
+                  background: "#fff", border: "1px solid rgba(29,41,66,0.15)" }}>
+                {/* Hetzelfde beeld als op het keuzescherm: het mannetje met het barlijstje
+                    voor zelf opnemen, de telefoon met de QR voor een groep die scant. */}
+                <span style={{ flexShrink: 0, width: 42, height: 42, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center",
+                  background: qr ? MODUS_FAIR.tint : MODUS_SNEL.tint }}>
+                  {qr ? <GsmIcoon size={26} kleur={MODUS_FAIR.rand} qr /> : <NoteerIcoon size={30} kleur={MODUS_SNEL.rand} />}
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#1d2942", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name || L.autoName()}</span>
+                  {/* Alleen nog open of bewaard, en in welke modus het was. */}
+                  <span style={{ display: "block", fontSize: 14, marginTop: 2, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    color: !g.finalized ? MODUS_SNEL.tekst : "#9aa3b2" }}>
+                    {!g.finalized ? L.statusOpenPlain : L.statusKept} · {qr ? L.modeFairShort : g.uitgebreid ? L.modeNaamShort : L.modeSnelTitle}{g.owned ? "" : ` · ${L.asGuest}`}
+                  </span>
+                </span>
+                {!toonDagen && (
+                  <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, borderRadius: 999, padding: "4px 10px", whiteSpace: "nowrap",
+                    background: "rgba(157,184,164,0.2)", color: "#4d7159" }}>{L.pinOn}</span>
+                )}
                 <span style={{ fontSize: 19, color: "#a7b0bf", flexShrink: 0 }}>›</span>
               </button>
-              {/* De dagenteller ís de knop: je ziet dat de avond afloopt en verlengt met
-                  dezelfde tik — via een bevestiging, zodat een mistik niets verandert. */}
-              {/* De dagenteller ís de verlengknop; bij bewaarde groepen is er niets
-                  om te verlengen en zegt de gouden diskette ernaast al alles. */}
-              {g.owned && g.finalized && !g.pinned && (() => {
-                const rest = Math.max(0, Math.ceil((Math.max(new Date(g.last_active).getTime() + AUTO_WIS, keepUntil(g.id)) - Date.now()) / DAG))
-                const verlengd = keepUntil(g.id) > Date.now()
-                return (
-                  <button onClick={() => vraagVerlenging(g)} disabled={busy} title={L.extendYes}
-                    style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 14, cursor: "pointer", padding: "0 10px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap",
-                      background: verlengd ? "rgba(240,165,0,0.14)" : "#fcf0ef",
-                      border: verlengd ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(224,104,92,0.5)",
-                      color: verlengd ? "#c88a1a" : "#b0402f" }}>{L.chipDays(rest)} 🕑</button>
-                )
-              })()}
-              {/* Bewaren of losmaken zonder de groep te openen: goud gevuld = blijft
-                  staan, grijs met streep = verdwijnt na de termijn. Losmaken loopt via
-                  een bevestiging (in vraagVerlenging), want dat stelt de groep weer
-                  bloot aan het automatische opruimen. */}
-              {g.owned && (
-                <button onClick={() => { if (g.pinned) { vraagVerlenging(g) } else { void togglePin(g) } }} disabled={busy} title={g.pinned ? L.pinOff : L.pinOn}
-                  style={{ flexShrink: 0, width: 44, borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                    background: g.pinned ? "rgba(240,165,0,0.14)" : "#fff",
-                    border: g.pinned ? "1px solid rgba(240,165,0,0.6)" : "1px solid rgba(29,41,66,0.25)",
-                    color: g.pinned ? "#c88a1a" : "#6b7484" }}><BewaarIcoon aan={!!g.pinned} /></button>
+              {/* De dagenteller ís de verlengknop: je ziet dat het afloopt en verlengt met
+                  dezelfde tik, via een bevestiging zodat een mistik niets verandert. */}
+              {toonDagen && (
+                <button onClick={() => vraagVerlenging(g)} disabled={busy} title={L.extendYes}
+                  style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", borderRadius: 12, cursor: "pointer", padding: "0 11px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap",
+                    background: verlengd ? "rgba(240,165,0,0.14)" : !g.finalized ? "rgba(240,165,0,0.16)" : "#fcf0ef",
+                    border: verlengd ? "1px solid rgba(240,165,0,0.6)" : !g.finalized ? "1px solid rgba(240,165,0,0.5)" : "1px solid rgba(224,104,92,0.5)",
+                    color: verlengd ? "#c88a1a" : !g.finalized ? "#8a5e0f" : "#b0402f" }}>{L.chipDays(rest)}</button>
               )}
               {g.owned && (
                 <button onClick={() => deleteSavedGroup(g)} disabled={busy} aria-label={L.delGroupYes}
                   style={{ flexShrink: 0, width: 44, borderRadius: 12, background: "#fff", border: "1px solid rgba(29,41,66,0.2)", color: "#6b7484", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><WisIcoon /></button>
               )}
             </div>
-          )
+            )
+          }
           // Zoeken op naam; bij weinig groepen heeft een zoekveld geen zin.
           const zoek = normText(groepZoek)
           const past = (g: SavedGroup) => !zoek || normText(g.name || L.autoName()).includes(zoek)
@@ -11235,22 +11345,12 @@ export default function PartyTest() {
           return (
             <div style={{ marginTop: 18 }}>
               <div onClick={() => setGroepenOpen((v) => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: groepenOpen ? 10 : 0 }}>
-                <span style={{ fontSize: 15.5, fontWeight: 800, color: "#6b7484", letterSpacing: "0.02em" }}>📂 {L.savedGroups} <span style={{ color: "#9aa3b2", fontWeight: 700 }}>({savedGroups.length})</span></span>
-                <span style={{ flexShrink: 0, border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", borderRadius: 9, padding: "6px 11px", fontSize: 15, fontWeight: 800, whiteSpace: "nowrap" }}>{groepenOpen ? `${L.hideWord} ▴` : `${L.showWord} ▾`}</span>
+                <span style={{ fontSize: 18.5, fontWeight: 800, color: "#1d2942", letterSpacing: "0.01em" }}>📂 {L.savedGroups} <span style={{ color: "#9aa3b2", fontWeight: 700 }}>({savedGroups.length})</span></span>
+                <span style={{ flexShrink: 0, border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", borderRadius: 10, padding: "8px 14px", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap" }}>{groepenOpen ? `${L.hideWord} ▴` : `${L.showWord} ▾`}</span>
               </div>
               {groepenOpen && (<>
-              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                {([["alle", L.filterAll], ["open", L.statusOpen], ["af", L.statusClosed], ["pin", L.filterSaved]] as const).map(([f, tekst]) => (
-                  <span key={f} onClick={() => { setGroepFilter(f); setShowAllGroups(false) }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 16, padding: "7px 13px", fontSize: 14, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap",
-                      background: groepFilter === f ? "#ef9f27" : "#fff",
-                      border: groepFilter === f ? "1px solid #ef9f27" : "1px solid rgba(29,41,66,0.2)",
-                      color: groepFilter === f ? "#412402" : "#6b7484" }}>
-                    {/* De bewaard-pill draagt de diskette: hetzelfde icoon als de knop op de
-                        rijen, zodat pill en knop zichtbaar over hetzelfde gaan. */}
-                    {f === "pin" && <BewaarIcoon aan size={13} />}{tekst}</span>
-                ))}
-              </div>
+              {/* De filterbalk is weg: elke rij zegt zelf of ze open of bewaard is, en dat
+                  is met een handvol groepjes genoeg. */}
               {savedGroups.length > 4 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, background: VLAK1, border: "1px solid rgba(29,41,66,0.18)", borderRadius: 11, padding: "8px 12px", marginBottom: 12 }}>
                   <span style={{ fontSize: 17, color: "#8b93a3" }}>🔍</span>
@@ -14297,8 +14397,11 @@ export default function PartyTest() {
                         setPpKlaar((prev) => new Set(prev).add(p.id))
                         setPpOpen(volgende ? volgende.id : "__geen")
                       }}
-                        style={{ width: "100%", marginTop: 10, cursor: "pointer", fontFamily: "inherit", borderRadius: 12, padding: "12px 8px",
-                          fontSize: 16, fontWeight: 800, background: "#fff", color: RAND, border: `1.5px solid ${RAND}` }}>
+                        // Wit met een dun randje viel weg tussen de drankjesregels; gevuld in
+                        // het blauw van de app is het onmiskenbaar de knop die je verderhelpt.
+                        style={{ width: "100%", marginTop: 10, cursor: "pointer", fontFamily: "inherit", borderRadius: 999, padding: "13px 8px",
+                          fontSize: 16.5, fontWeight: 800, background: RAND, color: "#fff", border: "none",
+                          boxShadow: "0 5px 14px -6px rgba(29,41,66,0.8)" }}>
                         {L.ppDone(p.name, volgende?.name ?? null)}
                       </button>
                     </div>
