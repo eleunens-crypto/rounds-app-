@@ -600,6 +600,11 @@ const STRINGS = {
       : `Er zijn nog ${n} plaatsen vrij op deze plek. Verhoog eerst het aantal personen bovenaan als je er meer nodig hebt.`,
     addNameTitle: "Wie voeg je toe?",
     addNameSub: "Hij tikt deze naam aan na het scannen, of jij duidt zelf aan wat hij nam.",
+    // Voor wie geen gsm heeft of niet scant: jij vult in en duidt voor hem aan.
+    // Waarom hij niet scant hoeft nergens te staan.
+    noScanBtn: "Iemand die niet scant?",
+    noScanTitle: "Iemand die niet scant?",
+    noScanSub: "Vul zijn naam in — jij duidt straks voor hem aan wat hij nam.",
     togetherTitle: (n: number) => n === 2 ? "Samen op één plaats" : `Met ${n} op één plaats`,
     togetherWhat: (n: number) => n === 2
       ? "Deze twee betalen samen: ze nemen één plaats in aan tafel en krijgen op het einde één bedrag te zien, niet elk apart."
@@ -659,9 +664,15 @@ const STRINGS = {
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
     seatsFreeTitle: (n: number) => n === 1 ? "Nog 1 plaats vrij" : `Nog ${n} plaatsen vrij`,
+    // De kop telt niet meer alleen wat vrij is, maar toont hoever de tafel staat.
+    seatsProgress: (gedaan: number, totaal: number) => `${gedaan} van de ${totaal} plaatsen ingevuld`,
+    seatsViaScan: (n: number) => `${n} via scan`,
+    seatsByYou: (n: number) => `${n} door jou`,
     optionalShort: "optioneel",
     seatsAllNamed: "Alle plaatsen ingevuld ✓",
-    freeSpotHow: "wacht op een scan · of vul zelf in",
+    // Een vrije plaats wacht; invullen gebeurt niet meer op de rij zelf maar via de
+    // knop onder de QR. Daarom staat hier nog maar één ding.
+    freeSpotHow: "wacht op een scan",
     collapseSeats: "Plaatsen verbergen",
     selfJoinedBadge: "✓ zelf gescand",
     addNameRow: "+ naam",
@@ -1302,6 +1313,9 @@ const STRINGS = {
       : `Il reste ${n} places disponibles ici. Augmente d’abord le nombre de personnes en haut s’il t’en faut plus.`,
     addNameTitle: "Qui ajoutes-tu ?",
     addNameSub: "Cette personne touchera ce nom après le scan, ou tu indiques toi-même ce qu'elle a pris.",
+    noScanBtn: "Quelqu'un qui ne scanne pas ?",
+    noScanTitle: "Quelqu'un qui ne scanne pas ?",
+    noScanSub: "Entre son nom — tu indiqueras toi-même ce qu'elle a pris.",
     togetherTitle: (n: number) => n === 2 ? "Ensemble sur une place" : `À ${n} sur une place`,
     togetherWhat: (n: number) => n === 2
       ? "Ces deux-là paient ensemble : ils occupent une seule place à table et verront un seul montant à la fin, pas chacun le sien."
@@ -1361,9 +1375,12 @@ const STRINGS = {
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
     seatsFreeTitle: (n: number) => n === 1 ? "Encore 1 place libre" : `Encore ${n} places libres`,
+    seatsProgress: (gedaan: number, totaal: number) => gedaan === 1 ? `1 place sur ${totaal} remplie` : `${gedaan} places sur ${totaal} remplies`,
+    seatsViaScan: (n: number) => `${n} via scan`,
+    seatsByYou: (n: number) => `${n} par toi`,
     optionalShort: "facultatif",
     seatsAllNamed: "Toutes les places sont remplies ✓",
-    freeSpotHow: "en attente d'un scan · ou remplis toi-même",
+    freeSpotHow: "en attente d'un scan",
     collapseSeats: "Masquer les places",
     selfJoinedBadge: "✓ a scanné",
     addNameRow: "+ nom",
@@ -5304,8 +5321,16 @@ export default function RundoTable() {
                 "wacht op iemand". Twee vormen van hetzelfde feit. Nu is elke stoel één
                 rij, en die rij doet meteen wat je ermee wil. */}
             {personsSet && adminNamed && (() => {
+              const zitVan = (q: Participant) => Math.max(1, q.seats ?? 1)
               const vrijeZit = participants.filter((q) => isFreeSpot(q) && !q.self_joined)
-                .reduce((a, q) => a + Math.max(1, q.seats ?? 1), 0)
+                .reduce((a, q) => a + zitVan(q), 0)
+              // Drie tellingen, want dat is de vraag die de beheerder zich stelt: wie is er
+              // al binnen via de QR, wie heb ik zelf gezet, en op hoeveel wacht ik nog.
+              const scanZit = participants.filter((q) => q.self_joined && q.id !== meId)
+                .reduce((a, q) => a + zitVan(q), 0)
+              const totaalZit = participants.reduce((a, q) => a + zitVan(q), 0)
+              const gevuldZit = Math.max(0, totaalZit - vrijeZit)
+              const jouwZit = Math.max(0, gevuldZit - scanZit)
               const openVoor = (q: Participant | null) => {
                 const zit = q ? Math.max(1, q.seats ?? 1) : 1
                 const leeg = !q || isFreeSpot(q)
@@ -5323,14 +5348,47 @@ export default function RundoTable() {
                       zelf namen te zetten komt pas na het uitklappen — anders nodig je uit
                       tot iets wat je meestal niet hoeft te doen. */}
                   <button onClick={() => setShowNamesBlock((v) => !v)}
-                    style={{ width: "100%", display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer", textAlign: "left",
+                    style={{ width: "100%", display: "block", cursor: "pointer", textAlign: "left",
                       background: "#fff", border: "1px solid rgba(18,58,66,0.14)", borderRadius: showNamesBlock ? "0" : "0 0 14px 14px", padding: "13px 12px" }}>
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: vrijeZit > 0 ? "#123a42" : "#1f8a4c" }}>
-                        {vrijeZit > 0 ? L.seatsFreeTitle(vrijeZit) : L.seatsAllNamed}
+                    <span style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: vrijeZit > 0 ? "#123a42" : "#1f8a4c" }}>
+                        {vrijeZit > 0 ? L.seatsProgress(gevuldZit, totaalZit) : L.seatsAllNamed}
                       </span>
-                            </span>
-                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#4a6e73", lineHeight: 1, marginTop: 2 }}>{showNamesBlock ? "▴" : "▾"}</span>
+                      <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#4a6e73", lineHeight: 1, marginTop: 2 }}>{showNamesBlock ? "▴" : "▾"}</span>
+                    </span>
+                    {/* De balk zegt hetzelfde als de tekst, maar in één oogopslag: groen wat
+                        via de QR binnenkwam, turkoois wat jij zette, grijs wat nog wacht.
+                        Eén blokje per plaats zolang dat leesbaar blijft; aan een lange tafel
+                        wordt het één balk op verhouding, anders zie je enkel streepjes. */}
+                    {totaalZit > 0 && (
+                      <span style={{ display: "flex", gap: totaalZit <= 10 ? 5 : 0, marginTop: 10 }}>
+                        {totaalZit <= 10
+                          ? Array.from({ length: totaalZit }, (_, i) => (
+                              <span key={i} style={{ flex: 1, height: 8, borderRadius: 4,
+                                background: i < scanZit ? "#1f8a4c" : i < gevuldZit ? "#0f7d90" : "rgba(18,58,66,0.12)" }} />
+                            ))
+                          : [
+                              { k: "scan", n: scanZit, c: "#1f8a4c" },
+                              { k: "jij", n: jouwZit, c: "#0f7d90" },
+                              { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.12)" },
+                            ].filter((d) => d.n > 0).map((d, i, arr) => (
+                              <span key={d.k} style={{ flexGrow: d.n, height: 8, background: d.c,
+                                borderTopLeftRadius: i === 0 ? 4 : 0, borderBottomLeftRadius: i === 0 ? 4 : 0,
+                                borderTopRightRadius: i === arr.length - 1 ? 4 : 0, borderBottomRightRadius: i === arr.length - 1 ? 4 : 0 }} />
+                            ))}
+                      </span>
+                    )}
+                    <span style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", marginTop: 9, fontSize: 13, fontWeight: 700, color: "#44656b" }}>
+                      {([
+                        { k: "scan", n: scanZit, c: "#1f8a4c", t: L.seatsViaScan(scanZit) },
+                        { k: "jij", n: jouwZit, c: "#0f7d90", t: L.seatsByYou(jouwZit) },
+                        { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.18)", t: L.nStillFree(vrijeZit) },
+                      ]).filter((d) => d.n > 0).map((d) => (
+                        <span key={d.k} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.c }} />{d.t}
+                        </span>
+                      ))}
+                    </span>
                   </button>
 
                   {showNamesBlock && (
@@ -5339,26 +5397,40 @@ export default function RundoTable() {
                         const ikZelf = q.id === meId
                         const leeg = isFreeSpot(q) && !q.self_joined
                         const zit = Math.max(1, q.seats ?? 1)
+                        // Een vrije plaats is geen knop meer. Er valt daar niets te doen:
+                        // ze vult zichzelf zodra iemand scant, en wie niet scant voeg je
+                        // toe met de knop bij de QR. Een potlood dat een tweede weg opent
+                        // naar hetzelfde venster maakte de lijst enkel dubbelzinnig.
+                        if (leeg) {
+                          return (
+                            <div key={q.id}
+                              style={{ display: "flex", alignItems: "center", gap: 10,
+                                borderTop: "1px solid rgba(18,58,66,0.08)", padding: "13px 12px", background: "#fbfcfd" }}>
+                              {/* Een stippelrondje naast een gevuld rondje toont de reeks: hier zit
+                                  iemand, daar hoort straks iemand. Dat werkt zonder tekst. */}
+                              <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, border: "1.5px dashed rgba(18,58,66,0.25)", color: "#b3bac6" }}>?</span>
+                              <span style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#8aa3a6", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.freeSpotName}</span>
+                                <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#94a7ad", lineHeight: 1.35, marginTop: 2 }}>{L.freeSpotHow}</span>
+                              </span>
+                            </div>
+                          )
+                        }
                         return (
                           <button key={q.id} onClick={() => ikZelf ? openZelfPopup() : openVoor(q)}
                             style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer",
                               border: "none", borderTop: "1px solid rgba(18,58,66,0.08)", padding: "11px 12px", background: "#fff" }}>
-                            {/* Een stippelrondje naast een gevuld rondje toont de reeks: hier zit
-                                iemand, daar hoort straks iemand. Dat werkt zonder tekst. */}
                             <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
-                              ...(leeg
-                                ? { border: "1.5px dashed rgba(18,58,66,0.25)", color: "#b3bac6" }
+                              ...(q.self_joined && !ikZelf
+                                ? { background: "rgba(39,174,96,0.16)", color: "#1f8a4c" }
                                 : { background: "rgba(20,153,176,0.14)", color: "#0f7d90" }) }}>
-                              {leeg ? "?" : (q.name || "?").trim().charAt(0).toUpperCase()}
+                              {(q.name || "?").trim().charAt(0).toUpperCase()}
                             </span>
                             <span style={{ flex: 1, minWidth: 0 }}>
-                              <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: leeg ? "#8aa3a6" : "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {leeg ? L.freeSpotName : q.name}{!leeg && zit > 1 ? ` · ${zit}p.` : ""}
+                              <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {q.name}{zit > 1 ? ` · ${zit}p.` : ""}
                                 {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
                               </span>
-                              {/* Beide wegen op de rij waar ze over gaan. Daardoor kunnen de uitlegregel
-                                  boven de lijst en de strook eronder weg. */}
-                              {leeg && <span style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: "#b3bac6", lineHeight: 1.35, marginTop: 2 }}>{L.freeSpotHow}</span>}
                             </span>
                             {q.self_joined && !ikZelf && (
                               <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.selfJoinedBadge}</span>
@@ -5426,6 +5498,23 @@ export default function RundoTable() {
                       </div>
                       <div style={{ fontSize: 15.5, fontWeight: 800, color: "#0f7488", marginTop: 10 }}>👆 {L.scanThis}</div>
                     </div>
+                  </div>
+
+                  {/* De uitzondering hoort klein en opzij: de meeste gasten scannen. Wie
+                      dat niet kan of niet doet, zet jij er zelf bij — met dezelfde stappen
+                      als een gast (met hoeveel, dan de naam). Waarom hij niet scant hoeft
+                      nergens vermeld te worden. */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -2, marginBottom: 12 }}>
+                    <button onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        if (!requireName()) return
+                        setGuestTarget(null); setGuestSeats(1); setGuestNames([""]); setShowGuestModal(true)
+                      }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, minHeight: 44, cursor: "pointer",
+                        background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", borderRadius: 10,
+                        padding: "10px 13px", fontSize: 14.5, fontWeight: 800, color: "#0b6473", whiteSpace: "nowrap" }}>
+                      {L.noScanBtn}
+                    </button>
                   </div>
 
                   <div style={{ borderTop: "1px solid rgba(18,58,66,0.08)", paddingTop: 13 }}>
@@ -6246,8 +6335,10 @@ export default function RundoTable() {
         return (
           <div style={{ ...S.overlay, zIndex: 3100 }}>
             <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-              <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3 }}>{L.addNameTitle}</h3>
-              <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 13 }}>{L.addNameSub}</div>
+              {/* Zonder doelplaats kom je hier via de knop bij de QR: dan gaat het over
+                  iemand die niet scant, en zegt de kop dat ook. */}
+              <h3 style={{ ...S.h3, marginTop: 0, marginBottom: 3 }}>{guestTarget ? L.addNameTitle : L.noScanTitle}</h3>
+              <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 13 }}>{guestTarget ? L.addNameSub : L.noScanSub}</div>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#123a42", marginBottom: 7 }}>{L.howManyPersonsQ}</div>
               <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
                 {[1, 2, 3].map((n) => {
