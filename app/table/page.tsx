@@ -683,7 +683,7 @@ const STRINGS = {
     seatsAllNamed: "Alle plaatsen ingevuld ✓",
     // Een vrije plaats wacht; invullen gebeurt niet meer op de rij zelf maar via de
     // knop onder de QR. Daarom staat hier nog maar één ding.
-    freeSpotHow: "wacht op een scan",
+    freeSpotHow: "wacht op een QR-scan",
     collapseSeats: "Plaatsen verbergen",
     selfJoinedBadge: "✓ zelf gescand",
     addNameRow: "+ naam",
@@ -807,7 +807,7 @@ const STRINGS = {
     tagByYou: "admin duidt aan",
     tagAdded: "toegevoegd",
     tagFree: "nog niemand",
-    freeSpotName: "Nog vrij",
+    freeSpotName: "Vrije plaats",
     rescan: "🔄 Bon opnieuw scannen",
     startScan: "📸 Scan je rekening",
     startHereTitle: "Start hier",
@@ -1419,7 +1419,7 @@ const STRINGS = {
     seatsByYou: (n: number) => `${n} par toi`,
     optionalShort: "facultatif",
     seatsAllNamed: "Toutes les places sont remplies ✓",
-    freeSpotHow: "en attente d'un scan",
+    freeSpotHow: "en attente d'un scan QR",
     collapseSeats: "Masquer les places",
     selfJoinedBadge: "✓ a scanné",
     addNameRow: "+ nom",
@@ -1543,7 +1543,7 @@ const STRINGS = {
     tagByYou: "l’hôte coche",
     tagAdded: "ajouté",
     tagFree: "personne",
-    freeSpotName: "Encore libre",
+    freeSpotName: "Place libre",
     rescan: "🔄 Rescanner l'addition",
     startScan: "📸 Scanne ton ticket",
     startHereTitle: "Commence ici",
@@ -3117,7 +3117,9 @@ export default function RundoTable() {
     participants.forEach((p) => { if (isFreeSpot(p)) { n += 1; m[p.id] = n } })
     return m
   })()
-  const naamVan = (p: Participant) => vrijeNummers[p.id] ? `${L.guestWord} ${vrijeNummers[p.id]}` : p.name
+  // Eén naam voor een lege stoel, overal: in de plaatsenlijst, op de toewijspillen en
+  // in het eindoverzicht. "Gast 1" klonk als iemand die er al zat.
+  const naamVan = (p: Participant) => vrijeNummers[p.id] ? `${L.freeSpotName} ${vrijeNummers[p.id]}` : p.name
   // Een gast zonder plaats kan er een vragen. De beheerder houdt de controle, want
   // het aantal personen bepaalt mee hoe gedeelde items verdeeld worden.
   // Deze twee moeten bóven elke vroege return staan: hooks mogen niet overgeslagen
@@ -5652,8 +5654,8 @@ export default function RundoTable() {
                           <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 10, borderTop: i === 0 ? "none" : "1px solid rgba(18,58,66,0.08)", padding: "13px 12px", background: "#fbfcfd" }}>
                             <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, border: "1.5px dashed rgba(18,58,66,0.25)", color: "#b3bac6" }}>?</span>
                             <span style={{ flex: 1, minWidth: 0 }}>
-                              <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#8aa3a6" }}>{L.freeSpotName}</span>
-                              <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#94a7ad", lineHeight: 1.35, marginTop: 2 }}>{L.freeSpotHow}</span>
+                              <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#5b7378" }}>{L.freeSpotName}</span>
+                              <span style={{ display: "block", fontSize: 14.5, fontWeight: 600, color: "#7d949a", lineHeight: 1.4, marginTop: 2 }}>{L.freeSpotHow}</span>
                             </span>
                           </div>
                         )
