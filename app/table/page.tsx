@@ -664,6 +664,9 @@ const STRINGS = {
     lockedPersons: "🔒 Eerst het aantal personen invullen",
     lockedName: "🔒 Vul eerst je eigen naam in",
     nowAssignTitle: "Heeft iedereen gescand?",
+    everyoneInTitle: "Iedereen zit erbij \u2713",
+    everyoneInSub: "Alle plaatsen hebben een naam. Tijd om te verdelen.",
+    showSeats: "Toon plaatsen",
     nowAssignSub: "Dan kan je nu toewijzen wie wat nam.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Toewijzen eten & drinken \u2192",
     howManyPersonsQ: "Voor hoeveel personen?",
@@ -1036,18 +1039,30 @@ const STRINGS = {
     // hier "bezig", wat leek alsof die persoon nog zat te tikken.
     statusToConfirm: "● te bevestigen",
     allAssignedTitle: "Alles toegewezen",
-    allAssignedBody: "Elk item op de rekening heeft nu een naam. Wil je het overzicht per persoon bekijken?",
+    allAssignedBody: "Elk item op de rekening heeft een naam. Zal ik ze meteen afsluiten? Je kan ze daarna altijd nog heropenen.",
+    allAssignedClose: "\ud83d\udd12 Ja, rekening afsluiten",
+    allAssignedCheck: "Toch nog even nakijken",
     allAssignedGo: "Ga naar rekeningoverzicht",
     allAssignedLater: "Later",
     stickyTipNone: "Nog geen fooi",
     stickyTipSet: (b: string) => `Fooi €${b}`,
     stickyTipEdit: "wijzig",
+    stickyAllDone: "Alles toegewezen",
+    stickyOpenUnits: (n: number) => n === 1 ? "Nog 1 stuk zonder naam" : `Nog ${n} stuks zonder naam`,
+    stickyCheckFirst: "Nog iets na te kijken",
+    addTipSmall: "+ Fooi toevoegen",
     showDetailsBtn: "Toon details",
     closedBarTitle: "Rekening afgesloten",
     reopenShort: "🔓 heropen",
+    reopenWord: "Heropenen",
+    reopenLong: "🔓 Toch nog iets wijzigen — heropenen",
+    closedListTitle: "De verdeling, zoals afgesloten",
+    lockedWord: "op slot",
+    closedBarAll: "Afgesloten · alles verdeeld",
+    closedBarSub: (bedrag: string, n: number) => `${bedrag} · ${n} ${n === 1 ? "persoon" : "personen"}`,
     disputeCtaTitle: "Klopt er iets niet?",
     disputeCtaSub: "Tik hier en laat de beheerder weten wat er scheelt",
-    settleSaveBtn: "🔒 Sluit af en bewaar",
+    settleSaveBtn: "Iedereen betaald? Sluit af!",
     settleAskTitle: "Ben je zeker?",
     settleAskBody: "Is alles verrekend en heeft iedereen betaald? Daarna verandert er niets meer aan deze rekening.",
     settleAskKeep: "Je groepje blijft daarna 7 dagen op het startscherm staan, onder \u201cJouw groepen\u201d.",
@@ -1104,6 +1119,8 @@ const STRINGS = {
     addTipShort: "Toevoegen",
     tipOptional: "Optioneel — wordt gelijk verdeeld over iedereen aan tafel. Je kan er iemand uit halen bij het afrekenen.",
     finalizeBtn: "✅ Alles toegewezen?  Rekening afsluiten",
+    finalizeBtnDone: "✓ Alles toegewezen. Rekening afsluiten",
+    finalizeBtnOpen: (n: number) => n === 1 ? "Nog 1 stuk niet toegewezen" : `Nog ${n} stuks niet toegewezen`,
     finalizeConfirm: "De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.",
     notFinalizedNote: "Sluit pas af als alles is aangetikt en nagekeken. Gasten krijgen dan een melding.",
     backToTop: "↑ Terug naar boven",
@@ -1386,6 +1403,9 @@ const STRINGS = {
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
     lockedName: "🔒 Indique d'abord ton propre nom",
     nowAssignTitle: "Tout le monde a scanné ?",
+    everyoneInTitle: "Tout le monde y est \u2713",
+    everyoneInSub: "Chaque place a un nom. C'est le moment de r\u00e9partir.",
+    showSeats: "Voir les places",
     nowAssignSub: "Tu peux maintenant attribuer qui a pris quoi.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Attribuer plats & boissons \u2192",
     howManyPersonsQ: "Pour combien de personnes ?",
@@ -1752,18 +1772,30 @@ const STRINGS = {
     statusSettled: "✓ clôturé",
     statusToConfirm: "● à confirmer",
     allAssignedTitle: "Tout est attribué",
-    allAssignedBody: "Chaque article de l'addition a un nom. Tu veux voir le récapitulatif par personne ?",
+    allAssignedBody: "Chaque article de l'addition a un nom. Je la cl\u00f4ture tout de suite ? Tu pourras toujours la rouvrir ensuite.",
+    allAssignedClose: "\ud83d\udd12 Oui, cl\u00f4turer l'addition",
+    allAssignedCheck: "Je v\u00e9rifie encore",
     allAssignedGo: "Voir le récapitulatif",
     allAssignedLater: "Plus tard",
     stickyTipNone: "Pas de pourboire",
     stickyTipSet: (b: string) => `Pourboire €${b}`,
     stickyTipEdit: "modifier",
+    stickyAllDone: "Tout est attribué",
+    stickyOpenUnits: (n: number) => n === 1 ? "Encore 1 article sans nom" : `Encore ${n} articles sans nom`,
+    stickyCheckFirst: "Encore quelque chose à vérifier",
+    addTipSmall: "+ Pourboire",
     showDetailsBtn: "Afficher les détails",
     closedBarTitle: "Addition clôturée",
     reopenShort: "🔓 rouvrir",
+    reopenWord: "Rouvrir",
+    reopenLong: "🔓 Encore quelque chose à changer — rouvrir",
+    closedListTitle: "La répartition, telle que clôturée",
+    lockedWord: "verrouillé",
+    closedBarAll: "Clôturée · tout est réparti",
+    closedBarSub: (bedrag: string, n: number) => `${bedrag} · ${n} ${n === 1 ? "personne" : "personnes"}`,
     disputeCtaTitle: "Quelque chose ne va pas ?",
     disputeCtaSub: "Touche ici et préviens l'hôte de ce qui ne colle pas",
-    settleSaveBtn: "🔒 Clôturer et garder",
+    settleSaveBtn: "Tout le monde a payé ? Clôture !",
     settleAskTitle: "Tu es sûr ?",
     settleAskBody: "Tout est réglé et tout le monde a payé ? Ensuite, plus rien ne change sur cette addition.",
     settleAskKeep: "Ton groupe reste ensuite 7 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb.",
@@ -1817,6 +1849,8 @@ const STRINGS = {
     addTipShort: "Ajouter",
     tipOptional: "Optionnel — réparti également entre tous à table. Tu peux en exclure quelqu’un au moment de régler.",
     finalizeBtn: "✅ Tout attribué ?  Clôturer l'addition",
+    finalizeBtnDone: "✓ Tout est attribué. Clôturer l'addition",
+    finalizeBtnOpen: (n: number) => n === 1 ? "Encore 1 article non attribué" : `Encore ${n} articles non attribués`,
     finalizeConfirm: "Clôturer l'addition ? Les invités ne pourront plus rien cocher ni modifier jusqu'à ce que tu la rouvres.",
     notFinalizedNote: "Ne clôture que lorsque tout est coché et vérifié. Les invités reçoivent alors une notification.",
     backToTop: "↑ Retour en haut",
@@ -3010,6 +3044,11 @@ export default function RundoTable() {
   // Aantal PERSONEN in de groep (niet aantal plaatsen): een koppel is één plaats maar telt voor twee.
   // Zo blijft de som van alle personen altijd gelijk aan het getal in de teller.
   const totalPersons = participants.reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
+  // Hoeveel stoelen er nog op iemand wachten. Stond vroeger verstopt in het blok dat de
+  // plaatsen toonde; nu hangt er meer van af: de strook onderaan, en het moment waarop
+  // het scherm je naar het toewijzen stuurt.
+  const vrijeZitplaatsen = participants.filter((q) => isFreeSpot(q) && !q.self_joined)
+    .reduce((a, q) => a + Math.max(1, q.seats ?? 1), 0)
 
   // Heeft de admin zichzelf al een naam gegeven? Zonder naam mag hij niet delen of toewijzen.
   const adminNamed = (() => {
@@ -3021,6 +3060,19 @@ export default function RundoTable() {
 
   // Zodra je eigen naam er staat, wordt het groene blok onderaan actief. Zonder deze
   // sprong staat het onder de QR-kaart, die op een telefoon bijna het hele scherm vult.
+  // Alle stoelen hebben een naam: dan is wachten zinloos geworden en mag het scherm je
+  // naar de volgende stap sturen.
+  const zitKlaar = adminNamed && personsSet && vrijeZitplaatsen === 0
+  const tafelWasVol = useRef(false)
+  useEffect(() => {
+    if (!isAdmin || adminTab !== "guests") { if (!zitKlaar) tafelWasVol.current = false; return }
+    if (zitKlaar && !tafelWasVol.current) {
+      tafelWasVol.current = true
+      window.setTimeout(() => document.getElementById("naar-toewijzen")?.scrollIntoView({ behavior: "smooth", block: "center" }), 350)
+    }
+    if (!zitKlaar) tafelWasVol.current = false
+  }, [zitKlaar, isAdmin, adminTab])
+
   const naamWasGezet = useRef(false)
   useEffect(() => {
     if (!isAdmin || adminTab !== "guests") return
@@ -4031,17 +4083,6 @@ export default function RundoTable() {
   const openUnits = baseItems.filter((it) => !it.is_shared)
     .reduce((s, it) => s + Math.max(0, it.quantity - claimedQty(it.id)), 0)
   const undecidedShared = baseItems.filter((it) => it.is_shared && sharerIds(it.id).length === 0)
-  const allesToegewezenSprong = useRef(false)
-  useEffect(() => {
-    if (!isAdmin || adminTab !== "overview" || group?.finalized) return
-    const klaar = openUnits === 0 && undecidedShared.length === 0
-    if (klaar && !allesToegewezenSprong.current) {
-      allesToegewezenSprong.current = true
-      window.setTimeout(() => document.getElementById("afsluit-knop")?.scrollIntoView({ behavior: "smooth", block: "center" }), 250)
-    }
-    if (!klaar) allesToegewezenSprong.current = false
-  }, [openUnits, undecidedShared.length, isAdmin, adminTab, group?.finalized])
-
   const sharedWarnings = baseItems.filter((it) => it.is_shared && sharedStatus(it).warn !== null)
   const zeroPriceItems = baseItems.filter((it) => it.unit_price <= 0.0001)
   const allAssignedNow = openUnits === 0 && undecidedShared.length === 0 && sharedWarnings.length === 0 && zeroPriceItems.length === 0
@@ -4834,7 +4875,7 @@ export default function RundoTable() {
       {/* Alleen voor de beheerder: deze balk draagt het opmerkingenblok en de knop om te
           heropenen. Voor een gast stond er enkel tekst die zijn eigen groene balk — met
           bedrag en knoppen — al zegt, dus die zag er twee onder elkaar. */}
-      {group.finalized && isAdmin && (() => {
+      {group.finalized && isAdmin && adminTab !== "overview" && (() => {
         const disputers = parseDisputes(group.disputed_by || "")
         const openCount = disputers.filter((d) => !d.resolved).length
         return (
@@ -4890,11 +4931,15 @@ export default function RundoTable() {
             }} style={{
               flex: 1, border: "none", borderRadius: 12, padding: "13px 4px", fontSize: 18, cursor: "pointer", lineHeight: 1.15,
               fontWeight: adminTab === t.id ? 800 : 700,
-              background: adminTab === t.id ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#eaf6f9",
-              color: adminTab === t.id ? "#fff" : "#0f7d90",
+              // Groen zodra de rekening afgesloten is: zo zie je ook vanaf een ander
+              // tabblad dat het rond is, zonder er een blok voor te moeten tonen.
+              background: adminTab === t.id
+                ? (t.id === "overview" && group.finalized ? "linear-gradient(135deg,#1f8a4c,#27ae60)" : "linear-gradient(135deg,#0f7d90,#3ec9d8)")
+                : "#eaf6f9",
+              color: adminTab === t.id ? "#fff" : (t.id === "overview" && group.finalized ? "#1f8a4c" : "#0f7d90"),
               boxShadow: adminTab === t.id ? "0 3px 10px -3px rgba(20,153,176,0.5)" : "none",
               transition: "all 0.15s",
-            }}>{t.label}</button>
+            }}>{t.label}{t.id === "overview" && group.finalized ? " \u2713" : ""}</button>
           ))}
         </div>
       )}
@@ -5358,154 +5403,6 @@ export default function RundoTable() {
             </div>
             )}
 
-            {/* Eén lijst voor de hele tafel. Vroeger stonden hier twee uitklappen naast
-                elkaar — een namenlijst met een "+ toevoegen"-knop, en daarnaast het
-                groepsoverzichtje dat diezelfde vrije plaatsen nog eens toonde als
-                "wacht op iemand". Twee vormen van hetzelfde feit. Nu is elke stoel één
-                rij, en die rij doet meteen wat je ermee wil. */}
-            {personsSet && adminNamed && (() => {
-              const zitVan = (q: Participant) => Math.max(1, q.seats ?? 1)
-              const vrijeZit = participants.filter((q) => isFreeSpot(q) && !q.self_joined)
-                .reduce((a, q) => a + zitVan(q), 0)
-              // Drie tellingen, want dat is de vraag die de beheerder zich stelt: wie is er
-              // al binnen via de QR, wie heb ik zelf gezet, en op hoeveel wacht ik nog.
-              const scanZit = participants.filter((q) => q.self_joined && q.id !== meId)
-                .reduce((a, q) => a + zitVan(q), 0)
-              const totaalZit = participants.reduce((a, q) => a + zitVan(q), 0)
-              const gevuldZit = Math.max(0, totaalZit - vrijeZit)
-              const jouwZit = Math.max(0, gevuldZit - scanZit)
-              const openVoor = (q: Participant | null) => {
-                const zit = q ? Math.max(1, q.seats ?? 1) : 1
-                const leeg = !q || isFreeSpot(q)
-                setGuestTarget(q ? q.id : null)
-                setGuestSeats(leeg ? 1 : zit)
-                setGuestNames(leeg ? [""] : q!.name.split(/\s*&\s*/).map((x) => x.trim()))
-                setShowGuestModal(true)
-              }
-              return (
-                <div>
-                  {/* Onderste helft van hetzelfde kader: geen eigen vlak meer, want binnen een
-                      kader is al duidelijk dat je hier mag tikken. Alleen de scheidingslijn
-                      met de rij erboven blijft. */}
-                  {/* Ingeklapt zegt dit blok alleen wat er vanzelf gebeurt. De uitnodiging om
-                      zelf namen te zetten komt pas na het uitklappen — anders nodig je uit
-                      tot iets wat je meestal niet hoeft te doen. */}
-                  <button onClick={() => setShowNamesBlock((v) => !v)}
-                    style={{ width: "100%", display: "block", cursor: "pointer", textAlign: "left",
-                      background: "#fff", border: "1px solid rgba(18,58,66,0.14)", borderRadius: showNamesBlock ? "0" : "0 0 14px 14px", padding: "13px 12px" }}>
-                    <span style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: vrijeZit > 0 ? "#123a42" : "#1f8a4c" }}>
-                        {vrijeZit > 0 ? L.seatsProgress(gevuldZit, totaalZit) : L.seatsAllNamed}
-                      </span>
-                      <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#4a6e73", lineHeight: 1, marginTop: 2 }}>{showNamesBlock ? "▴" : "▾"}</span>
-                    </span>
-                    {/* De balk zegt hetzelfde als de tekst, maar in één oogopslag: groen wat
-                        via de QR binnenkwam, turkoois wat jij zette, grijs wat nog wacht.
-                        Eén blokje per plaats zolang dat leesbaar blijft; aan een lange tafel
-                        wordt het één balk op verhouding, anders zie je enkel streepjes. */}
-                    {totaalZit > 0 && (
-                      <span style={{ display: "flex", gap: totaalZit <= 10 ? 5 : 0, marginTop: 10 }}>
-                        {totaalZit <= 10
-                          ? Array.from({ length: totaalZit }, (_, i) => (
-                              <span key={i} style={{ flex: 1, height: 8, borderRadius: 4,
-                                background: i < scanZit ? "#1f8a4c" : i < gevuldZit ? "#0f7d90" : "rgba(18,58,66,0.12)" }} />
-                            ))
-                          : [
-                              { k: "scan", n: scanZit, c: "#1f8a4c" },
-                              { k: "jij", n: jouwZit, c: "#0f7d90" },
-                              { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.12)" },
-                            ].filter((d) => d.n > 0).map((d, i, arr) => (
-                              <span key={d.k} style={{ flexGrow: d.n, height: 8, background: d.c,
-                                borderTopLeftRadius: i === 0 ? 4 : 0, borderBottomLeftRadius: i === 0 ? 4 : 0,
-                                borderTopRightRadius: i === arr.length - 1 ? 4 : 0, borderBottomRightRadius: i === arr.length - 1 ? 4 : 0 }} />
-                            ))}
-                      </span>
-                    )}
-                    <span style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", marginTop: 9, fontSize: 13, fontWeight: 700, color: "#44656b" }}>
-                      {([
-                        { k: "scan", n: scanZit, c: "#1f8a4c", t: L.seatsViaScan(scanZit) },
-                        { k: "jij", n: jouwZit, c: "#0f7d90", t: L.seatsByYou(jouwZit) },
-                        { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.18)", t: L.nStillFree(vrijeZit) },
-                      ]).filter((d) => d.n > 0).map((d) => (
-                        <span key={d.k} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.c }} />{d.t}
-                        </span>
-                      ))}
-                    </span>
-                    {/* Een gast die scande terwijl alles bezet was, vraagt een plaats. Dat
-                        venster staat bovenaan het scherm, maar dat is weggescrold tegen dat
-                        je hier kijkt — en hier is precies waar je je afvraagt waarom het
-                        niet klopt. */}
-                    {seatRequests.length > 0 && (
-                      <span style={{ display: "block", marginTop: 9, fontSize: 13.5, fontWeight: 800, color: "#8a4514", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 9, padding: "7px 9px" }}>
-                        {L.seatAsks(seatRequests.length)}
-                      </span>
-                    )}
-                  </button>
-
-                  {showNamesBlock && (
-                    <div style={{ border: "1px solid rgba(18,58,66,0.14)", borderTop: "none", borderRadius: "0 0 14px 14px", overflow: "hidden" }}>
-                      {participants.map((q) => {
-                        const ikZelf = q.id === meId
-                        const leeg = isFreeSpot(q) && !q.self_joined
-                        const zit = Math.max(1, q.seats ?? 1)
-                        // Een vrije plaats is geen knop meer. Er valt daar niets te doen:
-                        // ze vult zichzelf zodra iemand scant, en wie niet scant voeg je
-                        // toe met de knop bij de QR. Een potlood dat een tweede weg opent
-                        // naar hetzelfde venster maakte de lijst enkel dubbelzinnig.
-                        if (leeg) {
-                          return (
-                            <div key={q.id}
-                              style={{ display: "flex", alignItems: "center", gap: 10,
-                                borderTop: "1px solid rgba(18,58,66,0.08)", padding: "13px 12px", background: "#fbfcfd" }}>
-                              {/* Een stippelrondje naast een gevuld rondje toont de reeks: hier zit
-                                  iemand, daar hoort straks iemand. Dat werkt zonder tekst. */}
-                              <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, border: "1.5px dashed rgba(18,58,66,0.25)", color: "#b3bac6" }}>?</span>
-                              <span style={{ flex: 1, minWidth: 0 }}>
-                                <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#8aa3a6", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.freeSpotName}</span>
-                                <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#94a7ad", lineHeight: 1.35, marginTop: 2 }}>{L.freeSpotHow}</span>
-                              </span>
-                            </div>
-                          )
-                        }
-                        return (
-                          <button key={q.id} onClick={() => ikZelf ? openZelfPopup() : openVoor(q)}
-                            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer",
-                              border: "none", borderTop: "1px solid rgba(18,58,66,0.08)", padding: "11px 12px", background: "#fff" }}>
-                            <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
-                              ...(q.self_joined && !ikZelf
-                                ? { background: "rgba(39,174,96,0.16)", color: "#1f8a4c" }
-                                : { background: "rgba(20,153,176,0.14)", color: "#0f7d90" }) }}>
-                              {(q.name || "?").trim().charAt(0).toUpperCase()}
-                            </span>
-                            <span style={{ flex: 1, minWidth: 0 }}>
-                              <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {q.name}{zit > 1 ? ` · ${zit}p.` : ""}
-                                {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
-                              </span>
-                            </span>
-                            {q.self_joined && !ikZelf && (
-                              <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.selfJoinedBadge}</span>
-                            )}
-                            <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "rgba(20,153,176,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                              <PotloodIcon />
-                            </span>
-                          </button>
-                        )
-                      })}
-
-
-                      {/* Een tweede weg naar buiten: na een lijst van zes plaatsen staat de kop
-                          te ver weg om terug te scrollen. */}
-                      <button onClick={() => setShowNamesBlock(false)}
-                        style={{ width: "100%", border: "none", borderTop: "1px solid rgba(18,58,66,0.10)", background: "#fff", padding: "12px 0", cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: "#4a6e73" }}>
-                        ▴ {L.collapseSeats}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
 
           </div>
 
@@ -5700,20 +5597,142 @@ export default function RundoTable() {
               naam ontbreekt is dit blok gedempt en de knop niet aanklikbaar. Anders staat
               er een uitnodigende knop die bij een tik alleen een foutmelding geeft. */}
           <div id="naar-toewijzen" style={{ order: 3, marginTop: 14, ...S.card, padding: "18px 16px",
-            background: adminNamed ? "linear-gradient(160deg,#eafaf1,#d9f2e4)" : "rgba(18,58,66,0.04)",
-            border: adminNamed ? "2px solid rgba(31,138,76,0.45)" : "2px solid rgba(18,58,66,0.10)",
+            background: zitKlaar ? "linear-gradient(160deg,#eafaf1,#d9f2e4)" : adminNamed ? "#fff" : "rgba(18,58,66,0.04)",
+            border: zitKlaar ? "2px solid rgba(31,138,76,0.45)" : adminNamed ? "2px solid rgba(20,153,176,0.3)" : "2px solid rgba(18,58,66,0.10)",
             opacity: adminNamed ? 1 : 0.55 }}>
             {/* "Toewijzen" alleen zegt niet wát je toewijst; dat staat nu in de knop.
                 De ondertitel herhaalde wat je een scherm verder toch te zien krijgt. */}
-            <div style={{ fontSize: 21, fontWeight: 800, color: adminNamed ? "#15703f" : "#8aa3a6", marginBottom: 3, lineHeight: 1.25 }}>{L.nowAssignTitle}</div>
-            <div style={{ fontSize: 15.5, color: adminNamed ? "#3c6b51" : "#8aa3a6", lineHeight: 1.45, marginBottom: 13 }}>{L.nowAssignSub}</div>
-            <button disabled={!adminNamed} className={adminNamed ? "rundo-klaar-puls" : undefined}
+            <div style={{ fontSize: 21, fontWeight: 800, color: zitKlaar ? "#15703f" : adminNamed ? "#123a42" : "#8aa3a6", marginBottom: 3, lineHeight: 1.25 }}>{zitKlaar ? L.everyoneInTitle : L.nowAssignTitle}</div>
+            <div style={{ fontSize: 15.5, color: zitKlaar ? "#3c6b51" : adminNamed ? "#4a6e73" : "#8aa3a6", lineHeight: 1.45, marginBottom: 13 }}>{zitKlaar ? L.everyoneInSub : L.nowAssignSub}</div>
+            {/* Pas pulseren als er ook echt niets meer te wachten valt: pulseert het blok
+                al terwijl er nog drie stoelen leeg zijn, dan jaagt het je vooruit terwijl
+                je gasten nog aan het scannen zijn. */}
+            <button disabled={!adminNamed} className={zitKlaar ? "rundo-klaar-puls" : undefined}
               onClick={() => { if (warnMismatch) { setShowShareWarn(true); return } if (!requireName()) return; setAdminTab("overview"); scrollTop() }}
               style={{ width: "100%", padding: "16px 0", fontSize: 19, fontWeight: 800, border: "none", borderRadius: 14, color: "#fff",
-                background: adminNamed ? "linear-gradient(135deg,#1f8a4c,#27ae60)" : "#b6cacc",
-                boxShadow: adminNamed ? "0 8px 20px -8px rgba(31,138,76,0.75)" : "none",
+                background: zitKlaar ? "linear-gradient(135deg,#1f8a4c,#27ae60)" : adminNamed ? "linear-gradient(135deg,#0f7d90,#3ec9d8)" : "#b6cacc",
+                boxShadow: zitKlaar ? "0 8px 20px -8px rgba(31,138,76,0.75)" : adminNamed ? "0 6px 16px -6px rgba(20,153,176,0.55)" : "none",
                 cursor: adminNamed ? "pointer" : "not-allowed" }}>{L.goAssignBtn}</button>
           </div>
+
+          {/* De plaatsenstand hoort niet meer bovenaan, bij het invullen van je eigen naam,
+              maar hier: onder de QR, waar je hem nodig hebt. En als strook die meeloopt,
+              want op dit moment doe je maar één ding — wachten tot iedereen gescand heeft —
+              en dan wil je de teller zien oplopen zonder te scrollen. */}
+          {personsSet && adminNamed && (() => {
+            const zitVan = (q: Participant) => Math.max(1, q.seats ?? 1)
+            const vrijeZit = vrijeZitplaatsen
+            const scanZit = participants.filter((q) => q.self_joined && q.id !== meId).reduce((a, q) => a + zitVan(q), 0)
+            const totaalZit = totalPersons
+            const gevuldZit = Math.max(0, totaalZit - vrijeZit)
+            const jouwZit = Math.max(0, gevuldZit - scanZit)
+            const openVoor = (q: Participant) => {
+              setGuestTarget(q.id)
+              setGuestSeats(Math.max(1, q.seats ?? 1))
+              setGuestNames(q.name.split(/\s*&\s*/).map((x) => x.trim()))
+              setShowGuestModal(true)
+            }
+            return (
+              <div style={{ order: 6, position: "sticky", bottom: 0, zIndex: 20, marginTop: 12,
+                padding: "10px 12px calc(10px + env(safe-area-inset-bottom))",
+                background: "rgba(247,251,252,0.97)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+                borderTop: "1.5px solid rgba(18,58,66,0.12)", borderRadius: "14px 14px 0 0",
+                boxShadow: "0 -8px 20px -14px rgba(18,58,66,0.5)" }}>
+
+                {/* Uitgeklapt groeit de strook naar boven: de lijst komt bovenop het scherm
+                    te staan in plaats van eronder te verdwijnen. */}
+                {showNamesBlock && (
+                  <div style={{ maxHeight: "44vh", overflowY: "auto", border: "1px solid rgba(18,58,66,0.14)", borderRadius: 12, background: "#fff", marginBottom: 10 }}>
+                    {participants.map((q, i) => {
+                      const ikZelf = q.id === meId
+                      const leeg = isFreeSpot(q) && !q.self_joined
+                      const zit = zitVan(q)
+                      if (leeg) {
+                        return (
+                          <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 10, borderTop: i === 0 ? "none" : "1px solid rgba(18,58,66,0.08)", padding: "13px 12px", background: "#fbfcfd" }}>
+                            <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, border: "1.5px dashed rgba(18,58,66,0.25)", color: "#b3bac6" }}>?</span>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#8aa3a6" }}>{L.freeSpotName}</span>
+                              <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#94a7ad", lineHeight: 1.35, marginTop: 2 }}>{L.freeSpotHow}</span>
+                            </span>
+                          </div>
+                        )
+                      }
+                      return (
+                        <button key={q.id} onClick={() => ikZelf ? openZelfPopup() : openVoor(q)}
+                          style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer",
+                            border: "none", borderTop: i === 0 ? "none" : "1px solid rgba(18,58,66,0.08)", padding: "11px 12px", background: "#fff" }}>
+                          <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
+                            ...(q.self_joined && !ikZelf ? { background: "rgba(39,174,96,0.16)", color: "#1f8a4c" } : { background: "rgba(20,153,176,0.14)", color: "#0f7d90" }) }}>
+                            {(q.name || "?").trim().charAt(0).toUpperCase()}
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {q.name}{zit > 1 ? ` · ${zit}p.` : ""}
+                            {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
+                          </span>
+                          {q.self_joined && !ikZelf && (
+                            <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.selfJoinedBadge}</span>
+                          )}
+                          <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "rgba(20,153,176,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                            <PotloodIcon />
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: vrijeZit > 0 ? "#123a42" : "#1f8a4c" }}>
+                      {vrijeZit > 0 ? L.seatsProgress(gevuldZit, totaalZit) : L.seatsAllNamed}
+                    </span>
+                    {totaalZit > 0 && (
+                      <span style={{ display: "flex", gap: totaalZit <= 10 ? 4 : 0, marginTop: 6 }}>
+                        {totaalZit <= 10
+                          ? Array.from({ length: totaalZit }, (_, i) => (
+                              <span key={i} style={{ flex: 1, height: 7, borderRadius: 4,
+                                background: i < scanZit ? "#1f8a4c" : i < gevuldZit ? "#0f7d90" : "rgba(18,58,66,0.12)" }} />
+                            ))
+                          : [
+                              { k: "scan", n: scanZit, c: "#1f8a4c" },
+                              { k: "jij", n: jouwZit, c: "#0f7d90" },
+                              { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.12)" },
+                            ].filter((d) => d.n > 0).map((d, i, arr) => (
+                              <span key={d.k} style={{ flexGrow: d.n, height: 7, background: d.c,
+                                borderTopLeftRadius: i === 0 ? 4 : 0, borderBottomLeftRadius: i === 0 ? 4 : 0,
+                                borderTopRightRadius: i === arr.length - 1 ? 4 : 0, borderBottomRightRadius: i === arr.length - 1 ? 4 : 0 }} />
+                            ))}
+                      </span>
+                    )}
+                    <span style={{ display: "flex", flexWrap: "wrap", gap: "2px 12px", marginTop: 6, fontSize: 12.5, fontWeight: 700, color: "#44656b" }}>
+                      {([
+                        { k: "scan", n: scanZit, c: "#1f8a4c", t: L.seatsViaScan(scanZit) },
+                        { k: "jij", n: jouwZit, c: "#0f7d90", t: L.seatsByYou(jouwZit) },
+                        { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.18)", t: L.nStillFree(vrijeZit) },
+                      ]).filter((d) => d.n > 0).map((d) => (
+                        <span key={d.k} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          <span style={{ width: 7, height: 7, borderRadius: "50%", background: d.c }} />{d.t}
+                        </span>
+                      ))}
+                    </span>
+                  </span>
+                  <button onClick={() => setShowNamesBlock((v) => !v)}
+                    style={{ flexShrink: 0, minHeight: 44, padding: "9px 12px", cursor: "pointer",
+                      border: "1.5px solid rgba(20,153,176,0.45)", borderRadius: 10, background: "#fff",
+                      color: "#0b6473", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap" }}>
+                    {showNamesBlock ? `${L.collapseSeats} ▾` : `${L.showSeats} ▴`}
+                  </button>
+                </div>
+
+                {seatRequests.length > 0 && (
+                  <div style={{ marginTop: 9, fontSize: 13.5, fontWeight: 800, color: "#8a4514", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 9, padding: "7px 9px" }}>
+                    {L.seatAsks(seatRequests.length)}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
       )}
 
@@ -5772,15 +5791,41 @@ export default function RundoTable() {
           boxShadow: "0 6px 18px -8px rgba(31,138,76,0.8)" }}>
           <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>✓</span>
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>{L.closedBarTitle}</span>
-            <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, opacity: 0.9, marginTop: 1 }}>€{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span>
+            <span style={{ display: "block", fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>{openUnits > 0 ? L.closedBarTitle : L.closedBarAll}</span>
+            <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, opacity: 0.92, marginTop: 1 }}>{L.closedBarSub(`€${(billTotal + tipTotal).toFixed(2).replace(".", ",")}`, totalPersons)}</span>
           </span>
+          {/* Oranje op groen: de enige knop in de balk, en meteen herkenbaar als de
+              uitzondering. Een halfdoorzichtige knop leest als "uitgeschakeld". */}
           <button onClick={() => finalizeBill(false)}
-            style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 12, padding: "9px 13px", color: "#fff", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap" }}>
-            {L.reopenShort}
+            style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f39c12,#e67e22)", border: "none", borderRadius: 11, padding: "10px 13px", color: "#fff", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap", boxShadow: "0 4px 12px -5px rgba(230,126,34,0.9)" }}>
+            {L.reopenWord}
           </button>
         </div>
       )}
+
+      {/* De opmerkingen van gasten stonden in het grote groene kaartje dat hier weg is.
+          Ze horen niet in de balk zelf — die moet één regel blijven — maar er vlak onder,
+          in amber, zodat een open opmerking niet stilletjes verdwijnt. */}
+      {isAdmin && adminTab === "overview" && group.finalized && (() => {
+        const disputers = parseDisputes(group.disputed_by || "")
+        if (disputers.length === 0) return null
+        const openCount = disputers.filter((d) => !d.resolved).length
+        return (
+          <div style={{ background: "#fff7e6", border: "1.5px solid #f0b840", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 16, color: "#8a5a00" }}>
+            <div style={{ fontWeight: 800, marginBottom: 6, color: "#a06b00" }}>{openCount > 0 ? L.remarksOpen : L.remarksDone}</div>
+            {disputers.map((d, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7, opacity: d.resolved ? 0.7 : 1 }}>
+                <div style={{ flex: 1, minWidth: 0, textDecoration: d.resolved ? "line-through" : "none" }}>
+                  <b>{d.name}</b>{d.comment ? <span>: “{d.comment}”</span> : ""}
+                </div>
+                <button onClick={() => resolveDispute(d.name, !d.resolved)} style={{ flexShrink: 0, border: d.resolved ? "1px solid rgba(18,58,66,0.2)" : "none", background: d.resolved ? "#fff" : "linear-gradient(135deg,#1f8a4c,#27ae60)", color: d.resolved ? "#4a6e73" : "#fff", borderRadius: 9, padding: "7px 12px", fontSize: 15.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  {d.resolved ? L.reopenRemark : L.markResolved}
+                </button>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
 
       {((isAdmin && adminTab === "overview") || !isAdmin) && (
         <>
@@ -6031,14 +6076,6 @@ export default function RundoTable() {
               onbereikbaar was. Dat overzicht staat nu gewoon op de pagina, en de melding
               plus het heropenen zitten in de balk bovenaan die meeloopt. Alles wat hier
               stond, staat dus al ergens — en dubbel is verwarrend. */}
-          {group.finalized ? null : (
-            <button id="afsluit-knop" onClick={probeerAfsluiten} style={{ ...S.btn, width: "100%", padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
-              {L.finalizeBtn}
-            </button>
-          )}
-          {group.finalized ? null : (
-            <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 6, marginBottom: 4 }}>{L.notFinalizedNote}</div>
-          )}
           <div style={{ textAlign: "center", marginTop: 10 }}>
             <button onClick={() => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }) }} style={{ ...S.btn, fontSize: 16, fontWeight: 700, padding: "8px 16px" }}>{L.backToTop}</button>
           </div>
@@ -6051,6 +6088,12 @@ export default function RundoTable() {
           en zegt deze plek dat gewoon. */}
       {isAdmin && adminTab === "overview" && group.finalized && (
         <div style={{ ...S.card, marginTop: 12, padding: 14 }}>
+          {/* Eerst de uitweg, dan de laatste stap: wie hier komt met twijfel moet niet
+              langs de knop die alles afrondt om bij "toch nog wijzigen" te raken. */}
+          <button onClick={() => finalizeBill(false)}
+            style={{ width: "100%", marginBottom: 10, cursor: "pointer", border: "1.5px solid rgba(230,126,34,0.55)", borderRadius: 12, padding: "12px 0", fontSize: 16, fontWeight: 800, fontFamily: "inherit", color: "#b3560f", background: "#fffaf4" }}>
+            {L.reopenLong}
+          </button>
           {group.pinned ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "rgba(39,174,96,0.16)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>✓</span>
@@ -6062,7 +6105,7 @@ export default function RundoTable() {
           ) : (
             <button onClick={() => setSettleVraag(true)}
               style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 18, fontWeight: 800, fontFamily: "inherit", color: "#fff",
-                background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>
+                background: "linear-gradient(135deg,#4a5b96,#6577b4)", boxShadow: "0 6px 16px -6px rgba(74,91,150,0.6)" }}>
               {L.settleSaveBtn}
             </button>
           )}
@@ -6078,20 +6121,35 @@ export default function RundoTable() {
           padding: "10px 12px calc(10px + env(safe-area-inset-bottom))",
           background: "rgba(247,251,252,0.97)", backdropFilter: "blur(6px)",
           borderTop: "1.5px solid rgba(18,58,66,0.12)", borderRadius: "14px 14px 0 0",
-          boxShadow: "0 -8px 22px -14px rgba(18,58,66,0.45)",
-          display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => { if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }}
-            style={{ flex: 1, minWidth: 0, textAlign: "left", cursor: "pointer", background: "transparent", border: "none", padding: 0, fontFamily: "inherit" }}>
-            <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: tipTotal > 0.005 ? "#15703f" : "#8aa3a6", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {tipTotal > 0.005 ? `✓ ${L.stickyTipSet(tipTotal.toFixed(2).replace(".", ","))}` : `💛 ${L.stickyTipNone}`}
-            </span>
-            <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#0f7488", textDecoration: "underline", textUnderlineOffset: 3, marginTop: 1 }}>{L.stickyTipEdit}</span>
-          </button>
+          boxShadow: "0 -8px 22px -14px rgba(18,58,66,0.45)" }}>
+          {/* De halve voet ging vroeger naar de fooi, met een hartje en het woord
+              "wijzig" — een grote knop voor iets wat je hoogstens één keer doet, en de
+              afsluitknop moest daardoor inkrimpen. Nu staat links wáárom je nog niet
+              kan afsluiten, staat de fooi er klein naast, en heeft het afsluiten de
+              volle breedte. */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 8 }}>
+            <button onClick={() => { if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }}
+              style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", borderRadius: 9, padding: "7px 11px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap",
+                border: tipTotal > 0.005 ? "1.5px solid rgba(39,174,96,0.45)" : "1.5px solid rgba(20,153,176,0.45)",
+                background: tipTotal > 0.005 ? "rgba(39,174,96,0.1)" : "#fff",
+                color: tipTotal > 0.005 ? "#15703f" : "#0b6473" }}>
+              {tipTotal > 0.005 ? `✓ ${L.stickyTipSet(tipTotal.toFixed(2).replace(".", ","))}` : L.addTipSmall}
+            </button>
+          </div>
+          {/* Grijs zei enkel "kan niet"; nu zegt de knop wát er nog ontbreekt, en een tik
+              erop brengt je naar dat lijstje. Zacht rood, geen alarm: er is niets stuk,
+              je bent gewoon nog niet klaar. */}
           <button onClick={probeerAfsluiten}
-            style={{ flexShrink: 0, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 20px", fontSize: 17, fontWeight: 800, fontFamily: "inherit", color: "#fff",
-              background: allAssignedNow ? "linear-gradient(135deg,#1f8a4c,#27ae60)" : "rgba(18,58,66,0.3)",
+            style={{ width: "100%", cursor: "pointer", borderRadius: 12, padding: "14px 0", fontSize: 17, fontWeight: 800, fontFamily: "inherit",
+              border: allAssignedNow ? "none" : "1.5px solid rgba(224,107,94,0.55)",
+              color: allAssignedNow ? "#fff" : "#a8402f",
+              background: allAssignedNow ? "linear-gradient(135deg,#1f8a4c,#27ae60)" : "rgba(224,107,94,0.14)",
               boxShadow: allAssignedNow ? "0 6px 16px -6px rgba(39,174,96,0.6)" : "none" }}>
-            {L.finalizeBtn}
+            {allAssignedNow
+              ? L.finalizeBtnDone
+              : (openUnits + undecidedShared.length) > 0
+              ? L.finalizeBtnOpen(openUnits + undecidedShared.length)
+              : L.stickyCheckFirst}
           </button>
         </div>
       )}
@@ -6583,7 +6641,7 @@ export default function RundoTable() {
             <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 11px" }}>{L.settleAskBody}</p>
             <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.5, background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>{L.settleAskKeep}</div>
             <button onClick={() => void sluitAfEnBewaar()}
-              style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 17, fontWeight: 800, fontFamily: "inherit", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{L.settleAskYes}</button>
+              style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 17, fontWeight: 800, fontFamily: "inherit", color: "#fff", background: "linear-gradient(135deg,#4a5b96,#6577b4)" }}>{L.settleAskYes}</button>
             <button onClick={() => setSettleVraag(false)}
               style={{ ...S.btn, width: "100%", padding: "11px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#8aa3a6", background: "transparent", border: "none" }}>{L.cancel}</button>
           </div>
@@ -6632,14 +6690,14 @@ export default function RundoTable() {
               <span style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c" }}>{L.allAssignedTitle}</span>
             </div>
             <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 14px" }}>{L.allAssignedBody}</p>
-            <button onClick={() => {
-              setAllesPopup(false)
-              setKlapToewijzenSignaal((n) => n + 1)
-              setExpandedPeople(new Set(participants.map((p) => p.id)))
-              if (typeof document !== "undefined") setTimeout(() => document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80)
-            }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.allAssignedGo}</button>
+            {/* Alles heeft een naam: de volgende stap is afsluiten, en dan doen we dat
+                hier meteen. Je eerst naar het overzicht sturen om daar de afsluitknop te
+                zoeken was een omweg langs een scherm dat niets beslist. Bang om te vroeg
+                te zijn hoeft niet: heropenen is één tik. */}
+            <button onClick={() => { setAllesPopup(false); void finalizeBill(true) }}
+              style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.allAssignedClose}</button>
             <button onClick={() => setAllesPopup(false)}
-              style={{ ...S.btn, width: "100%", padding: "11px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#8aa3a6", background: "transparent", border: "none" }}>{L.allAssignedLater}</button>
+              style={{ ...S.btn, width: "100%", padding: "11px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#4a6e73", background: "transparent", border: "none" }}>{L.allAssignedCheck}</button>
           </div>
         </div>
       )}
@@ -7871,6 +7929,45 @@ function ClaimScreen(props: {
     prevDoneRef.current = allDone
   }, [allDone, isAdmin, onAllAssigned])
   useEffect(() => { if (klapSignaal && klapSignaal > 0) setClaimCollapsed(true) }, [klapSignaal])
+
+  // Afgesloten, en jij bent de beheerder: dan is dit geen werkblad meer maar een
+  // eindafrekening. De knoppen zagen er tot nu toe uit als altijd, maar konden enkel nog
+  // melden dat de rekening dicht is — een scherm dat uitnodigt tot iets wat niet kan.
+  // Hier staat dus enkel nog wat er verdeeld is, en het scheelt ook de helft in hoogte.
+  if (isAdmin && finalized) {
+    return (
+      <div id="wie-nam-wat">
+        <div style={{ ...S.card, border: "1.5px solid rgba(39,174,96,0.3)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingBottom: 10, borderBottom: "1px solid rgba(39,174,96,0.2)" }}>
+            <span style={{ fontSize: 16.5, fontWeight: 800, color: "#1f6b3a" }}>{L.closedListTitle}</span>
+            <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#4e7a62", background: "rgba(39,174,96,0.12)", borderRadius: 8, padding: "4px 8px", whiteSpace: "nowrap" }}>{L.lockedWord}</span>
+          </div>
+          {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsScanFirst}</div>}
+          {items.map((it, i) => {
+            const gedeeld = !!it.is_shared
+            const wie = gedeeld
+              ? sharerIds(it.id).map((pid) => { const q = participants.find((x) => x.id === pid); return q ? naamVan(q) : "" }).filter(Boolean)
+              : participants
+                  .map((q) => ({ n: naamVan(q), q: myQty(it.id, q.id) }))
+                  .filter((x) => x.q > 0)
+                  .map((x) => `${x.n}${x.q > 1 ? ` ×${x.q}` : ""}`)
+            return (
+              <div key={it.id} style={{ padding: "11px 0", borderBottom: i === items.length - 1 ? "none" : "1px solid rgba(18,58,66,0.06)" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 700, color: "#1d2433" }}>{it.quantity > 1 ? `${it.quantity}× ` : ""}{showTip(it.name, L)}</span>
+                  <span style={{ flexShrink: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 15, color: wie.length > 0 ? "#6b8489" : "#c0392b", marginTop: 3 }}>
+                  {gedeeld && <ShareIcon on size={13} />}
+                  {wie.length > 0 ? wie.join(" · ") : L.tagFree}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   if (isAdmin) {
     const normalItems = items.filter((i) => !i.is_shared)
