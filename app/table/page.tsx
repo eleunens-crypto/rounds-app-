@@ -1295,8 +1295,11 @@ const STRINGS = {
     fullBillInfo: "De volledige rekening ter info — tik een naam aan voor het detail:",
     nothingTapped2: "Niets aangetikt.",
     youSuffix: " (jij)",
-    confirmedWord: "Bevestigd",
-    changeAnyway: "Toch iets wijzigen",
+    confirmedWord: "Bestelling bevestigd",
+    confirmedSub: "Je lijst staat vast. De beheerder rekent hiermee af.",
+    lockedList: "Vastgezet \u2014 tik op",
+    whatNowLong: "Wat gebeurt er nu?",
+    changeAnyway: "Bestelling aanpassen",
     confirmMyOrder: "✅ Bevestig mijn bestelling",
     confirmFailed: (msg: string) => `Bevestigen lukte niet: ${msg}`,
     claimFailed: (msg: string) => `Aanpassen lukte niet: ${msg}`,
@@ -2049,8 +2052,11 @@ const STRINGS = {
     fullBillInfo: "L'addition complète pour info — touche un nom pour le détail :",
     nothingTapped2: "Rien coché.",
     youSuffix: " (toi)",
-    confirmedWord: "Confirmé",
-    changeAnyway: "Modifier quand même",
+    confirmedWord: "Commande confirm\u00e9e",
+    confirmedSub: "Ta liste est fig\u00e9e. L'h\u00f4te compte avec \u00e7a.",
+    lockedList: "Fig\u00e9 \u2014 touche",
+    whatNowLong: "Que se passe-t-il maintenant\u00a0?",
+    changeAnyway: "Modifier ma commande",
     confirmMyOrder: "✅ Confirme ma commande",
     confirmFailed: (msg: string) => `Échec de la confirmation : ${msg}`,
     claimFailed: (msg: string) => `Modification impossible : ${msg}`,
@@ -7955,6 +7961,10 @@ function ClaimScreen(props: {
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
   // een volgend gezelschap krijg je ze opnieuw — dan zit er ook een ander gezelschap.
+  // Bevestigd betekent: dit is wat ik nam. Dan hoort de lijst ook vast te staan — anders
+  // is bevestigen een knop zonder gevolg, en verandert er van alles nadat de beheerder al
+  // afgetekend heeft.
+  const vast = iConfirmed && !finalized
   const uitlegSleutel = (soort: string) => `rundo_table_uitleg_${soort}_${meId ?? ""}`
   const uitlegGezien = (soort: string) => {
     try { return localStorage.getItem(uitlegSleutel(soort)) === "1" } catch { return false }
@@ -8476,10 +8486,19 @@ function ClaimScreen(props: {
           {toonKnop(gastItemsOpen)}
         </h3>
         {gastItemsOpen && (<>
-        {items.length > 0 && (
+        {items.length > 0 && !vast && (
           <DeelUitleg />
         )}
+        {/* Eén regel die zegt waaróm er niets meer beweegt, met de knop erbij genoemd.
+            Zonder die regel lijkt het scherm gewoon stuk. */}
+        {vast && items.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(18,58,66,0.05)", borderRadius: 10, padding: "9px 11px", marginBottom: 10, color: "#5b7378" }}>
+            <SlotIcon />
+            <span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4 }}>{L.lockedList} <b>{L.changeAnyway}</b>.</span>
+          </div>
+        )}
         {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsWaitScan}</div>}
+        <div style={vast ? { pointerEvents: "none", opacity: 0.55 } : undefined}>
 
         {items.map((it) => {
           const total = it.quantity
@@ -8642,6 +8661,7 @@ function ClaimScreen(props: {
             </div>
           )
         })}
+        </div>
         </>)}
         </div>
         )}
@@ -8771,34 +8791,41 @@ function ClaimScreen(props: {
             {/* Bevestigd is een toestand, geen knop: die groene balk was aantikbaar en
                 zette je bevestiging in één tik weer uit, terwijl het label "tik om te
                 wijzigen" beloofde dat er iets zou opengaan. Wijzigen staat nu apart. */}
-            <div style={{ display: "flex", alignItems: "stretch", gap: 8, marginTop: 12 }}>
-              {iConfirmed ? (
-                <span style={{ flex: 3, display: "flex", alignItems: "center", gap: 9, background: "rgba(39,174,96,0.10)", border: "1.5px solid rgba(39,174,96,0.45)", borderRadius: 12, padding: "12px 13px" }}>
-                  <span style={{ fontSize: 19 }}>✓</span>
-                  <span style={{ fontSize: 15.5, fontWeight: 800, color: "#1f8a4c" }}>{L.confirmedWord}</span>
-                </span>
-              ) : (
-                <button onClick={async () => {
-                  const ok = await confirmMe()
-                  if (ok !== false) setShowConfirmInfo(true)
-                }} style={{ ...S.btn, ...S.btnPrimary, flex: 3, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none" }}>
-                  {L.confirmMyOrder}
-                </button>
-              )}
-              {/* Pas na het bevestigen: deze uitleg gaat over wat er dan gebeurt. */}
-              {!isAdmin && iConfirmed && (
-                <button onClick={() => setShowConfirmInfo(true)}
-                  style={{ ...S.btn, flex: 1, minWidth: 0, padding: "14px 4px", fontSize: 16, fontWeight: 800, cursor: "pointer", background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", color: "#0f7d90", whiteSpace: "nowrap" }}>{L.whatNowBtn}</button>
-              )}
-            </div>
-            {iConfirmed && !finalized && (
-              // Na het afsluiten heeft wijzigen geen zin meer: de balk blijft staan als
-              // vaststelling, zonder een actie aan te bieden die dan niet hoort.
+            {/* Bevestigd, aanpassen en de uitleg horen bij elkaar, dus staan ze in één groen
+                kader. En het blijft onderaan in beeld terwijl je door je items scrolt: dat
+                kader is het enige wat je hier nog kan doen. */}
+            {iConfirmed ? (
+              <div style={{ position: "sticky", bottom: 0, zIndex: 15, marginTop: 12,
+                paddingBottom: "calc(4px + env(safe-area-inset-bottom))" }}>
+                <div style={{ background: "rgba(234,250,241,0.97)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+                  border: "1.5px solid rgba(39,174,96,0.45)", borderRadius: 14, padding: 14, boxShadow: "0 -6px 18px -14px rgba(18,58,66,0.5)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                    <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "rgba(39,174,96,0.2)", color: "#1f8a4c", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>✓</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#1f8a4c" }}>{L.confirmedWord}</span>
+                      <span style={{ display: "block", fontSize: 14, color: "#3c6b51", lineHeight: 1.4, marginTop: 2 }}>{L.confirmedSub}</span>
+                    </span>
+                  </div>
+                  {!finalized && (
+                    <button onClick={async () => { await confirmMe() }}
+                      style={{ width: "100%", marginTop: 9, minHeight: 46, cursor: "pointer", border: "1.5px solid rgba(230,126,34,0.6)", borderRadius: 12, background: "#fffaf4", color: "#b3560f", fontSize: 16, fontWeight: 800, fontFamily: "inherit" }}>
+                      {L.changeAnyway}
+                    </button>
+                  )}
+                </div>
+                {!isAdmin && (
+                  <button onClick={() => setShowConfirmInfo(true)}
+                    style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "center", fontSize: 15.5, fontWeight: 800, color: "#0f7d90", textDecoration: "underline", textUnderlineOffset: 3, marginTop: 9, padding: "4px 0", fontFamily: "inherit" }}>
+                    {L.whatNowLong}
+                  </button>
+                )}
+              </div>
+            ) : (
               <button onClick={async () => {
-                await confirmMe()
-              }}
-                style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "center", fontSize: 14.5, fontWeight: 700, color: "#4a6e73", textDecoration: "underline", marginTop: 9, padding: 0 }}>
-                {L.changeAnyway}
+                const ok = await confirmMe()
+                if (ok !== false) setShowConfirmInfo(true)
+              }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none" }}>
+                {L.confirmMyOrder}
               </button>
             )}
           </>
@@ -8928,6 +8955,16 @@ function ClaimScreen(props: {
         </div>
       )}
     </div>
+  )
+}
+
+function SlotIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0 }} aria-hidden="true">
+      <rect x="4.5" y="10.5" width="15" height="10.5" rx="2.2" />
+      <path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" />
+    </svg>
   )
 }
 
