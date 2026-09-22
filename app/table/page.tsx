@@ -1067,6 +1067,20 @@ const STRINGS = {
     // Kort en hetzelfde voor beheerder en gast: waar het staat, en niets over codes of
     // links — daar hoef je niets voor te doen.
     settleDoneKeep: "Je groepje staat 7 dagen op het startscherm, onder \u201cJouw groepen\u201d. Daarna wordt het automatisch gewist.",
+    keptShortPre: "\ud83d\udcc2 Nog 7 dagen bewaard op ",
+    whatNowHead: "Nog iets samen met de groep?",
+    ideaBtnTitle: "Iemand een idee?",
+    ideaBtnSub: "Wij wel!",
+    ideaListTitle: "Leuke groepsideetjes",
+    ideaListSub: "Voor de volgende keer met deze ploeg.",
+    ideaList: [
+      "\ud83c\udfb3 Bowlen \u2014 de verliezer trakteert de volgende keer",
+      "\ud83d\udd10 Escape room \u2014 kijken wie er echt kan samenwerken",
+      "\ud83c\udf73 Kook samen \u2014 ieder brengt \u00e9\u00e9n gang mee",
+      "\ud83c\udfaf Darts of pool \u2014 en een tornooitje ernaast",
+      "\ud83e\udd7e Wandeling met een caf\u00e9 halverwege",
+      "\ud83c\udfad Quiz of pubquiz \u2014 met dezelfde tafelnamen",
+    ],
     settleShareHint: "Wil je het langer houden, deel het dan nu.",
     settleShareBtn: "Deel het overzicht",
     settleShareCopied: "Overzicht gekopieerd — plak het waar je wil",
@@ -1775,6 +1789,20 @@ const STRINGS = {
     settleDoneTitle: "Tout est réglé",
     settleDoneKeepTitle: "📂 Gardé",
     settleDoneKeep: "Ton groupe reste 7 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb. Ensuite il est effacé automatiquement.",
+    keptShortPre: "📂 Encore 7 jours sur ",
+    whatNowHead: "Encore un truc avec le groupe ?",
+    ideaBtnTitle: "Une idée, quelqu'un ?",
+    ideaBtnSub: "Nous oui !",
+    ideaListTitle: "Des idées à faire en groupe",
+    ideaListSub: "Pour la prochaine fois avec cette équipe.",
+    ideaList: [
+      "🎳 Bowling — le perdant paie la prochaine fois",
+      "🔐 Escape game — on verra qui coopère vraiment",
+      "🍳 Cuisinez ensemble — chacun amène un plat",
+      "🎯 Fléchettes ou billard — avec un petit tournoi",
+      "🥾 Balade avec un café à mi-chemin",
+      "🎭 Quiz — avec les mêmes équipes qu'à table",
+    ],
     settleShareHint: "Tu veux le garder plus longtemps ? Partage-le maintenant.",
     settleShareBtn: "Partager le récapitulatif",
     settleShareCopied: "Récapitulatif copié — colle-le où tu veux",
@@ -2207,6 +2235,8 @@ export default function RundoTable() {
   // dat het gebeurt — de sleutel wordt gewist zodra het groepje weer losgemaakt wordt,
   // zodat een tweede afronding wél opnieuw gemeld wordt.
   const [settleGastPopup, setSettleGastPopup] = useState(false)
+  // Het lijstje achter "Iemand een idee?" — wat je met deze ploeg een volgende keer kan doen.
+  const [ideeLijst, setIdeeLijst] = useState(false)
   const [showShareWarn, setShowShareWarn] = useState(false)   // waarschuwing bij delen terwijl totalen niet kloppen
   const [showFinalizeWarn, setShowFinalizeWarn] = useState(false) // waarschuwing bij afsluiten terwijl totalen niet kloppen
   // Centrale in-app melding (midden op het scherm, met OK) — vervangt browser-alerts en
@@ -3119,11 +3149,14 @@ export default function RundoTable() {
   useEffect(() => {
     if (!isAdmin) return
     if (!zitKlaar) { volGemeld.current = false; return }
+    // Is de rekening al afgesloten, dan is "iedereen is er" geen nieuws meer, en zou de
+    // melding tussen de afsluitvensters door komen — precies waar je ze niet wil.
+    if (group?.finalized) { volGemeld.current = true; return }
     if (adminTab !== "overview") return
     if (volGemeld.current) return
     volGemeld.current = true
     setGroepVolPopup(true)
-  }, [zitKlaar, isAdmin, adminTab])
+  }, [zitKlaar, isAdmin, adminTab, group?.finalized])
   useEffect(() => {
     if (!isAdmin || adminTab !== "guests") { if (!zitKlaar) tafelWasVol.current = false; return }
     if (zitKlaar && !tafelWasVol.current) {
@@ -4869,7 +4902,7 @@ export default function RundoTable() {
       {/* Zelfde onderdelen als het gewone aanmelden: keuzeknoppen voor het aantal en
           één naamveld per persoon, samengevoegd met een & zoals overal elders. */}
       {vraagPopup && (
-        <div style={{ ...S.overlay, alignItems: "flex-start", paddingTop: "8vh" }} onClick={() => setVraagPopup(null)}>
+        <div style={{ ...S.overlay, alignItems: "flex-start", paddingTop: "8vh" }}>
           <div style={{ ...S.modal, width: "min(320px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#2b4f56" }}>{L.askSeatTitle}</h3>
             <div style={{ fontSize: 13.5, color: "#8aa3a6", lineHeight: 1.45, marginTop: 4 }}>{L.askSeatSub}</div>
@@ -6269,7 +6302,7 @@ export default function RundoTable() {
           )
         }
         return (
-        <div style={S.overlay} onClick={() => setTaxModal(null)}>
+        <div style={S.overlay}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)", maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0, marginBottom: 12, fontSize: 21, fontWeight: 800 }}>{L.taxModalTitle}</h3>
 
@@ -6398,7 +6431,7 @@ export default function RundoTable() {
         const entered = group?.receipt_total ?? null
         const diff = entered != null ? Math.abs(billTotal - entered) : null
         return (
-          <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowShareWarn(false)}>
+          <div style={{ ...S.overlay, zIndex: 3000 }}>
             <div style={{ ...S.modal, width: "min(350px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 20, fontWeight: 800, color: "#c0392b" }}>{L.totalsMismatchTitle}{diff != null ? L.diffSuffix(diff.toFixed(2).replace(".", ",")) : ""}</h3>
               <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 8px" }}>{entered == null ? L.warnFillTotal : L.warnCheckItems}</p>
@@ -6415,7 +6448,7 @@ export default function RundoTable() {
       })()}
 
       {showInviteModal && (
-        <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowInviteModal(false)}>
+        <div style={{ ...S.overlay, zIndex: 3000 }}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 20, fontWeight: 800, color: "#123a42" }}>{L.inviteModalTitle}</h3>
             <div style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, marginBottom: 12 }}>{L.inviteModalMsg}</div>
@@ -6484,7 +6517,7 @@ export default function RundoTable() {
       })()}
 
       {showTipReminder && (
-        <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowTipReminder(false)}>
+        <div style={{ ...S.overlay, zIndex: 3000 }}>
           <div style={{ ...S.modal, width: "min(350px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0, marginBottom: 7, fontSize: 20, fontWeight: 800, color: "#123a42" }}>{L.tipTitleNew}</h3>
             <div style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.55, marginBottom: 13 }}>{L.tipBodyNew}</div>
@@ -6548,7 +6581,7 @@ export default function RundoTable() {
         const entered = group?.receipt_total ?? null
         const diff = entered != null ? Math.abs(billTotal - entered) : null
         return (
-          <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowFinalizeWarn(false)}>
+          <div style={{ ...S.overlay, zIndex: 3000 }}>
             <div style={{ ...S.modal, width: "min(350px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 20, fontWeight: 800, color: "#c0392b" }}>{L.sureTitle}{diff != null ? L.sureDiff(diff.toFixed(2).replace(".", ",")) : L.sureNoTotal}</h3>
               <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 14px" }}>{L.finalizeWarnBody}</p>
@@ -6561,7 +6594,7 @@ export default function RundoTable() {
 
       {/* Centrale in-app melding (vervangt browser-alerts, toont gast-opmerkingen). */}
       {centerNote && (
-        <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setCenterNote(null)}>
+        <div style={{ ...S.overlay, zIndex: 3200 }}>
           <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             {centerNote.title && <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 20, fontWeight: 800, color: "#123a42" }}>{centerNote.title}</h3>}
             <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{centerNote.body}</p>
@@ -6774,7 +6807,7 @@ export default function RundoTable() {
 
       {/* In-app ja/nee-bevestiging. */}
       {confirmDlg && (
-        <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setConfirmDlg(null)}>
+        <div style={{ ...S.overlay, zIndex: 3200 }}>
           <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             {confirmDlg.title && <h3 style={{ marginTop: 0, marginBottom: 9, fontSize: 20, fontWeight: 800, color: confirmDlg.danger ? "#c0392b" : "#123a42" }}>{confirmDlg.title}</h3>}
             <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body}</p>
@@ -6788,8 +6821,25 @@ export default function RundoTable() {
       {/* De gast hoort het ook: de avond is rond, dit is het bedrag, en zo vind je het
           groepje later terug. De verwijzing naar Rundo staat hier en niet meer in het
           afsluitvenster — daar was je nog met de verdeling bezig. */}
+      {/* ─── Venster: ideeën om met de groep te doen ─── */}
+      {ideeLijst && (
+        <div style={{ ...S.overlay, zIndex: 3500 }}>
+          <div style={{ ...S.modal, width: "min(360px, 92vw)", maxHeight: "86vh", overflowY: "auto" }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#123a42", marginBottom: 3 }}>{L.ideaListTitle}</div>
+            <div style={{ fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.4, marginBottom: 13 }}>{L.ideaListSub}</div>
+            {L.ideaList.map((idee, i) => (
+              <div key={i} style={{ fontSize: 16, color: "#2b4f56", lineHeight: 1.45, padding: "10px 12px", borderRadius: 11, background: i % 2 === 0 ? "rgba(20,153,176,0.06)" : "transparent", marginBottom: 4 }}>{idee}</div>
+            ))}
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+              <button onClick={() => setIdeeLijst(false)}
+                style={{ ...S.btn, ...S.btnPrimary, minWidth: "55%", padding: "12px 26px", fontSize: 16.5, fontWeight: 800 }}>{L.close}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isAdmin && settleGastPopup && meId && (
-        <div style={{ ...S.overlay, zIndex: 3400 }} onClick={() => setSettleGastPopup(false)}>
+        <div style={{ ...S.overlay, zIndex: 3400 }}>
           <div style={{ ...S.modal, width: "min(380px, 92vw)", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 13 }}>
               <div style={{ width: 58, height: 58, borderRadius: "50%", background: "rgba(39,174,96,0.16)", border: "2px solid rgba(39,174,96,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 10px", color: "#1f8a4c", fontWeight: 800 }}>✓</div>
@@ -6800,26 +6850,63 @@ export default function RundoTable() {
               <span style={{ fontSize: 17, fontWeight: 800, color: "#0f7488" }}>{L.yourTotal}</span>
               <span style={{ fontSize: 28, fontWeight: 800, color: "#123a42" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>
             </div>
-            <div style={{ background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "11px 13px" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#0f7488", marginBottom: 4 }}>{L.settleDoneKeepTitle}</div>
-              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45 }}>{L.settleDoneKeep}</div>
-              {/* De uitweg voor wie het lánger wil houden: de verdeling gaat als tekst mee
-                  naar zijn eigen gesprek, en niet naar onze databank. */}
-              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45, marginTop: 7 }}>{L.settleShareHint}</div>
-              <button onClick={() => void deelOverzicht()}
-                style={{ ...S.btn, width: "100%", marginTop: 9, padding: "11px 0", fontSize: 15.5, fontWeight: 800, background: "#fff", color: "#0f7488", border: "1.5px solid rgba(20,153,176,0.45)" }}>
-                🔗 {L.settleShareBtn}
-              </button>
+            {/* Hier stond een heel blok: waar je het groepje terugvindt, plus een uitnodiging
+                om het overzicht te delen met een knop erbij. Voor een gast die via een QR
+                binnenviel was dat veel tekst over een startscherm dat hij nooit zag. Eén
+                regel volstaat, met het adres als link — dan is de knop erheen overbodig. */}
+            <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45, textAlign: "center" }}>
+              {L.keptShortPre}
+              <a href="https://www.rundo.be" style={{ fontWeight: 800, color: "#0f7488" }}>www.rundo.be</a>
             </div>
-            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "16px 0 -4px" }}>{L.tryRundoTitle}</div>
-            <div style={{ marginTop: 4 }}>{renderPartyVerwijzing()}</div>
-            <button onClick={() => setSettleGastPopup(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.settleOk}</button>
+
+            {/* De avond is klaar, de rekening staat vast — en dan pas komt dit. Het icoontje
+                wisselt, zodat de knop niet meteen verklapt waar hij over gaat. */}
+            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "18px 0 8px" }}>{L.whatNowHead}</div>
+            <button onClick={() => setIdeeLijst(true)}
+              style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
+                border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 13, padding: "12px 13px" }}>
+              <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(20,153,176,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}><IdeeIcoon /></span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                {/* "Wij wel!" is de wending die uitnodigt om te tikken — klein en grijs
+                    ging dat verloren onder de vraag erboven. Nu even groot, in de accentkleur. */}
+                <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>{L.ideaBtnTitle}</span>
+                <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#0f7488", lineHeight: 1.3, marginTop: 1 }}>{L.ideaBtnSub}</span>
+              </span>
+              <span style={{ flexShrink: 0, fontSize: 16, color: "#0f7488" }}>→</span>
+            </button>
+
+            {/* De zwarte Rundo-kaart stond hier als een blok apart en woog zwaarder dan de
+                rekening erboven. Ze hoort bij dezelfde vraag — wat doen we nu? — dus staat ze
+                nu als tweede regel in dezelfde sectie, in dezelfde lichte vorm. Tik je erop,
+                dan klapt het volledige Rundo-scherm open zoals voorheen. */}
+            {partyInfo ? (
+              <div style={{ marginTop: 8 }}>{renderPartyVerwijzing()}</div>
+            ) : (
+              <button onClick={() => setPartyInfo(true)}
+                style={{ width: "100%", boxSizing: "border-box", marginTop: 8, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
+                  border: "1.5px solid rgba(240,193,75,0.75)", background: "rgba(240,193,75,0.09)", borderRadius: 13, padding: "12px 13px" }}>
+                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(240,179,1,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <RundoLogo size={24} />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: "#123a42" }}>{L.cafeAfterQ}</span>
+                  <span style={{ display: "block", fontSize: 13, color: "#8aa3a6", lineHeight: 1.35, marginTop: 1 }}>{L.seeWhatItDoes}</span>
+                </span>
+                <span style={{ flexShrink: 0, fontSize: 16, color: "#b3892a" }}>→</span>
+              </button>
+            )}
+            {/* Gecentreerd en niet over de volle breedte: dit sluit alleen het venster, het
+                is geen stap die je nog moet zetten. */}
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+              <button onClick={() => setSettleGastPopup(false)}
+                style={{ ...S.btn, ...S.btnPrimary, minWidth: "55%", padding: "13px 26px", fontSize: 17, fontWeight: 800 }}>{L.settleOk}</button>
+            </div>
           </div>
         </div>
       )}
 
       {isAdmin && settleVraag && (
-        <div style={{ ...S.overlay, zIndex: 3300 }} onClick={() => setSettleVraag(false)}>
+        <div style={{ ...S.overlay, zIndex: 3300 }}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 21, fontWeight: 800, color: "#123a42", marginBottom: 6 }}>{L.settleAskTitle}</div>
             <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 11px" }}>{L.settleAskBody}</p>
@@ -6836,7 +6923,7 @@ export default function RundoTable() {
           verwijzing naar Rundo. Die stond in het afsluitvenster, waar je hoofd nog bij
           de verdeling zat — nu staat ze op het moment dat de avond echt rond is. */}
       {isAdmin && settleKlaar && (
-        <div style={{ ...S.overlay, zIndex: 3400 }} onClick={() => setSettleKlaar(false)}>
+        <div style={{ ...S.overlay, zIndex: 3400 }}>
           <div style={{ ...S.modal, width: "min(380px, 92vw)", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 14 }}>
               <div style={{ width: 62, height: 62, borderRadius: "50%", background: "rgba(39,174,96,0.16)", border: "2px solid rgba(39,174,96,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, margin: "0 auto 10px", color: "#1f8a4c", fontWeight: 800 }}>✓</div>
@@ -6869,7 +6956,7 @@ export default function RundoTable() {
           afsluitknop; wat daar nog moet gebeuren, bewaakt die knop zelf. */}
       {/* ─── Venster: de laatste plaats is ingenomen ─── */}
       {isAdmin && groepVolPopup && (
-        <div style={{ ...S.overlay, zIndex: 3100 }} onClick={() => setGroepVolPopup(false)}>
+        <div style={{ ...S.overlay, zIndex: 3100 }}>
           <div style={{ ...S.modal, width: "min(330px, 92vw)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ width: 46, height: 46, margin: "0 auto 10px", borderRadius: "50%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 800 }}>✓</div>
             <div style={{ fontSize: 19, fontWeight: 800, color: "#123a42", marginBottom: 4 }}>{L.groupFullTitle}</div>
@@ -6885,7 +6972,7 @@ export default function RundoTable() {
       )}
 
       {isAdmin && allesPopup && (
-        <div style={{ ...S.overlay, zIndex: 3100 }} onClick={() => sluitAllesPopup()}>
+        <div style={{ ...S.overlay, zIndex: 3100 }}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}>
               <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>✓</span>
@@ -6921,7 +7008,7 @@ export default function RundoTable() {
       )}
 
       {adminFinalPopup && (
-        <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setAdminFinalPopup(false)}>
+        <div style={{ ...S.overlay, zIndex: 3000 }}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)", maxHeight: "84vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 12 }}>
               <div style={{ fontSize: 40, marginBottom: 4 }}>✅</div>
@@ -7307,7 +7394,7 @@ export default function RundoTable() {
         // Bovenaan verankerd in plaats van gecentreerd: op een telefoon verkleint het
         // toetsenbord het zichtbare venster terwijl position:fixed het volledige venster
         // blijft gebruiken, waardoor een gecentreerd venster onderuit zakt.
-        <div style={{ ...S.overlay, alignItems: "flex-start", paddingTop: "6vh" }} onClick={sluitEditItem}>
+        <div style={{ ...S.overlay, alignItems: "flex-start", paddingTop: "6vh" }}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)", position: "relative" }} onClick={(e) => e.stopPropagation()}>
             {/* Een kruisje rechtsboven en een klik naast het venster: je opent dit scherm
                 makkelijk per ongeluk, en dan moet weggaan even vanzelfsprekend zijn. */}
@@ -7453,7 +7540,7 @@ export default function RundoTable() {
         </div>
       )}
       {showTaxInfo && (
-        <div style={S.overlay} onClick={() => setShowTaxInfo(false)}>
+        <div style={S.overlay}>
           <div style={{ ...S.modal, width: "min(380px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginBottom: 12, fontSize: 21, fontWeight: 800 }}>{L.taxWord}</h3>
             <div style={{ fontSize: 17.5, color: "#2b4f56", lineHeight: 1.6 }}>
@@ -7466,7 +7553,7 @@ export default function RundoTable() {
 
       {/* ─── Modal: bon groot bekijken ─── */}
       {shareConfirm && (
-        <div style={S.overlay} onClick={() => setShareConfirm(null)}>
+        <div style={S.overlay}>
           <div style={{ ...S.card, maxWidth: 380, width: "100%", margin: 0 }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ ...S.h3, marginBottom: 6 }}>{shareConfirm.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}</h3>
             <div style={{ fontSize: 17.5, color: "#123a42", fontWeight: 700, marginBottom: 6 }}>{shareConfirm.quantity}× {shareConfirm.name}</div>
@@ -9028,7 +9115,7 @@ function ClaimScreen(props: {
 
         {/* Popup 1: net bevestigd — waar sta je nu in het geheel? */}
         {showConfirmInfo && (
-          <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setShowConfirmInfo(false)}>
+          <div style={{ ...S.overlay, zIndex: 3200 }}>
             <div style={{ ...S.modal, width: "min(460px, 94vw)", padding: 22 }} onClick={(e) => e.stopPropagation()}>
               <div style={{ textAlign: "center", marginBottom: 20 }}>
                 <div style={{ width: 62, height: 62, borderRadius: "50%", background: "rgba(39,174,96,0.14)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, margin: "0 auto 12px" }}>✓</div>
@@ -9070,7 +9157,7 @@ function ClaimScreen(props: {
         )}
 
         {showFinalPopup && meId && (
-          <div style={{ ...S.overlay, zIndex: 3200 }} onClick={() => setShowFinalPopup(false)}>
+          <div style={{ ...S.overlay, zIndex: 3200 }}>
             <div style={{ ...S.modal, width: "min(400px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ fontSize: 21, fontWeight: 800, color: "#123a42", marginBottom: 3 }}>{L.finalPopupTitle}</div>
               <div style={{ fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.45, marginBottom: 14 }}>{L.finalPopupSub}</div>
@@ -9154,6 +9241,38 @@ function ClaimScreen(props: {
 
 // Deur met een pijl naar buiten: het teken dat overal "hier ga je eruit" betekent. Staat
 // links van de knop die de tafel afrondt, zodat je die stap herkent zonder te lezen.
+// Getekende iconen voor "Iemand een idee?": ze wisselen om de anderhalve seconde, van de
+// gloeilamp naar een paar dingen die je met een groep doet. Emoji zagen er op elk toestel
+// anders uit en pasten niet bij de rest van de app; dit zijn dezelfde lijnen als de andere
+// iconen hier. Staat stil voor wie bewegende beelden liever niet heeft.
+function IdeeLijn({ children }: { children: React.ReactNode }) {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
+  )
+}
+const IDEE_TEKENINGEN = [
+  // gloeilamp
+  <IdeeLijn><path d="M12 2.8a6.2 6.2 0 0 0-3.7 11.2c.5.4.8 1 .9 1.6l.1.9h5.4l.1-.9c.1-.6.4-1.2.9-1.6A6.2 6.2 0 0 0 12 2.8Z" /><path d="M9.6 19.2h4.8" /><path d="M10.6 21.6h2.8" /></IdeeLijn>,
+  // bowlingkegel
+  <IdeeLijn><path d="M12 2.6c1.7 0 2.8 1.6 2.8 3.4 0 1.2-.4 2.1-.9 2.8 1.3 1.6 2.4 3.5 2.4 6.2 0 3.4-1.9 6.2-4.3 6.2s-4.3-2.8-4.3-6.2c0-2.7 1.1-4.6 2.4-6.2-.5-.7-.9-1.6-.9-2.8 0-1.8 1.1-3.4 2.8-3.4Z" /><path d="M9.9 8.8h4.2" /></IdeeLijn>,
+  // dartbord
+  <IdeeLijn><circle cx="11" cy="13" r="8.4" /><circle cx="11" cy="13" r="4.6" /><circle cx="11" cy="13" r="1" /><path d="m13.4 10.6 7.4-7.4" /><path d="M18.4 3.2h2.9v2.9" /></IdeeLijn>,
+  // slot (escape room)
+  <IdeeLijn><rect x="4.4" y="10.4" width="15.2" height="10.4" rx="2.4" /><path d="M8.2 10.4V7.6a3.8 3.8 0 0 1 7.6 0v2.8" /><path d="M12 14.4v2.4" /></IdeeLijn>,
+  // twee glazen
+  <IdeeLijn><path d="M3.4 5.6h6.2l-1 6a2.2 2.2 0 0 1-4.2 0Z" /><path d="M6.5 13.8v5.4" /><path d="M4.4 19.2h4.2" /><path d="M14.4 5.6h6.2l-1 6a2.2 2.2 0 0 1-4.2 0Z" /><path d="M17.5 13.8v5.4" /><path d="M15.4 19.2h4.2" /></IdeeLijn>,
+]
+function IdeeIcoon() {
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return
+    const t = window.setInterval(() => setI((n) => (n + 1) % IDEE_TEKENINGEN.length), 1500)
+    return () => window.clearInterval(t)
+  }, [])
+  return <span style={{ display: "flex", color: "#0f7488" }}>{IDEE_TEKENINGEN[i]}</span>
+}
+
 function UitgangIcon({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
