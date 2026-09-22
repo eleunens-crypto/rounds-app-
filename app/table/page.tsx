@@ -1033,7 +1033,6 @@ const STRINGS = {
     tipTitleNew: "💰 Nog geen fooi toegevoegd",
     tipBodyNew: "Wil je een fooi verdelen over iedereen? Vul het bedrag hier in, of sluit af met de bedragen zoals ze nu staan.",
     tipTotalLabel: "Totaal te verdelen",
-    tipAddBtn: "💰 Fooi toevoegen",
     tipSkipBtn: "Afsluiten zonder fooi",
     sharedWithN: (n: number) => `gedeeld met ${n} ${n === 1 ? "persoon" : "personen"}`,
     showDetails: "Toon details",
@@ -1056,7 +1055,6 @@ const STRINGS = {
     roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
     roundingSub: "Aanvaarden en verdergaan",
     roundingDone: (d: string) => `€${d} afronding aanvaard. Je kan verder naar Gasten & delen.`,
-    shareOpen: (have: number, now: number) => `Momenteel ${have} ${have === 1 ? "deler" : "delers"} · nu €${now.toFixed(2).replace(".", ",")} → daalt als er meer meedelen`,
     shareDone: (n: number, each: number) => `Gedeeld door ${n} ${n === 1 ? "persoon" : "personen"} · €${each.toFixed(2).replace(".", ",")} elk`,
     noFreeSpots: "Alle plaatsen zijn bezet. Verhoog eerst het aantal personen bovenaan.",
     howManyAdminSub: "Een koppel dat samen betaalt? Kies 2.",
@@ -1075,12 +1073,10 @@ const STRINGS = {
     allAssignedNotFinal: "Afsluiten is niet definitief \u2014 heropenen kan altijd met \u00e9\u00e9n tik.",
     allAssignedOk: "OK",
     stickyTipNone: "Nog geen fooi",
-    stickyTipSet: (b: string) => `Fooi €${b}`,
     stickyTipEdit: "wijzig",
     stickyAllDone: "Alles toegewezen",
     stickyOpenUnits: (n: number) => n === 1 ? "Nog 1 stuk zonder naam" : `Nog ${n} stuks zonder naam`,
     stickyCheckFirst: "Nog iets na te kijken",
-    addTipSmall: "+ Fooi toevoegen",
     showDetailsBtn: "Toon details",
     closedBarTitle: "Rekening afgesloten",
     reopenShort: "🔓 heropen",
@@ -1152,6 +1148,9 @@ const STRINGS = {
     tipOptional: "Optioneel — wordt gelijk verdeeld over iedereen aan tafel. Je kan er iemand uit halen bij het afrekenen.",
     finalizeBtn: "✅ Alles toegewezen?  Rekening afsluiten",
     finalizeBtnDone: "✓ Alles toegewezen. Rekening afsluiten",
+    tipAddedNow: (b: string) => `✓ Fooi van €${b} toegevoegd`,
+    tipCloseNow: "Rekening afsluiten",
+    tipPickWho: "Wie betaalt de fooi mee?",
     finalizeBtnOpen: (n: number) => n === 1 ? "Nog 1 stuk niet toegewezen" : `Nog ${n} stuks niet toegewezen`,
     finalizeConfirm: "De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.",
     notFinalizedNote: "Sluit pas af als alles is aangetikt en nagekeken. Gasten krijgen dan een melding.",
@@ -1207,7 +1206,6 @@ const STRINGS = {
     noItemsScanFirst: "Nog geen items — scan eerst de bon.",
     addGuestsInTab1: 'Voeg eerst gasten toe in de tab "Gasten & delen".',
     totalLower: "totaal",
-    nobodyYet: "nog niemand",
     notSelectedShare: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch laten meedelen?`,
     assignForOther: (name: string | undefined) => `Dit aanduiden voor ${name}?`,
     openAssign: "open — wijs toe ▾",
@@ -1242,7 +1240,6 @@ const STRINGS = {
     pickWhoShared: "Tik wie meedeelde — of kies iedereen in één keer.",
     pickWhoTook: "Tik wie ervan nam — meerdere mag.",
     allOfThem: (n: number) => n === 2 ? "👥 Allebei" : `👥 Allemaal (${n})`,
-    clearAll: "✕ Wissen",
     whoSharedOf: (nm: string, n: number) => `Wie van ${nm} (${n}) deelde hiervan mee?`,
     sharesInstead: (a: number, b: number) => `Jullie betalen ${a} ${a === 1 ? "aandeel" : "aandelen"} in plaats van ${b}.`,
     makeSharedTitle: "Dit item delen?",
@@ -1804,7 +1801,6 @@ const STRINGS = {
     tipTitleNew: "💰 Aucun pourboire ajouté",
     tipBodyNew: "Veux-tu répartir un pourboire ? Saisis le montant ici, ou clôture avec les montants actuels.",
     tipTotalLabel: "Total à répartir",
-    tipAddBtn: "💰 Ajouter un pourboire",
     tipSkipBtn: "Clôturer sans pourboire",
     sharedWithN: (n: number) => `partagé avec ${n} ${n === 1 ? "personne" : "personnes"}`,
     showDetails: "Voir les détails",
@@ -1827,7 +1823,6 @@ const STRINGS = {
     roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
     roundingSub: "Accepter et continuer",
     roundingDone: (d: string) => `Écart d'arrondi de €${d} accepté. Tu peux continuer.`,
-    shareOpen: (have: number, now: number) => `Actuellement ${have} participant${have === 1 ? "" : "s"} · maintenant €${now.toFixed(2).replace(".", ",")} → baisse si d'autres partagent`,
     shareDone: (n: number, each: number) => `Partagé par ${n} personne${n === 1 ? "" : "s"} · €${each.toFixed(2).replace(".", ",")} chacun`,
     noFreeSpots: "Toutes les places sont prises. Augmente d'abord le nombre de personnes en haut.",
     howManyAdminSub: "Un couple qui paie ensemble ? Choisis 2.",
@@ -1843,12 +1838,10 @@ const STRINGS = {
     allAssignedNotFinal: "Clôturer n'est pas définitif — tu peux toujours rouvrir en un clic.",
     allAssignedOk: "OK",
     stickyTipNone: "Pas de pourboire",
-    stickyTipSet: (b: string) => `Pourboire €${b}`,
     stickyTipEdit: "modifier",
     stickyAllDone: "Tout est attribué",
     stickyOpenUnits: (n: number) => n === 1 ? "Encore 1 article sans nom" : `Encore ${n} articles sans nom`,
     stickyCheckFirst: "Encore quelque chose à vérifier",
-    addTipSmall: "+ Pourboire",
     showDetailsBtn: "Afficher les détails",
     closedBarTitle: "Addition clôturée",
     reopenShort: "🔓 rouvrir",
@@ -1917,6 +1910,9 @@ const STRINGS = {
     tipOptional: "Optionnel — réparti également entre tous à table. Tu peux en exclure quelqu’un au moment de régler.",
     finalizeBtn: "✅ Tout attribué ?  Clôturer l'addition",
     finalizeBtnDone: "✓ Tout est attribué. Clôturer l'addition",
+    tipAddedNow: (b: string) => `✓ Pourboire de €${b} ajouté`,
+    tipCloseNow: "Clôturer l'addition",
+    tipPickWho: "Qui participe au pourboire ?",
     finalizeBtnOpen: (n: number) => n === 1 ? "Encore 1 article non attribué" : `Encore ${n} articles non attribués`,
     finalizeConfirm: "Clôturer l'addition ? Les invités ne pourront plus rien cocher ni modifier jusqu'à ce que tu la rouvres.",
     notFinalizedNote: "Ne clôture que lorsque tout est coché et vérifié. Les invités reçoivent alors une notification.",
@@ -1972,7 +1968,6 @@ const STRINGS = {
     noItemsScanFirst: "Aucun article — scanne d'abord l'addition.",
     addGuestsInTab1: "Ajoute d'abord des invités dans l'onglet « Invités et partage ».",
     totalLower: "total",
-    nobodyYet: "personne encore",
     notSelectedShare: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. Le faire participer quand même ?`,
     assignForOther: (name: string | undefined) => `Attribuer ceci à ${name} ?`,
     openAssign: "à prendre — attribuer ▾",
@@ -2007,7 +2002,6 @@ const STRINGS = {
     pickWhoShared: "Touche qui a partagé — ou choisis tout le monde d'un coup.",
     pickWhoTook: "Touche qui en a pris — plusieurs, c'est possible.",
     allOfThem: (n: number) => n === 2 ? "👥 Tous les deux" : `👥 Tous (${n})`,
-    clearAll: "✕ Effacer",
     whoSharedOf: (nm: string, n: number) => `Qui de ${nm} (${n}) a partagé ?`,
     sharesInstead: (a: number, b: number) => `Vous payez ${a} ${a === 1 ? "part" : "parts"} au lieu de ${b}.`,
     makeSharedTitle: "Partager cet article ?",
@@ -2937,6 +2931,17 @@ export default function RundoTable() {
   // Een plaats is "vrij" zolang niemand er zijn naam op zette (naam is nog "Gast N" of "Ik").
   // De organisator is de eerste deelnemer: die plaats mag niemand overnemen via de link.
   const ownerPid = participants[0]?.id ?? null
+  // Welke plaats "ik" ben, staat in de opslag van deze browser. Open je de tafel op een
+  // ander toestel, in een privévenster of na het wissen van je gegevens, dan is die leeg
+  // en kende de app haar eigen beheerder niet meer als deelnemer. Gevolg: aanduiden voor
+  // je eigen plaats werd behandeld als aanduiden voor een ander, mét de vraag "je vult dit
+  // in voor X". Voor de beheerder is de eerste plaats altijd de zijne, dus die zetten we
+  // hier gewoon terug.
+  useEffect(() => {
+    if (!isAdmin || !group || meId || !ownerPid) return
+    setMeIdStored(group.id, ownerPid)
+    setMeId(ownerPid)
+  }, [isAdmin, group, meId, ownerPid])
   // Bewust smal gehouden: alleen op de gasten-tab, en alleen zolang er echt nog een plaats
   // leeg is. Breder maken zou betekenen dat het scherm nooit meer pauzeert.
   const isFreeSpot = (p: Participant) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
@@ -6310,11 +6315,19 @@ export default function RundoTable() {
               </span>
             </div>
           ) : (
-            <button onClick={() => setSettleVraag(true)}
-              style={{ width: "100%", cursor: "pointer", border: "none", borderRadius: 12, padding: "14px 0", fontSize: 18, fontWeight: 800, fontFamily: "inherit", color: "#fff",
-                background: "linear-gradient(135deg,#4a5b96,#6577b4)", boxShadow: "0 6px 16px -6px rgba(74,91,150,0.6)" }}>
-              {L.settleSaveBtn}
-            </button>
+            // Stond hier even breed en even zwaar als het heropenen erboven, in een paars
+            // dat nergens anders in de app voorkomt — twee gelijkwaardige knoppen onder
+            // elkaar, terwijl dit de laatste stap is en dat het uitstapje. Nu smaller,
+            // rechts uitgelijnd en in leisteen, met de deur naar buiten ernaast.
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={() => setSettleVraag(true)}
+                style={{ minWidth: "62%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9,
+                  cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 18px", fontSize: 16, fontWeight: 800, fontFamily: "inherit", color: "#fff",
+                  background: "linear-gradient(135deg,#3d4f57,#54696f)", boxShadow: "0 5px 14px -6px rgba(61,79,87,0.8)" }}>
+                <UitgangIcon />
+                {L.settleSaveBtn}
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -6541,19 +6554,60 @@ export default function RundoTable() {
         <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowTipReminder(false)}>
           <div style={{ ...S.modal, width: "min(350px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0, marginBottom: 7, fontSize: 20, fontWeight: 800, color: "#123a42" }}>{L.tipTitleNew}</h3>
-            <div style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.55, marginBottom: 15 }}>{L.tipBodyNew}</div>
-            <div style={{ background: "rgba(90,108,166,0.07)", borderRadius: 11, padding: "11px 13px", marginBottom: 16 }}>
+            <div style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.55, marginBottom: 13 }}>{L.tipBodyNew}</div>
+            {/* Dit venster stuurde je vroeger naar het fooivak tussen de items: je moest
+                het venster wegklikken, scrollen, invullen, en dan opnieuw afsluiten. De
+                fooi is één bedrag — dat kan gewoon hier. */}
+            {tipTotal > 0.005 ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}>
+                <span style={{ flexShrink: 0, fontSize: 18, color: "#1f8a4c", fontWeight: 800 }}>✓</span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#15703f" }}>{L.tipAddedNow(tipTotal.toFixed(2).replace(".", ","))}</span>
+              </div>
+            ) : (
+              <div style={{ background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.3)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", flex: 1, minWidth: 0, border: "1px solid rgba(18,58,66,0.15)", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
+                    <span style={{ fontSize: 19, fontWeight: 700, color: "#4a6e73", padding: "0 2px 0 11px" }}>€</span>
+                    <input type="text" inputMode="decimal" value={tipInput} placeholder="0,00"
+                      onChange={(e) => setTipInput(numFilter(e.target.value, true))}
+                      onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); void addTip() } }}
+                      style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "10px 12px 10px 2px", fontSize: 19 }} />
+                  </span>
+                  <button onPointerDown={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur?.(); void addTip() }}
+                    style={{ ...S.btn, ...S.btnPrimary, flexShrink: 0, padding: "11px 15px", fontSize: 16, fontWeight: 800 }}>{L.addTipShort}</button>
+                </div>
+                {/* Een percentage is hoe de meeste mensen over fooi denken; het bedrag
+                    komt gewoon in het veld hierboven, zodat je het nog kan bijstellen. */}
+                <div style={{ display: "flex", gap: 6, marginTop: 9 }}>
+                  {[5, 10, 15].map((pct) => {
+                    const bedrag = billTotal * pct / 100
+                    return (
+                      <button key={pct} onPointerDown={(e) => { e.preventDefault(); setTipInput(bedrag.toFixed(2).replace(".", ",")) }}
+                        style={{ flex: 1, cursor: "pointer", fontFamily: "inherit", fontSize: 15, fontWeight: 800, color: "#0b6473", background: "#fff", border: "1.5px solid rgba(20,153,176,0.4)", borderRadius: 10, padding: "9px 0", lineHeight: 1.25 }}>
+                        {pct}%<br /><span style={{ fontSize: 12.5, fontWeight: 700, color: "#8aa3a6" }}>€{bedrag.toFixed(2).replace(".", ",")}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            <div style={{ background: "rgba(90,108,166,0.07)", borderRadius: 11, padding: "11px 13px", marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 16, color: "#4a6e73", fontWeight: 700 }}>{L.tipTotalLabel}</span>
                 <span style={{ fontSize: 21, fontWeight: 800, color: "#123a42" }}>€{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { setShowTipReminder(false); if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }}
-                style={{ ...S.btn, flex: 1, padding: "12px 8px", fontSize: 16.5, fontWeight: 800 }}>{L.tipAddBtn}</button>
-              <button onClick={() => { setShowTipReminder(false); finalizeBill(true) }}
-                style={{ ...S.btn, ...S.btnPrimary, flex: 1, padding: "12px 8px", fontSize: 16.5, fontWeight: 800 }}>{L.tipSkipBtn}</button>
-            </div>
+            {tipTotal > 0.005 ? (
+              <>
+                <button onClick={() => { setShowTipReminder(false); void finalizeBill(true) }}
+                  style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.tipCloseNow}</button>
+                <button onClick={() => { setShowTipReminder(false); if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }}
+                  style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 15.5, fontWeight: 700, color: "#4a6e73", background: "transparent", border: "none" }}>{L.tipPickWho}</button>
+              </>
+            ) : (
+              <button onClick={() => { setShowTipReminder(false); void finalizeBill(true) }}
+                style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 16.5, fontWeight: 800, color: "#4a6e73", background: "#fff", border: "1.5px solid rgba(18,58,66,0.18)" }}>{L.tipSkipBtn}</button>
+            )}
           </div>
         </div>
       )}
@@ -8088,6 +8142,12 @@ function ClaimScreen(props: {
   const [claimCollapsed, setClaimCollapsed] = useState(false)
   // Welke meerpersoonsplaats de beheerder net bevestigd heeft, als "itemId:pid".
   const [ledenOpen, setLedenOpen] = useState<string | null>(null)
+  // Welk gedeeld item zijn keuzepillen openstaan heeft. Bij een gewoon item gebeurt dat
+  // al zo; bij een gedeeld item stonden alle namen altijd open, waardoor het item drie
+  // keer zo lang was als bij de gast en je de delers uit de opgelichte pillen moest
+  // afleiden. Nu leest het item hetzelfde als op het gastenscherm, en opent de beheerder
+  // de pillen wanneer hij iets wil rechtzetten — wat hij nog altijd overal mag.
+  const [delenOpen, setDelenOpen] = useState<string | null>(null)
   // De knop "Wie nam wat" in het overzicht klapt deze lijst open (en scrollt ernaartoe).
   useEffect(() => { if (jumpToAssign) setClaimCollapsed(false) }, [jumpToAssign])
   // Vrije plaatsen (nog niemand) horen niet in de toewijslijst: enkel wie een naam heeft.
@@ -8213,7 +8273,6 @@ function ClaimScreen(props: {
                   const open = it.quantity - claimed
                   if (it.is_shared) {
                     const sh = sharerIds(it.id)
-                    const ok = sh.length > 0
                     const heads = shareHeads(it.id)
                     const perHead = heads > 0 ? itemTotal(it) / heads : 0
                     const fixed = !!it.share_fixed
@@ -8225,23 +8284,65 @@ function ClaimScreen(props: {
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 18, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 15.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "3px 6px" }}>{L.sharedWord}</span></div>
                             <div style={{ fontSize: 15.5, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} {L.totalLower}</div>
-                            {/* Zelfde boodschap als de gast krijgt: wat je nu betaalt én wat het
-                                wordt. Een vast "p.p." toonde een bedrag dat meteen halveerde
-                                zodra de tweede deler zich aanduidde. */}
-                            {ok && (
-                              <div style={{ fontSize: 14.5, fontWeight: 700, marginTop: 2, color: "#1f8a4c" }}>
-                                {L.shareOpen(heads, perHead)}
-                              </div>
-                            )}
                           </div>
-                          <span style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "4px 9px", flexShrink: 0, whiteSpace: "nowrap",
-                            ...(!ok ? { color: "#c0392b", background: "rgba(224,107,94,0.12)" }
-                              : { color: "#1f8a4c", background: "rgba(39,174,96,0.12)" }) }}>
-                            {!ok ? L.nobodyYet : `${heads} ${heads === 1 ? L.person : L.persons}`}
-                          </span>
+                          {/* De telbadge zei "3 personen" zonder te zeggen wélke; dat staat nu
+                              in het kader eronder, precies zoals de gast het ziet. Op die plek
+                              past beter de knop die zegt dat jij het mag rechtzetten. */}
+                          <button onClick={() => setDelenOpen(delenOpen === it.id ? null : it.id)}
+                            style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", fontSize: 14.5, fontWeight: 800, borderRadius: 10, padding: "6px 10px", whiteSpace: "nowrap",
+                              ...(delenOpen === it.id
+                                ? { color: "#fff", background: "linear-gradient(135deg,#0f7d90,#3ec9d8)", border: "none" }
+                                : { color: "#0f7488", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.4)" }) }}>
+                            {L.whoSharesBtn}
+                          </button>
                           {isAdmin && shareBtn(it)}
                         </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25 }}>
+                        {/* Hetzelfde kader als op het gastenscherm: eerst hoeveel delers en wat
+                            het per persoon kost, dan de namen. Zo lees je in één oogopslag of er
+                            iemand vergeten is — en dat is precies waar je bij het nakijken op let. */}
+                        {(() => {
+                          const isError = heads === 0
+                          const delers = sh.map((q) => participants.find((x) => x.id === q)).filter(Boolean) as Participant[]
+                          return (
+                            <div style={{ marginTop: 8, marginLeft: 25, borderRadius: 10, padding: "10px 11px",
+                              background: isError ? "rgba(243,156,18,0.1)" : "rgba(90,108,166,0.07)",
+                              border: isError ? "1px solid rgba(243,156,18,0.45)" : "1px solid rgba(90,108,166,0.25)" }}>
+                              {isError ? (
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <span style={{ flexShrink: 0, fontSize: 16.5 }}>👥</span>
+                                  <span style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 700, color: "#b5591a" }}>{L.nobodyShared}</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <div style={{ fontSize: 15.5, color: "#2b4f56", lineHeight: 1.4, marginBottom: 7 }}>
+                                    <b>{L.nSharers(heads)}</b> · {L.eachAmount(perHead)}
+                                    {!fixed && <span style={{ color: "#8aa3a6" }}> {L.dropsIfMore}</span>}
+                                  </div>
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                                    {delers.map((q) => {
+                                      const ikZelf = q.id === adminPid
+                                      return (
+                                        <span key={q.id} style={{ fontSize: 14, fontWeight: ikZelf ? 800 : 700, borderRadius: 9, padding: "5px 9px",
+                                          background: ikZelf ? "rgba(233,196,95,0.35)" : "rgba(18,58,66,0.06)",
+                                          color: ikZelf ? "#5a4a1a" : "#4a6e73" }}>
+                                          {naamVan(q)}{ikZelf ? ` · ${L.youWord}` : ""}
+                                        </span>
+                                      )
+                                    })}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )
+                        })()}
+                        {delenOpen === it.id && (
+                        <div style={{ marginTop: 9, marginLeft: 25, padding: "10px 11px", borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.3)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a6e73" }}>{L.whoSharesPanel}</span>
+                          <button aria-label={L.whoSharesPanel} onClick={() => setDelenOpen(null)}
+                            style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8aa3a6", fontWeight: 800, fontFamily: "inherit" }}>✕</button>
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                           {named.length === 0
                             ? <span style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</span>
                             : toewijsbaar.map((p, i) => {
@@ -8322,9 +8423,16 @@ function ClaimScreen(props: {
                             <div key={key} style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.3)", borderRadius: 12, padding: "11px 12px" }}>
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 9 }}>
                                 <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>🍴 {L.whoSharedOf(p.name, pSeats)}</span>
-                                <button onClick={setAll} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#0f7d90", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "7px 9px", cursor: "pointer" }}>
-                                  {allOn ? L.clearAll : L.allOfThem(pSeats)}
-                                </button>
+                                {/* Deze knop wisselde van "Allebei" naar "Wissen" zodra iedereen
+                                    aanstond — dezelfde knop, andere betekenis onder je vinger.
+                                    Hij doet nu één ding en verdwijnt als er niets meer bij kan;
+                                    weghalen doe je, net als bij de gast, door de naam weer uit
+                                    te tikken. */}
+                                {!allOn && (
+                                  <button onClick={setAll} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#0f7d90", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "7px 9px", cursor: "pointer", whiteSpace: "nowrap" }}>
+                                    {L.allOfThem(pSeats)}
+                                  </button>
+                                )}
                                 {/* Zonder deze knop raakte je dit venster niet kwijt: het sloot
                                     alleen door opnieuw op de naamknop erboven te tikken. */}
                               </div>
@@ -8345,6 +8453,8 @@ function ClaimScreen(props: {
                             </div>
                           )
                         })}
+                        </div>
+                        )}
                       </div>
                     )
                   }
@@ -8592,9 +8702,10 @@ function ClaimScreen(props: {
                   )
                   return (
                     <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "9px 11px" }}>
+                      {/* Hier stond een knop "✕ Wissen". Overbodig: de naampil erboven is
+                          zelf de schakelaar, en twee manieren om hetzelfde te doen trokken
+                          de aandacht weg van de zin die er echt toe doet. */}
                       <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, color: "#4a6e73", lineHeight: 1.4 }}>{L.sharesInstead(sel.length, mySeats)}</span>
-                      <button onClick={() => setClaim(it.id, meId, 0, [])}
-                        style={{ flexShrink: 0, cursor: "pointer", background: "transparent", border: "1.5px solid rgba(18,58,66,0.18)", borderRadius: 10, padding: "7px 11px", fontSize: 14, fontWeight: 800, color: "#4a6e73" }}>{L.clearAll}</button>
                     </div>
                   )
                 })()}
@@ -8990,6 +9101,18 @@ function ClaimScreen(props: {
         </div>
       )}
     </div>
+  )
+}
+
+// Deur met een pijl naar buiten: het teken dat overal "hier ga je eruit" betekent. Staat
+// links van de knop die de tafel afrondt, zodat je die stap herkent zonder te lezen.
+function UitgangIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h8" />
+      <path d="M11 12h10" />
+      <path d="m17.5 8.5 4 3.5-4 3.5" />
+    </svg>
   )
 }
 
