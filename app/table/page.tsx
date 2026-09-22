@@ -849,6 +849,9 @@ const STRINGS = {
     goGuestsBtn: "Naar Gasten & QR",
     seatsFreeWarn: (n: number) => n === 1 ? "Nog 1 plaats vrij" : `Nog ${n} plaatsen vrij`,
     seatsFreeWarnHow: "Laat ze scannen of verwijder ze.",
+    groupFullTitle: "Iedereen is er",
+    groupFullBody: (n: number) => `Alle ${n} plaatsen van je groep zijn ingenomen. Je kan gerust verder toewijzen.`,
+    groupFullAdjust: "Groep aanpassen",
     scanModalTitle: "🧾 Rekening scannen",
     scanModalTitleAdded: "🧾 Foto toegevoegd",
     oneStepLeft: "nog 1 stap",
@@ -1559,6 +1562,9 @@ const STRINGS = {
     goGuestsBtn: "Vers Invités & QR",
     seatsFreeWarn: (n: number) => n === 1 ? "Encore 1 place libre" : `Encore ${n} places libres`,
     seatsFreeWarnHow: "Fais-les scanner ou retire-les.",
+    groupFullTitle: "Tout le monde est là",
+    groupFullBody: (n: number) => `Les ${n} places de ton groupe sont prises. Tu peux continuer à attribuer.`,
+    groupFullAdjust: "Modifier le groupe",
     scanModalTitle: "🧾 Scanner l'addition",
     scanModalTitleAdded: "🧾 Photo ajoutée",
     oneStepLeft: "encore 1 étape",
@@ -2184,6 +2190,10 @@ export default function RundoTable() {
   // Kort oplichten van de afsluitknop nadat de melding "alles is toegewezen" is
   // weggetikt: het scherm springt ernaartoe, en dan moet je ook zien wélke knop bedoeld is.
   const [wijsAfsluit, setWijsAfsluit] = useState(false)
+  // Meldt de laatste gast zich terwijl jij op het toewijsscherm bezig bent, dan merkte je
+  // daar niets van: het scherm springt niet en er komt niets. Eén keer een venstertje, en
+  // je blijft gewoon staan waar je stond.
+  const [groepVolPopup, setGroepVolPopup] = useState(false)
   const allesToegewezenGezien = useRef(false)
   // Gaat met één omhoog wanneer de toewijslijst mag dichtklappen. ClaimScreen houdt zijn
   // eigen open/dicht bij, dus vragen we het via een signaal in plaats van die stand
@@ -3102,6 +3112,18 @@ export default function RundoTable() {
   // naar de volgende stap sturen.
   const zitKlaar = adminNamed && personsSet && vrijeZitplaatsen === 0
   const tafelWasVol = useRef(false)
+  // Hetzelfde moment, maar je staat op het toewijsscherm: dan hoort er geen sprong te
+  // gebeuren — je bent daar met iets anders bezig. Enkel een melding dat de groep
+  // compleet is, met de weg terug naar de teller voor wie er toch nog iemand bij wil.
+  const volGemeld = useRef(false)
+  useEffect(() => {
+    if (!isAdmin) return
+    if (!zitKlaar) { volGemeld.current = false; return }
+    if (adminTab !== "overview") return
+    if (volGemeld.current) return
+    volGemeld.current = true
+    setGroepVolPopup(true)
+  }, [zitKlaar, isAdmin, adminTab])
   useEffect(() => {
     if (!isAdmin || adminTab !== "guests") { if (!zitKlaar) tafelWasVol.current = false; return }
     if (zitKlaar && !tafelWasVol.current) {
@@ -6845,6 +6867,23 @@ export default function RundoTable() {
           groene knop volgde — en sloeg daarmee de fooi over, die je op dat moment nog
           niet had ingevuld. Ze meldt nu enkel dát het compleet is en zet je bij de
           afsluitknop; wat daar nog moet gebeuren, bewaakt die knop zelf. */}
+      {/* ─── Venster: de laatste plaats is ingenomen ─── */}
+      {isAdmin && groepVolPopup && (
+        <div style={{ ...S.overlay, zIndex: 3100 }} onClick={() => setGroepVolPopup(false)}>
+          <div style={{ ...S.modal, width: "min(330px, 92vw)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ width: 46, height: 46, margin: "0 auto 10px", borderRadius: "50%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 800 }}>✓</div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: "#123a42", marginBottom: 4 }}>{L.groupFullTitle}</div>
+            <div style={{ fontSize: 16, color: "#4a6e73", lineHeight: 1.45, marginBottom: 14 }}>{L.groupFullBody(totalPersons)}</div>
+            <button onClick={() => setGroepVolPopup(false)}
+              style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.allAssignedOk}</button>
+            {/* Er schuift toch nog iemand aan: dan moet je bij de teller zijn, niet bij de
+                plaatsenlijst — want een plaats bijzetten begint daar. */}
+            <button onClick={() => { setGroepVolPopup(false); setAdminTab("guests"); scrollTop(); if (typeof window !== "undefined") window.setTimeout(() => document.getElementById("plaatsen-sectie")?.scrollIntoView({ behavior: "smooth", block: "start" }), 220) }}
+              style={{ ...S.btn, width: "100%", marginTop: 8, padding: "11px 0", fontSize: 16, fontWeight: 800, color: "#2b4f56", background: "#fff", border: "1.5px solid rgba(18,58,66,0.22)" }}>{L.groupFullAdjust}</button>
+          </div>
+        </div>
+      )}
+
       {isAdmin && allesPopup && (
         <div style={{ ...S.overlay, zIndex: 3100 }} onClick={() => sluitAllesPopup()}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
@@ -8109,7 +8148,6 @@ function ClaimScreen(props: {
   // Een gast kijkt op een klein scherm naar een lange bon. De lijst en de eindverdeling
   // mogen dus dicht; wat híj moet betalen blijft altijd staan.
   const [gastItemsOpen, setGastItemsOpen] = useState(true)
-  const [gastVerdelingOpen, setGastVerdelingOpen] = useState(false)
   // Wat je bevestigde blijft raadpleegbaar, maar hoeft na het afsluiten niet meer open:
   // dan telt alleen nog de definitieve verdeling.
   const [gastBevestigdOpen, setGastBevestigdOpen] = useState(true)
@@ -8123,7 +8161,7 @@ function ClaimScreen(props: {
   )
   // Bij een afgesloten rekening is de verdeling van de tafel het enige dat nog telt:
   // die staat dus open, en de twee blokken van tijdens het bestellen gaan dicht.
-  useEffect(() => { if (finalized) { setGastItemsOpen(false); setGastBevestigdOpen(false); setGastVerdelingOpen(true) } }, [finalized])
+  useEffect(() => { if (finalized) { setGastItemsOpen(false); setGastBevestigdOpen(false) } }, [finalized])
   // Twee momenten waarop een gast uitleg nodig heeft: net na zijn bevestiging (wat nu?)
   // en zodra de rekening dichtgaat (dit is je bedrag). De eerste kan hij altijd opnieuw
   // oproepen via het ⓘ naast de knop; de tweede verschijnt één keer vanzelf.
@@ -8884,24 +8922,16 @@ function ClaimScreen(props: {
         {finalized && (
           <div id="gast-eindverdeling">
             <div>
-            {/* Bij een afgesloten rekening is dit de definitieve verdeling, en staat ze
-                open. Toeslagen en fooi zitten erin, want dit is het bedrag dat telt. */}
-            <div onClick={() => {
-                // Het blok én alle persoonsrijen samen: anders stond er "verberg alles" terwijl
-                // er nog een rij openstond, of "toon alles" terwijl je niets zag.
-                const openen = !gastVerdelingOpen
-                setGastVerdelingOpen(openen)
-                setOpenGuestRows(openen ? new Set(participants.map((q) => q.id)) : new Set())
-              }}
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-                {blokBol(3, true)}
-                <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1f8a4c", lineHeight: 1.25 }}>👥 {L.finalSplitTitle}</span>
-              </span>
-              {toonKnop(gastVerdelingOpen)}
+            {/* Bij een afgesloten rekening is dit de definitieve verdeling. Er stond een
+                knop "toon alles / verberg alles" bij die het hele blok dichtklapte — en dan
+                zag je niets meer, terwijl dit ná het afsluiten het enige is waarvoor je hier
+                bent. Die knop is weg; enkel "toon details" blijft, voor de regels per persoon. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+              {blokBol(3, true)}
+              <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1f8a4c", lineHeight: 1.25 }}>👥 {L.finalSplitTitle}</span>
             </div>
-            {gastVerdelingOpen && <div style={{ fontSize: 15.5, color: "#7d999d", marginTop: 4, marginBottom: 8 }}>{L.fullBillInfo}</div>}
-            {gastVerdelingOpen && participants.length > 0 && (
+            <div style={{ fontSize: 15.5, color: "#7d999d", marginTop: 4, marginBottom: 8 }}>{L.fullBillInfo}</div>
+            {participants.length > 0 && (
               // Dezelfde knop als de beheerder heeft: alles in één keer open of dicht,
               // in plaats van rij per rij.
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
@@ -8911,7 +8941,7 @@ function ClaimScreen(props: {
                 </button>
               </div>
             )}
-            {gastVerdelingOpen && (<>
+            <>
             {participants.map((p) => {
               const pt = personTotal(p.id)
               const isMe = p.id === meId
@@ -8945,7 +8975,7 @@ function ClaimScreen(props: {
               <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.billTotalLabel}</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
-            </>)}
+            </>
             </div>
           </div>
         )}
@@ -9064,7 +9094,6 @@ function ClaimScreen(props: {
                   de definitieve verdeling van de hele tafel, open, op de pagina eronder. */}
               <button onClick={() => {
                 setShowFinalPopup(false)
-                setGastVerdelingOpen(true)
                 setOpenGuestRows(new Set(participants.map((q) => q.id)))
                 if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80)
               }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.showDetailsBtn}</button>
