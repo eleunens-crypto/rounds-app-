@@ -414,9 +414,22 @@ function fileToBase64(file: File): Promise<string> {
 // Tijdens het wachten staan de lokale scan en handmatig toevoegen ernaast, dus die minuut is
 // geen dood moment. Plus 0-5s willekeur, zodat vier gasten aan dezelfde tafel niet allemaal
 // op exact dezelfde seconde opnieuw proberen.
+// Google geeft bij drukte soms een veel langere wachttijd op dan zijn eigen venster van
+// 60 seconden. Die telden we hier letterlijk af, waardoor de knop minutenlang dood stond
+// terwijl een nieuwe poging allang lukte. Zestig seconden is de bovengrens.
 function cooldownMs(retryAfter?: number | null): number {
-  const base = retryAfter != null && retryAfter > 0 ? retryAfter : 60
+  const opgegeven = retryAfter != null && retryAfter > 0 ? retryAfter : 60
+  const base = Math.min(opgegeven, 60)
   return Math.round((base + Math.random() * 5) * 1000)
+}
+
+// Alleen een échte limiet (429) verdient een wachttijd. Een server die er even uit ligt of
+// een oproep die over de tijd ging (500, 503, 504) is een hapering: dan lukt het meestal
+// meteen bij de volgende poging, en is aftellen puur tijdverlies.
+// Ook wanneer de server zelf een wachttijd meegeeft: die komt enkel uit een limietfout,
+// ook als ze onderweg een andere statuscode kreeg.
+function verdientWachttijd(status?: number, retryAfter?: number | null): boolean {
+  return status === 429 || (retryAfter != null && retryAfter > 0)
 }
 
 async function scanReceipt(files: File | File[], onProgress?: (p: number) => void): Promise<{ items: ParsedItem[] | null; total: number | null; quotaDay?: boolean; retryAfter?: number | null; reason: "unavailable" | "empty" | null; status?: number; detail?: string }> {
@@ -900,7 +913,6 @@ const STRINGS = {
     retryNow: "🔄 Opnieuw proberen",
     scanFailEmptyTitle: "📷 Niets herkend op de foto",
     scanFailEmptyBody: "De scan kon geen items lezen. Maak een scherpere foto — recht van boven, goed belicht en zonder plooien of schaduw — en probeer opnieuw.",
-    useQuickScan: "Toch de snelle scan gebruiken (minder nauwkeurig)",
     yourPhoto: "Jouw foto — vergelijk met de lijst",
     scannedReceiptAlt: "gescande bon",
     recognizedSuffix: "herkend — controleer en stuur bij",
@@ -1670,7 +1682,6 @@ const STRINGS = {
     retryNow: "🔄 Réessayer",
     scanFailEmptyTitle: "📷 Rien reconnu sur la photo",
     scanFailEmptyBody: "Le scan n'a lu aucun article. Prends une photo plus nette — de face, bien éclairée et sans plis ni ombres — puis réessaie.",
-    useQuickScan: "Utiliser quand même le scan rapide (moins précis)",
     yourPhoto: "Ta photo — compare avec la liste",
     scannedReceiptAlt: "addition scannée",
     recognizedSuffix: "reconnus — vérifie et corrige",
@@ -2572,13 +2583,21 @@ export default function RundoTable() {
     }
   }, [group?.id])
 
-  // Live afteller voor de "opnieuw proberen"-knop na een tijdelijk mislukte scan.
+  // Live afteller voor de "opnieuw proberen"-knop na een tijdelijk mislukte scan. Hij liep
+  // alleen zolang het foutvenster openstond; ging je terug en probeerde je opnieuw, dan
+  // bleef de klok stilstaan op het moment van de fout. De knop stond dan nog uit met een
+  // wachttijd die in werkelijkheid al lang voorbij was. Nu volgt de teller de wachttijd
+  // zelf, en stopt hij zodra die om is.
   useEffect(() => {
-    if (!scanFail || scanFail.reason !== "unavailable") return
+    if (cooldownUntil <= Date.now()) return
     setNowTs(Date.now())
-    const iv = setInterval(() => setNowTs(Date.now()), 500)
+    const iv = setInterval(() => {
+      const nu = Date.now()
+      setNowTs(nu)
+      if (nu >= cooldownUntil) clearInterval(iv)
+    }, 500)
     return () => clearInterval(iv)
-  }, [scanFail, cooldownUntil])
+  }, [cooldownUntil])
 
   useEffect(() => {
     if (group && typeof window !== "undefined") localStorage.setItem("rundo_table_last_tab", adminTab)
@@ -3489,12 +3508,14 @@ export default function RundoTable() {
       const reason = res.reason ?? "empty"
       // Wachttijd van Google zelf, met wat willekeur erbij: zitten er vier gasten aan tafel
       // te tikken, dan proberen ze anders allemaal op dezelfde seconde opnieuw.
-      if (reason === "unavailable" && !res.quotaDay) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
+      if (reason === "unavailable" && !res.quotaDay && verdientWachttijd(res.status, res.retryAfter)) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
       if (photos.length > 1) setMultiFails((n) => n + 1)
       setScanFail({ reason, status: res.status, detail: res.detail, quotaDay: res.quotaDay })
       return
     }
     setMultiFails(0)
+    // Gelukt: een wachttijd van een eerdere poging heeft geen betekenis meer.
+    setCooldownUntil(0)
     setScanSource("ai")
     await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", photos.map((p) => p.file))
     for (const ph of photos) URL.revokeObjectURL(ph.url)
@@ -3511,10 +3532,11 @@ export default function RundoTable() {
     setScanning(false)
     if (!res.items || res.items.length === 0) {
       const reason = res.reason ?? "empty"
-      if (reason === "unavailable" && !res.quotaDay) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
+      if (reason === "unavailable" && !res.quotaDay && verdientWachttijd(res.status, res.retryAfter)) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
       setScanFail({ reason, status: res.status, detail: res.detail, quotaDay: res.quotaDay })
       return
     }
+    setCooldownUntil(0)
     setScanSource("ai")
     await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", file)
   }
@@ -7201,7 +7223,10 @@ export default function RundoTable() {
                     </label>
                   </>
                 )}
-                <button onClick={runLocalScan} style={{ width: "100%", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 15.5, fontWeight: 700, color: "#8aa3a6", textDecoration: "underline", textUnderlineOffset: 2 }}>{L.useQuickScan}</button>
+                {/* Hier stond "Toch de snelle scan gebruiken". Die lokale scan leest de bon
+                    zo slecht dat je achteraf bijna elke regel moest verbeteren — meer werk
+                    dan opnieuw fotograferen. Ze blijft enkel over bij een daglimiet, want
+                    dan is de AI-scan tot middernacht onbereikbaar. */}
               </div>
             )}
 
