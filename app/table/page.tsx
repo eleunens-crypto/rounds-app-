@@ -847,6 +847,8 @@ const STRINGS = {
     yes: "Ja",
     checkTaxShort: "BTW of korting",
     goGuestsBtn: "Naar Gasten & QR",
+    seatsFreeWarn: (n: number) => n === 1 ? "Nog 1 plaats vrij" : `Nog ${n} plaatsen vrij`,
+    seatsFreeWarnHow: "Laat ze scannen of verwijder ze.",
     scanModalTitle: "🧾 Rekening scannen",
     scanModalTitleAdded: "🧾 Foto toegevoegd",
     oneStepLeft: "nog 1 stap",
@@ -874,6 +876,13 @@ const STRINGS = {
     scanFailUnavailBody: "De AI-herkenning is overbelast of tijdelijk offline. Je foto blijft bewaard — probeer het zo meteen opnieuw.",
     retryIn: (s: number) => `🔄 Opnieuw proberen over ${s}s`,
     retryNow: "🔄 Opnieuw proberen",
+    retriesLeft: (n: number) => `nog ${n} poging${n !== 1 ? "en" : ""} met deze foto`,
+    retryLast: "laatste poging met deze foto",
+    photoFailTitle: "📷 Het lukt niet met deze foto",
+    photoFailBody: "Drie keer geprobeerd. Meestal ligt het aan de foto zelf — te donker, schuin genomen, of de bon staat er niet helemaal op.",
+    photoTipsTitle: "Zo lukt het meestal wel",
+    photoTipsBody: "Leg de bon plat, zorg voor licht van opzij, en houd je gsm er recht boven. Is de bon lang? Neem hem in twee stukken.",
+    newPhotoBtn: "📷 Nieuwe foto nemen",
     scanFailEmptyTitle: "📷 Niets herkend op de foto",
     scanFailEmptyBody: "De scan kon geen items lezen. Maak een scherpere foto — recht van boven, goed belicht en zonder plooien of schaduw — en probeer opnieuw.",
     yourPhoto: "Jouw foto — vergelijk met de lijst",
@@ -1548,6 +1557,8 @@ const STRINGS = {
     yes: "Oui",
     checkTaxShort: "TVA ou remise",
     goGuestsBtn: "Vers Invités & QR",
+    seatsFreeWarn: (n: number) => n === 1 ? "Encore 1 place libre" : `Encore ${n} places libres`,
+    seatsFreeWarnHow: "Fais-les scanner ou retire-les.",
     scanModalTitle: "🧾 Scanner l'addition",
     scanModalTitleAdded: "🧾 Photo ajoutée",
     oneStepLeft: "encore 1 étape",
@@ -1575,6 +1586,13 @@ const STRINGS = {
     scanFailUnavailBody: "La reconnaissance IA est surchargée ou temporairement hors ligne. Ta photo reste enregistrée — réessaie dans un instant.",
     retryIn: (s: number) => `🔄 Réessayer dans ${s}s`,
     retryNow: "🔄 Réessayer",
+    retriesLeft: (n: number) => `encore ${n} essai${n !== 1 ? "s" : ""} avec cette photo`,
+    retryLast: "dernier essai avec cette photo",
+    photoFailTitle: "📷 Ça ne marche pas avec cette photo",
+    photoFailBody: "Trois essais. C'est presque toujours la photo — trop sombre, prise de biais, ou l'addition n'y est pas entièrement.",
+    photoTipsTitle: "Voilà ce qui marche",
+    photoTipsBody: "Pose l'addition à plat, éclaire-la de côté et tiens ton téléphone bien au-dessus. Addition longue ? Prends-la en deux morceaux.",
+    newPhotoBtn: "📷 Prendre une nouvelle photo",
     scanFailEmptyTitle: "📷 Rien reconnu sur la photo",
     scanFailEmptyBody: "Le scan n'a lu aucun article. Prends une photo plus nette — de face, bien éclairée et sans plis ni ombres — puis réessaie.",
     yourPhoto: "Ta photo — compare avec la liste",
@@ -2245,6 +2263,12 @@ export default function RundoTable() {
   const [photos, setPhotos] = useState<{ file: File; url: string }[]>([])
   const [scanStep, setScanStep] = useState<{ i: number; n: number } | null>(null)
   const [multiFails, setMultiFails] = useState(0)
+  // Hoeveel keer de slimme scan al mislukte op dezelfde foto. Na drie pogingen ligt het
+  // niet meer aan de dienst maar aan het beeld, en heeft nog eens drukken geen zin: dan
+  // vraagt de app een nieuwe foto. Een wachttijd van de dienst telt niet mee — dan heb
+  // je niets kunnen proberen.
+  const MAX_POGINGEN = 3
+  const [scanPogingen, setScanPogingen] = useState(0)
   // Welke kiesvensters je met "Klaar" hebt dichtgedaan. Zonder deze verzameling bleef het
   // venster openstaan zodra er iemand geselecteerd was — en deed die knop dus niets.
   const [jumpToAssign, setJumpToAssign] = useState(0)
@@ -3337,13 +3361,13 @@ export default function RundoTable() {
   const retryAiScan = () => {
     if (!retryFile) { setToast(L.errNoPhotoRescan); return }
     setShowScan(true)
-    onPhotoPicked(retryFile)
+    onPhotoPicked(retryFile, false)
   }
 
   // Voegt een foto toe aan de lijst (max 2: bovenste + onderste helft van een lange rekening).
   const addPhoto = (file: File | undefined) => {
     if (!file) return
-    setScanFail(null)
+    setScanFail(null); setScanPogingen(0)
     setPhotos((cur) => (cur.length >= 2 ? cur : [...cur, { file, url: URL.createObjectURL(file) }]))
   }
   const removePhoto = (idx: number) => {
@@ -3373,22 +3397,27 @@ export default function RundoTable() {
       const reason = res.reason ?? "empty"
       // Wachttijd van Google zelf, met wat willekeur erbij: zitten er vier gasten aan tafel
       // te tikken, dan proberen ze anders allemaal op dezelfde seconde opnieuw.
-      if (reason === "unavailable" && !res.quotaDay && verdientWachttijd(res.status, res.retryAfter)) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
+      const wacht = reason === "unavailable" && !res.quotaDay && verdientWachttijd(res.status, res.retryAfter)
+      if (wacht) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
+      else if (!res.quotaDay) setScanPogingen((n) => n + 1)
       if (photos.length > 1) setMultiFails((n) => n + 1)
       setScanFail({ reason, status: res.status, detail: res.detail, quotaDay: res.quotaDay })
       return
     }
     setMultiFails(0)
-    // Gelukt: een wachttijd van een eerdere poging heeft geen betekenis meer.
-    setCooldownUntil(0)
+    // Gelukt: een wachttijd en de pogingenteller van daarnet betekenen niets meer.
+    setCooldownUntil(0); setScanPogingen(0)
     setScanSource("ai")
     await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", photos.map((p) => p.file))
     for (const ph of photos) URL.revokeObjectURL(ph.url)
     setPhotos([])
   }
 
-  const onPhotoPicked = async (file: File | undefined) => {
+  // `nieuw` staat uit bij een herpoging met dezelfde foto: dan mag de pogingenteller
+  // niet terug op nul, anders kan je eindeloos blijven drukken.
+  const onPhotoPicked = async (file: File | undefined, nieuw = true) => {
     if (!file) return
+    if (nieuw) setScanPogingen(0)
     setScanFail(null); setScanPreview([]); setScanProgress(0); setScanning(true)
     setScanFile(file); setRetryFile(file)
     if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
@@ -3397,11 +3426,13 @@ export default function RundoTable() {
     setScanning(false)
     if (!res.items || res.items.length === 0) {
       const reason = res.reason ?? "empty"
-      if (reason === "unavailable" && !res.quotaDay && verdientWachttijd(res.status, res.retryAfter)) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
+      const wacht = reason === "unavailable" && !res.quotaDay && verdientWachttijd(res.status, res.retryAfter)
+      if (wacht) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
+      else if (!res.quotaDay) setScanPogingen((n) => n + 1)
       setScanFail({ reason, status: res.status, detail: res.detail, quotaDay: res.quotaDay })
       return
     }
-    setCooldownUntil(0)
+    setCooldownUntil(0); setScanPogingen(0)
     setScanSource("ai")
     await confirmScan(res.items, res.total != null ? res.total.toFixed(2).replace(".", ",") : "", file)
   }
@@ -6822,11 +6853,27 @@ export default function RundoTable() {
               <span style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c" }}>{L.allAssignedTitle}</span>
             </div>
             <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 12px" }}>{L.allAssignedBody}</p>
+            {/* Elk item heeft een naam, maar een lege stoel betekent dat gedeelde items over
+                te weinig mensen verdeeld worden. Dat mag niet stilzwijgend passeren in een
+                melding die zegt dat alles rond is. */}
+            {vrijeZitplaatsen > 0 && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "rgba(224,107,94,0.1)", border: "1.5px solid rgba(224,107,94,0.55)", borderRadius: 12, padding: "11px 12px", marginBottom: 12, textAlign: "left" }}>
+                <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", background: "#c0392b", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>!</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: "#a8402f", lineHeight: 1.35 }}>{L.seatsFreeWarn(vrijeZitplaatsen)}</span>
+                  <span style={{ display: "block", fontSize: 14.5, color: "#8a4514", lineHeight: 1.4, marginTop: 2 }}>{L.seatsFreeWarnHow}</span>
+                  <button onClick={() => { setAllesPopup(false); setAdminTab("guests"); setShowNamesBlock(true); scrollTop(); if (typeof window !== "undefined") window.setTimeout(() => document.getElementById("plaatsen-sectie")?.scrollIntoView({ behavior: "smooth", block: "start" }), 220) }}
+                    style={{ display: "inline-block", marginTop: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: "#a8402f", background: "#fff", border: "1.5px solid rgba(224,107,94,0.5)", borderRadius: 10, padding: "7px 11px" }}>→ {L.goGuestsBtn}</button>
+                </span>
+              </div>
+            )}
             {/* Wie hier "nog even nakijken" leest, kan denken dat afsluiten onherroepelijk
-                is en blijft dan eindeloos hangen. Dit regeltje haalt die spanning weg. */}
-            <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
-              <span style={{ flexShrink: 0, fontSize: 18 }}>💡</span>
-              <span style={{ fontSize: 15, color: "#7a5200", lineHeight: 1.35 }}>{L.allAssignedNotFinal}</span>
+                is en blijft dan eindeloos hangen. Dit regeltje haalt die spanning weg —
+                als voetnoot, want in een geel kader met een rand las het als een knop
+                naast de knop. */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, borderTop: "1px solid rgba(18,58,66,0.1)", paddingTop: 11, marginBottom: 13, textAlign: "left" }}>
+              <span style={{ flexShrink: 0, fontSize: 15, lineHeight: 1.4 }}>💡</span>
+              <span style={{ fontSize: 14.5, color: "#8aa3a6", lineHeight: 1.4 }}>{L.allAssignedNotFinal}</span>
             </div>
             <button onClick={() => sluitAllesPopup()}
               style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.allAssignedOk}</button>
@@ -6999,11 +7046,38 @@ export default function RundoTable() {
                     <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.quotaDayBody}</div>
                     <button onMouseDown={(e) => e.preventDefault()} onClick={runLocalScan} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.quotaDayQuickScan}</button>
                   </>
+                ) : scanFail.reason === "unavailable" && scanPogingen >= MAX_POGINGEN ? (
+                  <>
+                    {/* Drie keer dezelfde foto door dezelfde dienst halen geeft drie keer
+                        hetzelfde antwoord. De herprobeerknop verdwijnt dus, en in de plaats
+                        komt wat je wél kan doen. Met een nieuwe foto begint de teller opnieuw. */}
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#b5591a", marginBottom: 4 }}>{L.photoFailTitle}</div>
+                    <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 11 }}>{L.photoFailBody}</div>
+                    <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a4514", textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 6 }}>{L.photoTipsTitle}</div>
+                      <div style={{ fontSize: 14.5, color: "#7a5a30", lineHeight: 1.5 }}>{L.photoTipsBody}</div>
+                    </div>
+                    <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", padding: "12px 0", fontSize: 18, fontWeight: 800, cursor: "pointer" }}>
+                      {L.newPhotoBtn}
+                      <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
+                    </label>
+                  </>
                 ) : scanFail.reason === "unavailable" ? (
                   <>
                     <div style={{ fontSize: 18, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.scanFailUnavailTitle}</div>
                     <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.scanFailUnavailBody}</div>
                     <button onClick={retryAiScan} disabled={cooldownLeft > 0} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800, opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>{cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.retryNow}</button>
+                    {/* Weten hoeveel je er nog hebt, voorkomt dat de derde mislukking je
+                        overvalt — en bij de laatste kleurt de regel mee. */}
+                    {(() => {
+                      const rest = MAX_POGINGEN - scanPogingen
+                      const laatste = rest <= 1
+                      return (
+                        <div style={{ textAlign: "center", marginTop: 8, fontSize: 13.5, fontWeight: laatste ? 800 : 700, color: laatste ? "#c0392b" : "#9a6a30" }}>
+                          {laatste ? L.retryLast : L.retriesLeft(rest)}
+                        </div>
+                      )
+                    })()}
                   </>
                 ) : (
                   <>
