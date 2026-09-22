@@ -629,7 +629,7 @@ const STRINGS = {
     wipeAllYes: (n: number) => `Ja, wis ${n === 1 ? "die ene" : `die ${n}`}`,
     wipeSomeFailed: (n: number) => `${n} ${n === 1 ? "rekening kon" : "rekeningen konden"} niet verwijderd worden. Probeer het opnieuw.`,
     tabBon: "Bon",
-    tabGuests: "Gasten & delen",
+    tabGuests: "Gasten & QR",
     tabAssign: "Toewijzen",
     errNameTaken: "Je hebt al een groep met die naam. Kies een andere naam.",
     errCreateFailed: "Groep aanmaken mislukt: ",
@@ -667,6 +667,17 @@ const STRINGS = {
     everyoneInTitle: "Iedereen zit erbij \u2713",
     everyoneInSub: "Alle plaatsen hebben een naam. Tijd om te verdelen.",
     showSeats: "Toon plaatsen",
+    freeSeatsTitle: "Vrije plaatsen",
+    allTakenTitle: "Alle plaatsen ingenomen \u2713",
+    seatsFreeShort: (n: number) => `${n} vrij`,
+    waitingHeader: (n: number) => n === 1 ? "Nog 1 vrij \u2014 wacht op QR-scan" : `Nog ${n} vrij \u2014 wacht op QR-scan`,
+    byYouBadge: "door jou",
+    removeFreeSeat: "Deze vrije plaats verwijderen",
+    removeFreeSeatHint: "Te veel plaatsen aangemaakt? Met \u2715 haal je er \u00e9\u00e9n weg.",
+    freeSeatRemoved: (n: number) => `Plaats weg \u2014 jullie zijn nu met ${n}.`,
+    seatsStillFreeWarn: (n: number) => n === 1
+      ? "Nog 1 plaats vrij. Je kan al beginnen, maar kijk de verdeling later nog eens na."
+      : `Nog ${n} plaatsen vrij. Je kan al beginnen, maar kijk de verdeling later nog eens na.`,
     nowAssignSub: "Dan kan je nu toewijzen wie wat nam.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Toewijzen eten & drinken \u2192",
     howManyPersonsQ: "Voor hoeveel personen?",
@@ -838,7 +849,7 @@ const STRINGS = {
     checkSharedShort: "gedeeld item",
     allOkTitle: "Alles klopt",
     allOkSub: "Ga verder naar het delen met je gasten.",
-    goGuestsBtn: "Naar Gasten en delen",
+    goGuestsBtn: "Naar Gasten & QR",
     scanModalTitle: "🧾 Rekening scannen",
     scanModalTitleAdded: "🧾 Foto toegevoegd",
     oneStepLeft: "nog 1 stap",
@@ -1368,7 +1379,7 @@ const STRINGS = {
     wipeAllYes: (n: number) => `Oui, efface ${n === 1 ? "celle-là" : `ces ${n}`}`,
     wipeSomeFailed: (n: number) => `${n} addition${n === 1 ? "" : "s"} n’${n === 1 ? "a" : "ont"} pas pu être supprimée${n === 1 ? "" : "s"}. Réessaie.`,
     tabBon: "Addition",
-    tabGuests: "Invités et partage",
+    tabGuests: "Invités & QR",
     tabAssign: "Répartir",
     errNameTaken: "Tu as déjà un groupe portant ce nom. Choisis-en un autre.",
     errCreateFailed: "Échec de la création du groupe : ",
@@ -1406,6 +1417,17 @@ const STRINGS = {
     everyoneInTitle: "Tout le monde y est \u2713",
     everyoneInSub: "Chaque place a un nom. C'est le moment de r\u00e9partir.",
     showSeats: "Voir les places",
+    freeSeatsTitle: "Places libres",
+    allTakenTitle: "Toutes les places sont prises \u2713",
+    seatsFreeShort: (n: number) => `${n} libre${n === 1 ? "" : "s"}`,
+    waitingHeader: (n: number) => n === 1 ? "Encore 1 libre \u2014 en attente d'un scan QR" : `Encore ${n} libres \u2014 en attente d'un scan QR`,
+    byYouBadge: "par toi",
+    removeFreeSeat: "Supprimer cette place libre",
+    removeFreeSeatHint: "Trop de places cr\u00e9\u00e9es\u00a0? Avec \u2715 tu en retires une.",
+    freeSeatRemoved: (n: number) => `Place retir\u00e9e \u2014 vous \u00eates maintenant ${n}.`,
+    seatsStillFreeWarn: (n: number) => n === 1
+      ? "Encore 1 place libre. Tu peux d\u00e9j\u00e0 commencer, mais rev\u00e9rifie la r\u00e9partition plus tard."
+      : `Encore ${n} places libres. Tu peux d\u00e9j\u00e0 commencer, mais rev\u00e9rifie la r\u00e9partition plus tard.`,
     nowAssignSub: "Tu peux maintenant attribuer qui a pris quoi.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Attribuer plats & boissons \u2192",
     howManyPersonsQ: "Pour combien de personnes ?",
@@ -1574,7 +1596,7 @@ const STRINGS = {
     checkSharedShort: "article partagé",
     allOkTitle: "Tout est correct",
     allOkSub: "Continue vers le partage avec tes invit\u00e9s.",
-    goGuestsBtn: "Vers Invités et partage",
+    goGuestsBtn: "Vers Invités & QR",
     scanModalTitle: "🧾 Scanner l'addition",
     scanModalTitleAdded: "🧾 Photo ajoutée",
     oneStepLeft: "encore 1 étape",
@@ -3037,6 +3059,19 @@ export default function RundoTable() {
       await loadAll(group.id)
       setToast(L.guestRemoved(p.name))
     }, { title: L.removeGuestTitle, danger: true })
+  }
+
+  // Een lege stoel weghalen mag meteen: er staat niets op, en wie zich vergist zet de
+  // teller bovenaan gewoon weer een hoger. Een bevestigingsvenster zou hier enkel in de
+  // weg staan.
+  const verwijderVrijePlaats = async (id: string) => {
+    if (!group) return
+    if (group.finalized) { setToast(L.finalizedReopenFirst); return }
+    const p = participants.find((x) => x.id === id)
+    if (!p || !isFreeSpot(p) || p.self_joined) return
+    await supabase.from("table_participants").delete().eq("id", id)
+    await loadAll(group.id)
+    setToast(L.freeSeatRemoved(Math.max(0, totalPersons - Math.max(1, p.seats ?? 1))))
   }
 
   // Zet het aantal gasten in één beweging. Omhoog = extra gasten aanmaken.
@@ -5501,10 +5536,146 @@ export default function RundoTable() {
             })()}
           </div>
 
+          {/* Hier hoort de stand thuis: onder de QR die je net liet scannen, boven de knop
+              die je verder stuurt. Ingeklapt vertelt de balk het hele verhaal — één vakje
+              per stoel, groen voor wie scande, turkoois voor wie jij invulde, een leeg
+              vakje voor elke stoel die nog wacht. Zit iedereen erbij, dan wordt de balk
+              helemaal groen en verandert de kop mee. */}
+          {personsSet && adminNamed && (() => {
+            const zitVan = (q: Participant) => Math.max(1, q.seats ?? 1)
+            const vrijeZit = vrijeZitplaatsen
+            const scanZit = participants.filter((q) => q.self_joined && q.id !== meId).reduce((a, q) => a + zitVan(q), 0)
+            const totaalZit = totalPersons
+            const gevuldZit = Math.max(0, totaalZit - vrijeZit)
+            const jouwZit = Math.max(0, gevuldZit - scanZit)
+            const vol = vrijeZit === 0
+            const bezet = participants.filter((q) => !(isFreeSpot(q) && !q.self_joined))
+            const vrijeRijen = participants.filter((q) => isFreeSpot(q) && !q.self_joined)
+            const openVoor = (q: Participant) => {
+              setGuestTarget(q.id)
+              setGuestSeats(zitVan(q))
+              setGuestNames(q.name.split(/\s*&\s*/).map((x) => x.trim()))
+              setShowGuestModal(true)
+            }
+            return (
+              <div style={{ ...S.card, order: 3, border: vol ? "1.5px solid rgba(39,174,96,0.35)" : "1px solid rgba(18,58,66,0.04)" }}>
+                <button onClick={() => setShowNamesBlock((v) => !v)}
+                  style={{ width: "100%", display: "block", textAlign: "left", cursor: "pointer", background: "transparent", border: "none", padding: 0, fontFamily: "inherit" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 800, color: vol ? "#1f8a4c" : "#123a42" }}>
+                      {vol ? L.allTakenTitle : L.freeSeatsTitle}
+                    </span>
+                    <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#4a6e73" }}>
+                      {vol ? `${totaalZit} van ${totaalZit}` : L.seatsFreeShort(vrijeZit)}
+                    </span>
+                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#4a6e73", lineHeight: 1 }}>{showNamesBlock ? "\u25b4" : "\u25be"}</span>
+                  </span>
+
+                  {/* Eén vakje per stoel zolang dat te tellen valt; aan een lange tafel wordt
+                      het één balk op verhouding, anders zie je enkel streepjes. */}
+                  {totaalZit > 0 && (
+                    <span style={{ display: "flex", gap: totaalZit <= 12 ? 5 : 0, marginTop: 10 }}>
+                      {totaalZit <= 12
+                        ? Array.from({ length: totaalZit }, (_, i) => (
+                            <span key={i} style={{ flex: 1, height: 12, borderRadius: 4, boxSizing: "border-box",
+                              ...(vol
+                                ? { background: "#1f8a4c" }
+                                : i < scanZit
+                                ? { background: "#1f8a4c" }
+                                : i < gevuldZit
+                                ? { background: "#0f7d90" }
+                                : { background: "#fff", border: "1.5px dashed rgba(18,58,66,0.3)" }) }} />
+                          ))
+                        : [
+                            { k: "scan", n: vol ? gevuldZit : scanZit, c: "#1f8a4c" },
+                            { k: "jij", n: vol ? 0 : jouwZit, c: "#0f7d90" },
+                            { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.12)" },
+                          ].filter((d) => d.n > 0).map((d, i, arr) => (
+                            <span key={d.k} style={{ flexGrow: d.n, height: 12, background: d.c,
+                              borderTopLeftRadius: i === 0 ? 4 : 0, borderBottomLeftRadius: i === 0 ? 4 : 0,
+                              borderTopRightRadius: i === arr.length - 1 ? 4 : 0, borderBottomRightRadius: i === arr.length - 1 ? 4 : 0 }} />
+                          ))}
+                    </span>
+                  )}
+
+                  <span style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", marginTop: 9, fontSize: 13.5, fontWeight: 700, color: "#44656b" }}>
+                    {([
+                      { k: "scan", n: scanZit, c: "#1f8a4c", t: L.seatsViaScan(scanZit) },
+                      { k: "jij", n: jouwZit, c: "#0f7d90", t: L.seatsByYou(jouwZit) },
+                      { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.25)", t: L.nStillFree(vrijeZit) },
+                    ]).filter((d) => d.n > 0).map((d) => (
+                      <span key={d.k} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.c }} />{d.t}
+                      </span>
+                    ))}
+                  </span>
+                </button>
+
+                {seatRequests.length > 0 && (
+                  <div style={{ marginTop: 10, fontSize: 13.5, fontWeight: 800, color: "#8a4514", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 9, padding: "7px 9px" }}>
+                    {L.seatAsks(seatRequests.length)}
+                  </div>
+                )}
+
+                {showNamesBlock && (
+                  <>
+                    <div style={{ marginTop: 14 }}>
+                      {bezet.map((q) => {
+                        const ikZelf = q.id === meId
+                        const zit = zitVan(q)
+                        return (
+                          <button key={q.id} onClick={() => ikZelf ? openZelfPopup() : openVoor(q)}
+                            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer",
+                              border: "none", borderTop: "1px solid rgba(18,58,66,0.07)", padding: "10px 0", background: "transparent" }}>
+                            <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
+                              ...(q.self_joined && !ikZelf ? { background: "rgba(39,174,96,0.16)", color: "#1f8a4c" } : { background: "rgba(20,153,176,0.16)", color: "#0b6473" }) }}>
+                              {(q.name || "?").trim().charAt(0).toUpperCase()}
+                            </span>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {q.name}{zit > 1 ? ` \u00b7 ${zit}p.` : ""}
+                              {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> \u00b7 {zit > 1 ? L.adminsWord : L.adminWord}</span>}
+                            </span>
+                            {q.self_joined && !ikZelf
+                              ? <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.selfJoinedBadge}</span>
+                              : !ikZelf
+                              ? <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#0b6473", background: "rgba(20,153,176,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.byYouBadge}</span>
+                              : null}
+                            <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "rgba(20,153,176,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                              <PotloodIcon />
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* De uitleg staat één keer boven het raster: in elk vakje herhalen maakt
+                        van zes stoelen zes keer dezelfde zin. */}
+                    {vrijeRijen.length > 0 && (
+                      <>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#5b7378", marginTop: 14, marginBottom: 8 }}>{L.waitingHeader(vrijeZit)}</div>
+                        <div style={{ display: "grid", gridTemplateColumns: vrijeRijen.length > 4 ? "1fr 1fr" : "1fr", gap: 7 }}>
+                          {vrijeRijen.map((q) => (
+                            <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1.5px dashed rgba(18,58,66,0.28)", borderRadius: 12, padding: "10px", background: "#fbfcfd" }}>
+                              <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", border: "1.5px dashed rgba(18,58,66,0.25)", color: "#b3bac6", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800 }}>?</span>
+                              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: "#5b7378", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.freeSpotName}</span>
+                              <button onClick={() => void verwijderVrijePlaats(q.id)} aria-label={L.removeFreeSeat} title={L.removeFreeSeat}
+                                style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.08)", color: "#c0392b", fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>\u2715</button>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 13, color: "#8aa3a6", lineHeight: 1.45, marginTop: 10 }}>{L.removeFreeSeatHint}</div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            )
+          })()}
+
           {/* Deze kaart bevat enkel de uitklapbare namenlijst. Stond die dicht, dan bleef er
               een leeg wit vak op het scherm staan. */}
           {showGuestList && (
-          <div style={{ ...S.card, order: 3 }} id="wie-duid-ik-aan">
+          <div style={{ ...S.card, order: 4 }} id="wie-duid-ik-aan">
             {(() => {
               const twoCol = participants.length > 5
               const isPlaceholderName = (p: Participant) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
@@ -5599,7 +5770,7 @@ export default function RundoTable() {
           {/* Groen en pulserend pas wanneer je er ook echt naartoe kan: zolang je eigen
               naam ontbreekt is dit blok gedempt en de knop niet aanklikbaar. Anders staat
               er een uitnodigende knop die bij een tik alleen een foutmelding geeft. */}
-          <div id="naar-toewijzen" style={{ order: 3, marginTop: 14, ...S.card, padding: "18px 16px",
+          <div id="naar-toewijzen" style={{ order: 5, marginTop: 14, ...S.card, padding: "18px 16px",
             background: zitKlaar ? "linear-gradient(160deg,#eafaf1,#d9f2e4)" : adminNamed ? "#fff" : "rgba(18,58,66,0.04)",
             border: zitKlaar ? "2px solid rgba(31,138,76,0.45)" : adminNamed ? "2px solid rgba(20,153,176,0.3)" : "2px solid rgba(18,58,66,0.10)",
             opacity: adminNamed ? 1 : 0.55 }}>
@@ -5607,6 +5778,18 @@ export default function RundoTable() {
                 De ondertitel herhaalde wat je een scherm verder toch te zien krijgt. */}
             <div style={{ fontSize: 21, fontWeight: 800, color: zitKlaar ? "#15703f" : adminNamed ? "#123a42" : "#8aa3a6", marginBottom: 3, lineHeight: 1.25 }}>{zitKlaar ? L.everyoneInTitle : L.nowAssignTitle}</div>
             <div style={{ fontSize: 15.5, color: zitKlaar ? "#3c6b51" : adminNamed ? "#4a6e73" : "#8aa3a6", lineHeight: 1.45, marginBottom: 13 }}>{zitKlaar ? L.everyoneInSub : L.nowAssignSub}</div>
+            {/* Zolang er stoelen leegstaan hoor je dat te weten vóór je op de knop tikt,
+                niet erna in een venster dat je moet wegklikken. */}
+            {adminNamed && vrijeZitplaatsen > 0 && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 10, padding: "9px 10px", marginBottom: 12 }}>
+                <span style={{ flexShrink: 0, marginTop: 1 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4514" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+                  </svg>
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#8a4514", lineHeight: 1.45 }}>{L.seatsStillFreeWarn(vrijeZitplaatsen)}</span>
+              </div>
+            )}
             {/* Pas pulseren als er ook echt niets meer te wachten valt: pulseert het blok
                 al terwijl er nog drie stoelen leeg zijn, dan jaagt het je vooruit terwijl
                 je gasten nog aan het scannen zijn. */}
@@ -5618,124 +5801,6 @@ export default function RundoTable() {
                 cursor: adminNamed ? "pointer" : "not-allowed" }}>{L.goAssignBtn}</button>
           </div>
 
-          {/* De plaatsenstand hoort niet meer bovenaan, bij het invullen van je eigen naam,
-              maar hier: onder de QR, waar je hem nodig hebt. En als strook die meeloopt,
-              want op dit moment doe je maar één ding — wachten tot iedereen gescand heeft —
-              en dan wil je de teller zien oplopen zonder te scrollen. */}
-          {personsSet && adminNamed && (() => {
-            const zitVan = (q: Participant) => Math.max(1, q.seats ?? 1)
-            const vrijeZit = vrijeZitplaatsen
-            const scanZit = participants.filter((q) => q.self_joined && q.id !== meId).reduce((a, q) => a + zitVan(q), 0)
-            const totaalZit = totalPersons
-            const gevuldZit = Math.max(0, totaalZit - vrijeZit)
-            const jouwZit = Math.max(0, gevuldZit - scanZit)
-            const openVoor = (q: Participant) => {
-              setGuestTarget(q.id)
-              setGuestSeats(Math.max(1, q.seats ?? 1))
-              setGuestNames(q.name.split(/\s*&\s*/).map((x) => x.trim()))
-              setShowGuestModal(true)
-            }
-            return (
-              <div style={{ order: 6, position: "sticky", bottom: 0, zIndex: 20, marginTop: 12,
-                padding: "10px 12px calc(10px + env(safe-area-inset-bottom))",
-                background: "rgba(247,251,252,0.97)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-                borderTop: "1.5px solid rgba(18,58,66,0.12)", borderRadius: "14px 14px 0 0",
-                boxShadow: "0 -8px 20px -14px rgba(18,58,66,0.5)" }}>
-
-                {/* Uitgeklapt groeit de strook naar boven: de lijst komt bovenop het scherm
-                    te staan in plaats van eronder te verdwijnen. */}
-                {showNamesBlock && (
-                  <div style={{ maxHeight: "44vh", overflowY: "auto", border: "1px solid rgba(18,58,66,0.14)", borderRadius: 12, background: "#fff", marginBottom: 10 }}>
-                    {participants.map((q, i) => {
-                      const ikZelf = q.id === meId
-                      const leeg = isFreeSpot(q) && !q.self_joined
-                      const zit = zitVan(q)
-                      if (leeg) {
-                        return (
-                          <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 10, borderTop: i === 0 ? "none" : "1px solid rgba(18,58,66,0.08)", padding: "13px 12px", background: "#fbfcfd" }}>
-                            <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, border: "1.5px dashed rgba(18,58,66,0.25)", color: "#b3bac6" }}>?</span>
-                            <span style={{ flex: 1, minWidth: 0 }}>
-                              <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#5b7378" }}>{L.freeSpotName}</span>
-                              <span style={{ display: "block", fontSize: 14.5, fontWeight: 600, color: "#7d949a", lineHeight: 1.4, marginTop: 2 }}>{L.freeSpotHow}</span>
-                            </span>
-                          </div>
-                        )
-                      }
-                      return (
-                        <button key={q.id} onClick={() => ikZelf ? openZelfPopup() : openVoor(q)}
-                          style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer",
-                            border: "none", borderTop: i === 0 ? "none" : "1px solid rgba(18,58,66,0.08)", padding: "11px 12px", background: "#fff" }}>
-                          <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
-                            ...(q.self_joined && !ikZelf ? { background: "rgba(39,174,96,0.16)", color: "#1f8a4c" } : { background: "rgba(20,153,176,0.14)", color: "#0f7d90" }) }}>
-                            {(q.name || "?").trim().charAt(0).toUpperCase()}
-                          </span>
-                          <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {q.name}{zit > 1 ? ` · ${zit}p.` : ""}
-                            {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
-                          </span>
-                          {q.self_joined && !ikZelf && (
-                            <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.selfJoinedBadge}</span>
-                          )}
-                          <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "rgba(20,153,176,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                            <PotloodIcon />
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: vrijeZit > 0 ? "#123a42" : "#1f8a4c" }}>
-                      {vrijeZit > 0 ? L.seatsProgress(gevuldZit, totaalZit) : L.seatsAllNamed}
-                    </span>
-                    {totaalZit > 0 && (
-                      <span style={{ display: "flex", gap: totaalZit <= 10 ? 4 : 0, marginTop: 6 }}>
-                        {totaalZit <= 10
-                          ? Array.from({ length: totaalZit }, (_, i) => (
-                              <span key={i} style={{ flex: 1, height: 7, borderRadius: 4,
-                                background: i < scanZit ? "#1f8a4c" : i < gevuldZit ? "#0f7d90" : "rgba(18,58,66,0.12)" }} />
-                            ))
-                          : [
-                              { k: "scan", n: scanZit, c: "#1f8a4c" },
-                              { k: "jij", n: jouwZit, c: "#0f7d90" },
-                              { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.12)" },
-                            ].filter((d) => d.n > 0).map((d, i, arr) => (
-                              <span key={d.k} style={{ flexGrow: d.n, height: 7, background: d.c,
-                                borderTopLeftRadius: i === 0 ? 4 : 0, borderBottomLeftRadius: i === 0 ? 4 : 0,
-                                borderTopRightRadius: i === arr.length - 1 ? 4 : 0, borderBottomRightRadius: i === arr.length - 1 ? 4 : 0 }} />
-                            ))}
-                      </span>
-                    )}
-                    <span style={{ display: "flex", flexWrap: "wrap", gap: "2px 12px", marginTop: 6, fontSize: 12.5, fontWeight: 700, color: "#44656b" }}>
-                      {([
-                        { k: "scan", n: scanZit, c: "#1f8a4c", t: L.seatsViaScan(scanZit) },
-                        { k: "jij", n: jouwZit, c: "#0f7d90", t: L.seatsByYou(jouwZit) },
-                        { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.18)", t: L.nStillFree(vrijeZit) },
-                      ]).filter((d) => d.n > 0).map((d) => (
-                        <span key={d.k} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                          <span style={{ width: 7, height: 7, borderRadius: "50%", background: d.c }} />{d.t}
-                        </span>
-                      ))}
-                    </span>
-                  </span>
-                  <button onClick={() => setShowNamesBlock((v) => !v)}
-                    style={{ flexShrink: 0, minHeight: 44, padding: "9px 12px", cursor: "pointer",
-                      border: "1.5px solid rgba(20,153,176,0.45)", borderRadius: 10, background: "#fff",
-                      color: "#0b6473", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap" }}>
-                    {showNamesBlock ? `${L.collapseSeats} ▾` : `${L.showSeats} ▴`}
-                  </button>
-                </div>
-
-                {seatRequests.length > 0 && (
-                  <div style={{ marginTop: 9, fontSize: 13.5, fontWeight: 800, color: "#8a4514", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 9, padding: "7px 9px" }}>
-                    {L.seatAsks(seatRequests.length)}
-                  </div>
-                )}
-              </div>
-            )
-          })()}
         </div>
       )}
 
