@@ -733,6 +733,7 @@ const STRINGS = {
     seatRequestGranted: (naam: string) => `Plaats bijgezet voor ${naam}.`,
     shareStepTitle: "📱 Laat je gasten de QR scannen",
     orSendLinkTitle: "Of stuur de link zelf door naar je gasten",
+    orSendLinkShort: "Of stuur de link",
     linkWord: "Link",
     copyWord: "Kopieer",
     copiedWord: "Gekopieerd",
@@ -822,6 +823,8 @@ const STRINGS = {
     rescan: "🔄 Bon opnieuw scannen",
     startScan: "📸 Scan je rekening",
     startHereTitle: "Start hier",
+    startHereSub: "Maak een foto van de rekening — de rest volgt vanzelf.",
+    startScanShort: "Scan je rekening",
     startStep1: "Scan rekening",
     startStep2: "Items nakijken",
     startStep3: "QR delen",
@@ -1480,6 +1483,7 @@ const STRINGS = {
     seatRequestGranted: (naam: string) => `Place ajoutée pour ${naam}.`,
     shareStepTitle: "📱 Fais scanner le QR à tes invités",
     orSendLinkTitle: "Ou envoie le lien toi-même à tes invités",
+    orSendLinkShort: "Ou envoie le lien",
     linkWord: "Lien",
     copyWord: "Copier",
     copiedWord: "Copié",
@@ -1569,6 +1573,8 @@ const STRINGS = {
     rescan: "🔄 Rescanner l'addition",
     startScan: "📸 Scanne ton ticket",
     startHereTitle: "Commence ici",
+    startHereSub: "Prends une photo de l'addition — le reste suit tout seul.",
+    startScanShort: "Scanne ton addition",
     startStep1: "Scanner le ticket",
     startStep2: "Vérifier les articles",
     startStep3: "Partager le QR",
@@ -4762,6 +4768,11 @@ export default function RundoTable() {
           50% { box-shadow: 0 0 0 12px rgba(31,138,76,0); }
         }
         .rundo-klaar-puls { animation: rundoKlaarPuls 1.6s ease-out infinite; }
+        @keyframes rundoScanPuls {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(20,153,176,0.55); }
+          50% { box-shadow: 0 0 0 14px rgba(20,153,176,0); }
+        }
+        .rundo-scan-puls { animation: rundoScanPuls 1.8s ease-out infinite; }
         @keyframes rundoQrPuls {
           0%, 100% { box-shadow: 0 0 0 0 rgba(20,153,176,0.5); border-color: rgba(20,153,176,0.9); }
           50% { box-shadow: 0 0 0 11px rgba(20,153,176,0); border-color: rgba(20,153,176,0.45); }
@@ -4773,7 +4784,7 @@ export default function RundoTable() {
         }
         .rundo-pijl-wip { animation: rundoPijlWip 1.4s ease-in-out infinite; display: inline-block; }
         @media (prefers-reduced-motion: reduce) {
-          .rundo-klaar-puls, .rundo-qr-puls, .rundo-pijl-wip { animation: none; }
+          .rundo-klaar-puls, .rundo-qr-puls, .rundo-scan-puls, .rundo-pijl-wip { animation: none; }
         }`}</style>
       {/* Over elk scherm heen: de beheerder zit meestal op een andere tab, en er staat
           iemand te wachten. Alleen weg met toekennen of "nu niet". */}
@@ -5009,8 +5020,15 @@ export default function RundoTable() {
                zegt alleen waar je mee bezig bent, en vult de ruimte die er toch was. */
             <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 12px rgba(18,58,66,0.09)", marginBottom: 12 }}>
               <div style={{ padding: "16px 16px 14px" }}>
-                <div style={{ fontSize: 19, fontWeight: 800, color: "#123a42", marginBottom: 13 }}>{L.startHereTitle}</div>
-                <button onClick={() => setShowScan(true)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "15px 0", fontSize: 18, fontWeight: 800 }}>{L.startScan}</button>
+                {/* Dit is het eerste wat je ziet en het enige wat je hier kan doen, dus mag
+                    het ook zo groot zijn. De ondertitel neemt de twijfel weg over wát je
+                    precies moet scannen; de puls trekt het oog naar de knop. */}
+                <div style={{ fontSize: 26, fontWeight: 800, color: "#123a42", letterSpacing: -0.5, lineHeight: 1.15 }}>{L.startHereTitle}</div>
+                <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45, margin: "5px 0 14px" }}>{L.startHereSub}</div>
+                <button onClick={() => setShowScan(true)} className="rundo-scan-puls"
+                  style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "16px 0", fontSize: 19, fontWeight: 800, borderRadius: 14, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9 }}>
+                  <CameraIcon /> {L.startScanShort}
+                </button>
                 <div style={{ display: "flex", gap: 7, marginTop: 12 }}>
                   {[L.startStep1, L.startStep2, L.startStep3].map((tekst, i2) => (
                     <div key={i2} style={{ flex: 1, minWidth: 0, textAlign: "center", background: "rgba(20,153,176,0.07)", borderRadius: 11, padding: "9px 5px" }}>
@@ -5395,7 +5413,9 @@ export default function RundoTable() {
             {!personsSet && (
               <div style={{ fontSize: 15.5, color: "#c0392b", fontWeight: 700, marginTop: 8 }}>{L.personsFirst}</div>
             )}
-            {personsSet && (
+            {/* Zodra je naam er staat, verhuist ze naar de lijst onder de QR. Twee plekken
+                met dezelfde naam, elk met hun eigen potlood, was er één te veel. */}
+            {personsSet && !adminNamed && (
             <div style={{ marginTop: 14, paddingTop: 13, borderTop: "1px solid rgba(18,58,66,0.08)" }}>
               {(() => {
                 const me = participants.find((x) => x.id === meId) || participants[0]
@@ -5504,44 +5524,10 @@ export default function RundoTable() {
                     </button>
                   </div>
 
-                  <div style={{ borderTop: "1px solid rgba(18,58,66,0.08)", paddingTop: 13 }}>
-                    <div style={{ fontSize: 15.5, fontWeight: 800, color: "#123a42", marginBottom: 8 }}>{L.orSendLinkTitle}</div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6, background: "rgba(18,58,66,0.04)", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 10, padding: "11px 12px" }}>
-                        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#8aa3a6" }}>{L.linkWord}</span>
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: "#4a6e73", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link}</span>
-                      </div>
-                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) void kopieer() }}
-                        style={{ flexShrink: 0, border: "none", cursor: "pointer", borderRadius: 10, padding: "11px 15px", fontSize: 15, fontWeight: 800, whiteSpace: "nowrap",
-                          background: linkCopied ? "rgba(39,174,96,0.14)" : "#0f7d90", color: linkCopied ? "#1f8a4c" : "#fff" }}>
-                        {linkCopied ? `✓ ${L.copiedWord}` : `📋 ${L.copyWord}`}
-                      </button>
-                    </div>
-                    {/* Kopiëren alleen is niet genoeg: zonder deze regel weet je niet wat er
-                        gebeurd is, laat staan wat je nu moet doen. */}
-                    {linkCopied && (
-                      <div style={{ background: "rgba(39,174,96,0.08)", borderRadius: 10, padding: "11px 12px", marginTop: 9 }}>
-                        <div style={{ fontSize: 14.5, color: "#1f6b3a", fontWeight: 800, marginBottom: 5 }}>{L.pasteAndShare}</div>
-                        <div style={{ fontSize: 14.5, color: "#4a6e73", lineHeight: 1.6 }}>
-                          {["WhatsApp", "Messenger", "sms", "e-mail"].map((naam, i) => (
-                            <span key={naam}>{i > 0 && <span style={{ color: "#8aa3a6", fontWeight: 800, margin: "0 9px" }}>•</span>}{naam}</span>
-                          ))}
-                          <span style={{ color: "#8aa3a6", fontWeight: 800, margin: "0 9px" }}>•</span>…
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )
-            })()}
-          </div>
-
-          {/* Hier hoort de stand thuis: onder de QR die je net liet scannen, boven de knop
-              die je verder stuurt. Ingeklapt vertelt de balk het hele verhaal — één vakje
-              per stoel, groen voor wie scande, turkoois voor wie jij invulde, een leeg
-              vakje voor elke stoel die nog wacht. Zit iedereen erbij, dan wordt de balk
-              helemaal groen en verandert de kop mee. */}
-          {personsSet && adminNamed && (() => {
+                  {/* De stand hoort in dezelfde kaart als de QR: je laat de code zien en ziet
+                      de teller oplopen zonder ergens anders te kijken. De beheerder heeft hier
+                      geen eigen regel meer nodig — hij staat gewoon vooraan in de lijst. */}
+                  {personsSet && adminNamed && (() => {
             const zitVan = (q: Participant) => Math.max(1, q.seats ?? 1)
             const vrijeZit = vrijeZitplaatsen
             const scanZit = participants.filter((q) => q.self_joined && q.id !== meId).reduce((a, q) => a + zitVan(q), 0)
@@ -5551,14 +5537,8 @@ export default function RundoTable() {
             const vol = vrijeZit === 0
             const bezet = participants.filter((q) => !(isFreeSpot(q) && !q.self_joined))
             const vrijeRijen = participants.filter((q) => isFreeSpot(q) && !q.self_joined)
-            const openVoor = (q: Participant) => {
-              setGuestTarget(q.id)
-              setGuestSeats(zitVan(q))
-              setGuestNames(q.name.split(/\s*&\s*/).map((x) => x.trim()))
-              setShowGuestModal(true)
-            }
             return (
-              <div style={{ ...S.card, order: 3, border: vol ? "1.5px solid rgba(39,174,96,0.35)" : "1px solid rgba(18,58,66,0.04)" }}>
+              <div style={{ borderTop: vol ? "1px solid rgba(39,174,96,0.3)" : "1px solid rgba(18,58,66,0.08)", paddingTop: 13 }}>
                 <button onClick={() => setShowNamesBlock((v) => !v)}
                   style={{ width: "100%", display: "block", textAlign: "left", cursor: "pointer", background: "transparent", border: "none", padding: 0, fontFamily: "inherit" }}>
                   <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -5624,26 +5604,32 @@ export default function RundoTable() {
                         const ikZelf = q.id === meId
                         const zit = zitVan(q)
                         return (
-                          <button key={q.id} onClick={() => ikZelf ? openZelfPopup() : openVoor(q)}
-                            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer",
-                              border: "none", borderTop: "1px solid rgba(18,58,66,0.07)", padding: "10px 0", background: "transparent" }}>
+                          <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 10, borderTop: "1px solid rgba(18,58,66,0.07)", padding: "10px 0" }}>
                             <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
                               ...(q.self_joined && !ikZelf ? { background: "rgba(39,174,96,0.16)", color: "#1f8a4c" } : { background: "rgba(20,153,176,0.16)", color: "#0b6473" }) }}>
                               {(q.name || "?").trim().charAt(0).toUpperCase()}
                             </span>
                             <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {q.name}{zit > 1 ? ` \u00b7 ${zit}p.` : ""}
-                              {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> \u00b7 {zit > 1 ? L.adminsWord : L.adminWord}</span>}
+                              {q.name}{zit > 1 ? ` · ${zit}p.` : ""}
+                              {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
                             </span>
-                            {q.self_joined && !ikZelf
-                              ? <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.selfJoinedBadge}</span>
-                              : !ikZelf
-                              ? <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#0b6473", background: "rgba(20,153,176,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.byYouBadge}</span>
-                              : null}
-                            <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, background: "rgba(20,153,176,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                              <PotloodIcon />
-                            </span>
-                          </button>
+                            {q.self_joined && !ikZelf && (
+                              <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.selfJoinedBadge}</span>
+                            )}
+                            {/* Alleen je eigen naam pas je hier aan. Bij een ander zou jij een naam
+                                zetten die hij zelf al gaf of straks nog geeft, en dan staan er twee
+                                waarheden. Weghalen kan wel: een plaats te veel moet je kunnen
+                                rechtzetten. */}
+                            {ikZelf ? (
+                              <button onClick={openZelfPopup} aria-label={L.editMe} title={L.editMe}
+                                style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, border: "none", background: "rgba(20,153,176,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                                <PotloodIcon />
+                              </button>
+                            ) : (
+                              <button onClick={() => void removeSpot(q.id)} aria-label={L.removeGuestBtn} title={L.removeGuestBtn}
+                                style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.08)", color: "#c0392b", fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
+                            )}
+                          </div>
                         )
                       })}
                     </div>
@@ -5671,6 +5657,40 @@ export default function RundoTable() {
               </div>
             )
           })()}
+
+                  {/* De link is de uitzondering geworden: bijna iedereen scant. Eén rustige
+                      regel onderaan volstaat, met de knop ernaast voor wie hem toch nodig heeft. */}
+                  <div style={{ borderTop: "1px solid rgba(18,58,66,0.08)", paddingTop: 11, marginTop: 13 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: "#7d949a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {L.orSendLinkShort} · {link}
+                      </span>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) void kopieer() }}
+                        style={{ flexShrink: 0, cursor: "pointer", borderRadius: 9, padding: "7px 11px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap",
+                          border: linkCopied ? "1px solid rgba(39,174,96,0.45)" : "1px solid rgba(20,153,176,0.4)",
+                          background: linkCopied ? "rgba(39,174,96,0.12)" : "#fff", color: linkCopied ? "#1f8a4c" : "#0b6473" }}>
+                        {linkCopied ? `✓ ${L.copiedWord}` : L.copyWord}
+                      </button>
+                    </div>
+                    {/* Kopiëren alleen is niet genoeg: zonder deze regel weet je niet wat er
+                        gebeurd is, laat staan wat je nu moet doen. */}
+                    {linkCopied && (
+                      <div style={{ background: "rgba(39,174,96,0.08)", borderRadius: 10, padding: "11px 12px", marginTop: 9 }}>
+                        <div style={{ fontSize: 14.5, color: "#1f6b3a", fontWeight: 800, marginBottom: 5 }}>{L.pasteAndShare}</div>
+                        <div style={{ fontSize: 14.5, color: "#4a6e73", lineHeight: 1.6 }}>
+                          {["WhatsApp", "Messenger", "sms", "e-mail"].map((naam, i) => (
+                            <span key={naam}>{i > 0 && <span style={{ color: "#8aa3a6", fontWeight: 800, margin: "0 9px" }}>•</span>}{naam}</span>
+                          ))}
+                          <span style={{ color: "#8aa3a6", fontWeight: 800, margin: "0 9px" }}>•</span>…
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )
+            })()}
+          </div>
+
 
           {/* Deze kaart bevat enkel de uitklapbare namenlijst. Stond die dicht, dan bleef er
               een leeg wit vak op het scherm staan. */}
@@ -8814,6 +8834,16 @@ function ClaimScreen(props: {
 
 // Een gsm-silhouet blijft op 12px leesbaar waar een QR-vierkantje een vlekje wordt.
 // Het staat op de knop zelf, dus de uitlegregel onder de lijst kan weg.
+function CameraIcon({ size = 20, kleur = "currentColor" }: { size?: number; kleur?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={kleur} strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0 }} aria-hidden="true">
+      <path d="M3 8a2 2 0 0 1 2-2h2.2l1.3-2h6l1.3 2H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+      <circle cx="12" cy="12.5" r="3.6" />
+    </svg>
+  )
+}
+
 function GsmIcon({ size = 12, kleur = "currentColor" }: { size?: number; kleur?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={kleur} strokeWidth="2"
