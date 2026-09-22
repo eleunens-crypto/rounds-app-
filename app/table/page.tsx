@@ -668,6 +668,8 @@ const STRINGS = {
     everyoneInSub: "Alle plaatsen hebben een naam. Tijd om te verdelen.",
     showSeats: "Toon plaatsen",
     freeSeatsTitle: "Vrije plaatsen",
+    freeSeatNoAssignTitle: "Lege stoel",
+    freeSeatNoAssignBody: "Geef die plaats eerst een naam, of haal ze weg.",
     allTakenTitle: "Alle plaatsen ingenomen \u2713",
     seatsFreeShort: (n: number) => `${n} vrij`,
     waitingHeader: (n: number) => n === 1 ? "Nog 1 vrij \u2014 wacht op QR-scan" : `Nog ${n} vrij \u2014 wacht op QR-scan`,
@@ -1433,6 +1435,8 @@ const STRINGS = {
     everyoneInSub: "Chaque place a un nom. C'est le moment de r\u00e9partir.",
     showSeats: "Voir les places",
     freeSeatsTitle: "Places libres",
+    freeSeatNoAssignTitle: "Place vide",
+    freeSeatNoAssignBody: "Donne d\u2019abord un nom \u00e0 cette place, ou retire-la.",
     allTakenTitle: "Toutes les places sont prises \u2713",
     seatsFreeShort: (n: number) => `${n} libre${n === 1 ? "" : "s"}`,
     waitingHeader: (n: number) => n === 1 ? "Encore 1 libre \u2014 en attente d'un scan QR" : `Encore ${n} libres \u2014 en attente d'un scan QR`,
@@ -3159,6 +3163,9 @@ export default function RundoTable() {
     if (!isAdmin || adminTab !== "guests") { if (!zitKlaar) tafelWasVol.current = false; return }
     if (zitKlaar && !tafelWasVol.current) {
       tafelWasVol.current = true
+      // Er valt niets meer te controleren in die lijst, dus ze mag dicht — en het scherm
+      // brengt je meteen bij de enige knop die er nog toe doet.
+      setShowNamesBlock(false)
       window.setTimeout(() => document.getElementById("naar-toewijzen")?.scrollIntoView({ behavior: "smooth", block: "center" }), 350)
     }
     if (!zitKlaar) tafelWasVol.current = false
@@ -5924,7 +5931,7 @@ export default function RundoTable() {
                       <select value="" onChange={(e) => { const pid = e.target.value; if (pid) setClaim(it.id, pid, myQty(it.id, pid) + 1) }}
                         style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "7px 8px", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
                         <option value="">{L.assignDots}</option>
-                        {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        {participants.filter((p) => !isFreeSpot(p) || p.self_joined).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     )}
                   </div>
@@ -6013,6 +6020,7 @@ export default function RundoTable() {
             onPickMe={pickMe}
             finalized={!!group.finalized} iDispute={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name)} iResolved={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name && d.resolved)} iComment={(me && parseDisputes(group.disputed_by || "").find((d) => d.name === me.name)?.comment) || ""} onToggleDispute={(on, comment) => { if (me) flagDispute(me.name, on, comment) }}
             askConfirm={askConfirm}
+            onNaarGasten={() => { setAdminTab("guests"); scrollTop() }}
           />
         </>
       )}
@@ -7937,10 +7945,12 @@ function ClaimScreen(props: {
   iConfirmed: boolean; confirmMe: () => Promise<boolean> | void; onPickMe: (id: string) => void
   finalized: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
   askConfirm: (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean }) => void
+  /** brengt de beheerder naar het tabblad waar hij die lege stoel wél kan oplossen */
+  onNaarGasten?: () => void
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm } = props
+  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm, onNaarGasten } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
@@ -8231,6 +8241,7 @@ function ClaimScreen(props: {
                                         const doe = pSeats > 1
                                           ? () => setLedenOpen(`${it.id}:${p.id}`)
                                           : () => toggleShareClaim(it.id, p.id)
+                                        if (vrijFn(p)) { askConfirm(L.freeSeatNoAssignBody, L.goGuestsBtn, () => onNaarGasten?.(), { title: L.freeSeatNoAssignTitle }); return }
                                         if (explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(p.name), L.yes, doe); return }
                                         if (viaLink) { askConfirm(L.assignToQrGuest(naamVan(p), it.name), L.assignQrYes, doe, { title: L.assignQrTitle(naamVan(p)) }); return }
                                         if (uitlegGezien("ander")) { doe(); return }
@@ -8326,21 +8337,28 @@ function ClaimScreen(props: {
                         </div>
                         {open > 0
                           ? <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "5px 10px", cursor: "pointer", border: "none", color: "#c0392b", background: "rgba(224,107,94,0.14)" }}>{open} {L.openAssign}</button>
-                          : <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)}
-                              style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "4px 9px", cursor: "pointer", border: "1px solid rgba(39,174,96,0.35)", color: "#1f8a4c", background: "rgba(39,174,96,0.12)" }}>{L.fullyClaimed} ✏️</button>}
+                          /* Is alles verdeeld, dan valt er niets meer te kiezen: de kiezer
+                             toonde dan dezelfde namen nog eens, gedimd, met de uitnodiging
+                             om er één weg te halen — wat je hierboven al op de naam zelf
+                             doet. Nu is dit enkel nog een vaststelling. */
+                          : <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "6px 10px", border: "1px solid rgba(39,174,96,0.35)", color: "#1f8a4c", background: "rgba(39,174,96,0.12)", whiteSpace: "nowrap" }}>{L.fullyClaimed} ✓</span>}
                       </div>
                       {/* Blijft staan met de kiezer open: hier haal je per stuk weg,
                           daar voeg je per stuk toe. */}
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25, alignItems: "center" }}>
                         {who.map(({ p, q: pq }) => (
-                          <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "2px 4px 2px 9px", color: p.id === adminPid ? "#5a4a1a" : "#4a6e73", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>
+                          <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "3px 3px 3px 10px", color: p.id === adminPid ? "#5a4a1a" : "#4a6e73", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>
                             {naamVan(p)} ×{pq}
-                            <button onClick={() => setClaim(it.id, p.id, Math.max(0, pq - 1))} title={L.removeOne} style={{ border: "2px solid #2b2f38", background: "#fff", color: "#c0392b", borderRadius: 6, width: 26, height: 22, cursor: "pointer", fontSize: 18, fontWeight: 800, lineHeight: 1 }}>−</button>
+                            {/* Een kruisje leest als "weg", een minnetje als "minder" — en bij
+                                ×1 is dat hetzelfde. Staan er meerdere, dan gaat er telkens één
+                                af; dat hoeft er niet bij te staan, je ziet het cijfer zakken. */}
+                            <button onClick={() => setClaim(it.id, p.id, Math.max(0, pq - 1))} title={L.removeOne} aria-label={L.removeOne}
+                              style={{ border: "none", background: "rgba(224,107,94,0.16)", color: "#c0392b", borderRadius: 8, width: 28, height: 28, cursor: "pointer", fontSize: 15, fontWeight: 800, lineHeight: 1, fontFamily: "inherit" }}>✕</button>
                           </span>
                         ))}
                         {who.length === 0 && open === 0 && <span style={{ fontSize: 15.5, color: "#aaa" }}>—</span>}
                       </div>
-                      {assignItem === it.id && (
+                      {assignItem === it.id && open > 0 && (
                         <AssignPicker participants={participants} itemId={it.id} meId={meId} vol={open <= 0}
                           qtyFn={(pid) => myQty(it.id, pid)}
                           confirmedFn={explicitConfirmed}
@@ -8358,9 +8376,11 @@ function ClaimScreen(props: {
                             // uitleg, en daarna zou de vraag alleen nog in de weg zitten.
                             if (reden === "bevestigd") { askConfirm(L.notSelectedAdd(naam), L.yes, doe); return }
                             if (reden === "qr") { askConfirm(L.assignToQrGuest(naam, it.name), L.assignQrYes, doe, { title: L.assignQrTitle(naam) }); return }
+                            // Aanduiden op een stoel zonder naam maakt de rekening onbetrouwbaar:
+                            // straks weet je niet wie dit moet betalen. Dus niet meer toelaten,
+                            // en meteen de weg wijzen naar waar je het wél oplost.
                             if (reden === "vrij") {
-                              if (uitlegGezien("vrij")) { doe(); return }
-                              askConfirm(L.assignToFreeSpot(naam), L.yes, () => { markUitleg("vrij"); doe() })
+                              askConfirm(L.freeSeatNoAssignBody, L.goGuestsBtn, () => onNaarGasten?.(), { title: L.freeSeatNoAssignTitle })
                               return
                             }
                             if (reden === "ander") {
