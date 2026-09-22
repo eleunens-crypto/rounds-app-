@@ -1031,7 +1031,7 @@ const STRINGS = {
     mismatchBanner: (d: number) => `⚠️ De bon klopt niet: €${d.toFixed(2).replace(".", ",")} verschil tussen de items en het bontotaal.`,
     mismatchFix: "Naar de bon →",
     tipTitleNew: "💰 Nog geen fooi toegevoegd",
-    tipBodyNew: "Wil je een fooi verdelen over iedereen? Anders sluit je af met de bedragen zoals ze nu staan.",
+    tipBodyNew: "Wil je een fooi verdelen over iedereen? Vul het bedrag hier in, of sluit af met de bedragen zoals ze nu staan.",
     tipTotalLabel: "Totaal te verdelen",
     tipAddBtn: "💰 Fooi toevoegen",
     tipSkipBtn: "Afsluiten zonder fooi",
@@ -1070,12 +1070,10 @@ const STRINGS = {
     // Alles toegewezen, enkel de bevestiging van de gast ontbreekt nog. Vroeger stond
     // hier "bezig", wat leek alsof die persoon nog zat te tikken.
     statusToConfirm: "● te bevestigen",
-    allAssignedTitle: "Alles toegewezen",
-    allAssignedBody: "Elk item op de rekening heeft een naam. Zal ik ze meteen afsluiten? Je kan ze daarna altijd nog heropenen.",
-    allAssignedClose: "\ud83d\udd12 Ja, rekening afsluiten",
-    allAssignedCheck: "Toch nog even nakijken",
-    allAssignedGo: "Ga naar rekeningoverzicht",
-    allAssignedLater: "Later",
+    allAssignedTitle: "Alles is toegewezen",
+    allAssignedBody: "Elk item op de rekening heeft een naam. Kijk alles nog even na.",
+    allAssignedNotFinal: "Afsluiten is niet definitief \u2014 heropenen kan altijd met \u00e9\u00e9n tik.",
+    allAssignedOk: "OK",
     stickyTipNone: "Nog geen fooi",
     stickyTipSet: (b: string) => `Fooi €${b}`,
     stickyTipEdit: "wijzig",
@@ -1087,7 +1085,9 @@ const STRINGS = {
     closedBarTitle: "Rekening afgesloten",
     reopenShort: "🔓 heropen",
     reopenWord: "Heropenen",
-    reopenLong: "🔓 Toch nog iets wijzigen — heropenen",
+    reopenLong: "🔓 Iets wijzigen? Heropenen",
+    whoSharesBtn: "Wie deelt? ✏️",
+    whoSharesPanel: "Wie deelt mee?",
     closedListTitle: "De verdeling, zoals afgesloten",
     lockedWord: "op slot",
     closedBarAll: "Afgesloten · alles verdeeld",
@@ -1802,7 +1802,7 @@ const STRINGS = {
     mismatchBanner: (d: number) => `⚠️ L'addition ne correspond pas : €${d.toFixed(2).replace(".", ",")} d'écart entre les articles et le total.`,
     mismatchFix: "Vers l'addition →",
     tipTitleNew: "💰 Aucun pourboire ajouté",
-    tipBodyNew: "Veux-tu répartir un pourboire ? Sinon, tu clôtures avec les montants actuels.",
+    tipBodyNew: "Veux-tu répartir un pourboire ? Saisis le montant ici, ou clôture avec les montants actuels.",
     tipTotalLabel: "Total à répartir",
     tipAddBtn: "💰 Ajouter un pourboire",
     tipSkipBtn: "Clôturer sans pourboire",
@@ -1839,11 +1839,9 @@ const STRINGS = {
     statusSettled: "✓ clôturé",
     statusToConfirm: "● à confirmer",
     allAssignedTitle: "Tout est attribué",
-    allAssignedBody: "Chaque article de l'addition a un nom. Je la cl\u00f4ture tout de suite ? Tu pourras toujours la rouvrir ensuite.",
-    allAssignedClose: "\ud83d\udd12 Oui, cl\u00f4turer l'addition",
-    allAssignedCheck: "Je v\u00e9rifie encore",
-    allAssignedGo: "Voir le récapitulatif",
-    allAssignedLater: "Plus tard",
+    allAssignedBody: "Chaque article de l'addition a un nom. Vérifie encore le tout.",
+    allAssignedNotFinal: "Clôturer n'est pas définitif — tu peux toujours rouvrir en un clic.",
+    allAssignedOk: "OK",
     stickyTipNone: "Pas de pourboire",
     stickyTipSet: (b: string) => `Pourboire €${b}`,
     stickyTipEdit: "modifier",
@@ -1855,7 +1853,9 @@ const STRINGS = {
     closedBarTitle: "Addition clôturée",
     reopenShort: "🔓 rouvrir",
     reopenWord: "Rouvrir",
-    reopenLong: "🔓 Encore quelque chose à changer — rouvrir",
+    reopenLong: "🔓 Quelque chose à changer ? Rouvrir",
+    whoSharesBtn: "Qui partage ? ✏️",
+    whoSharesPanel: "Qui partage ?",
     closedListTitle: "La répartition, telle que clôturée",
     lockedWord: "verrouillé",
     closedBarAll: "Clôturée · tout est réparti",
@@ -2290,6 +2290,9 @@ export default function RundoTable() {
   // overzicht per persoon. De ref houdt het bij één melding per keer dat de rekening
   // volledig raakt, zodat hij niet bij elk tikje terugkomt.
   const [allesPopup, setAllesPopup] = useState(false)
+  // Kort oplichten van de afsluitknop nadat de melding "alles is toegewezen" is
+  // weggetikt: het scherm springt ernaartoe, en dan moet je ook zien wélke knop bedoeld is.
+  const [wijsAfsluit, setWijsAfsluit] = useState(false)
   const allesToegewezenGezien = useRef(false)
   // Gaat met één omhoog wanneer de toewijslijst mag dichtklappen. ClaimScreen houdt zijn
   // eigen open/dicht bij, dus vragen we het via een signaal in plaats van die stand
@@ -4198,6 +4201,19 @@ export default function RundoTable() {
   useEffect(() => { if (!allAssignedNow) allesToegewezenGezien.current = false }, [allAssignedNow])
   const tipItem = items.find((i) => i.name.trim().toLowerCase() === "fooi") || null
   const hasTip = !!tipItem
+
+  // De melding "alles is toegewezen" wegtikken: naar de afsluitknop scrollen en hem
+  // even laten pulseren. Zonder dat staat de melding weg en sta jij nog boven aan een
+  // lange rekening, zoekend naar de knop waar de tekst je net naartoe stuurde.
+  const sluitAllesPopup = () => {
+    setAllesPopup(false)
+    if (typeof document === "undefined") return
+    window.setTimeout(() => {
+      document.getElementById("afsluit-knop")?.scrollIntoView({ behavior: "smooth", block: "end" })
+      setWijsAfsluit(true)
+      window.setTimeout(() => setWijsAfsluit(false), 4000)
+    }, 120)
+  }
 
   // Deze hele controle zat als losse onClick in de afsluitknop, waardoor de zwevende
   // balk hem niet kon hergebruiken. Nu staat hij één keer hier en roepen beide hem.
@@ -6279,8 +6295,10 @@ export default function RundoTable() {
         <div style={{ ...S.card, marginTop: 12, padding: 14 }}>
           {/* Eerst de uitweg, dan de laatste stap: wie hier komt met twijfel moet niet
               langs de knop die alles afrondt om bij "toch nog wijzigen" te raken. */}
+          {/* Zelfde oranje vlak als de heropenknop in de groene balk bovenaan: het is
+              dezelfde uitweg, dus hij mag er niet uitzien als een ander soort knop. */}
           <button onClick={() => finalizeBill(false)}
-            style={{ width: "100%", marginBottom: 10, cursor: "pointer", border: "1.5px solid rgba(230,126,34,0.55)", borderRadius: 12, padding: "12px 0", fontSize: 16, fontWeight: 800, fontFamily: "inherit", color: "#b3560f", background: "#fffaf4" }}>
+            style={{ width: "100%", marginBottom: 10, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", color: "#fff", background: "linear-gradient(135deg,#f39c12,#e67e22)", boxShadow: "0 4px 14px -5px rgba(230,126,34,0.9)" }}>
             {L.reopenLong}
           </button>
           {group.pinned ? (
@@ -6311,24 +6329,14 @@ export default function RundoTable() {
           background: "rgba(247,251,252,0.97)", backdropFilter: "blur(6px)",
           borderTop: "1.5px solid rgba(18,58,66,0.12)", borderRadius: "14px 14px 0 0",
           boxShadow: "0 -8px 22px -14px rgba(18,58,66,0.45)" }}>
-          {/* De halve voet ging vroeger naar de fooi, met een hartje en het woord
-              "wijzig" — een grote knop voor iets wat je hoogstens één keer doet, en de
-              afsluitknop moest daardoor inkrimpen. Nu staat links wáárom je nog niet
-              kan afsluiten, staat de fooi er klein naast, en heeft het afsluiten de
-              volle breedte. */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 8 }}>
-            <button onClick={() => { if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }}
-              style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", borderRadius: 9, padding: "7px 11px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap",
-                border: tipTotal > 0.005 ? "1.5px solid rgba(39,174,96,0.45)" : "1.5px solid rgba(20,153,176,0.45)",
-                background: tipTotal > 0.005 ? "rgba(39,174,96,0.1)" : "#fff",
-                color: tipTotal > 0.005 ? "#15703f" : "#0b6473" }}>
-              {tipTotal > 0.005 ? `✓ ${L.stickyTipSet(tipTotal.toFixed(2).replace(".", ","))}` : L.addTipSmall}
-            </button>
-          </div>
+          {/* Hier stond ook nog een knopje "+ Fooi toevoegen", terwijl het fooivak al
+              tussen de items staat: twee keer dezelfde stap op één scherm. De fooi staat
+              nu op één plek, en vergeet je hem, dan houdt de afsluitknop je hieronder
+              tegen met een venster waar je het bedrag meteen kan invullen. */}
           {/* Grijs zei enkel "kan niet"; nu zegt de knop wát er nog ontbreekt, en een tik
               erop brengt je naar dat lijstje. Zacht rood, geen alarm: er is niets stuk,
               je bent gewoon nog niet klaar. */}
-          <button onClick={probeerAfsluiten}
+          <button id="afsluit-knop" onClick={probeerAfsluiten} className={wijsAfsluit ? "rundo-klaar-puls" : undefined}
             style={{ width: "100%", cursor: "pointer", borderRadius: 12, padding: "14px 0", fontSize: 17, fontWeight: 800, fontFamily: "inherit",
               border: allAssignedNow ? "none" : "1.5px solid rgba(224,107,94,0.55)",
               color: allAssignedNow ? "#fff" : "#a8402f",
@@ -6868,25 +6876,26 @@ export default function RundoTable() {
         </div>
       )}
 
-      {/* Alles toegewezen: een melding in plaats van een lijst die vanzelf dichtklapt.
-          "Later" laat je gewoon verder sleutelen; volg je hem, dan klapt de toewijslijst
-          dicht, staat iedereen open in het overzicht en spring je ernaartoe. */}
+      {/* Alles toegewezen. Deze melding sloot vroeger de rekening meteen af als je de
+          groene knop volgde — en sloeg daarmee de fooi over, die je op dat moment nog
+          niet had ingevuld. Ze meldt nu enkel dát het compleet is en zet je bij de
+          afsluitknop; wat daar nog moet gebeuren, bewaakt die knop zelf. */}
       {isAdmin && allesPopup && (
-        <div style={{ ...S.overlay, zIndex: 3100 }} onClick={() => setAllesPopup(false)}>
+        <div style={{ ...S.overlay, zIndex: 3100 }} onClick={() => sluitAllesPopup()}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}>
               <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>✓</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c" }}>{L.allAssignedTitle}</span>
             </div>
-            <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 14px" }}>{L.allAssignedBody}</p>
-            {/* Alles heeft een naam: de volgende stap is afsluiten, en dan doen we dat
-                hier meteen. Je eerst naar het overzicht sturen om daar de afsluitknop te
-                zoeken was een omweg langs een scherm dat niets beslist. Bang om te vroeg
-                te zijn hoeft niet: heropenen is één tik. */}
-            <button onClick={() => { setAllesPopup(false); void finalizeBill(true) }}
-              style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.allAssignedClose}</button>
-            <button onClick={() => setAllesPopup(false)}
-              style={{ ...S.btn, width: "100%", padding: "11px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#4a6e73", background: "transparent", border: "none" }}>{L.allAssignedCheck}</button>
+            <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 12px" }}>{L.allAssignedBody}</p>
+            {/* Wie hier "nog even nakijken" leest, kan denken dat afsluiten onherroepelijk
+                is en blijft dan eindeloos hangen. Dit regeltje haalt die spanning weg. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
+              <span style={{ flexShrink: 0, fontSize: 18 }}>💡</span>
+              <span style={{ fontSize: 15, color: "#7a5200", lineHeight: 1.35 }}>{L.allAssignedNotFinal}</span>
+            </div>
+            <button onClick={() => sluitAllesPopup()}
+              style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.allAssignedOk}</button>
           </div>
         </div>
       )}
