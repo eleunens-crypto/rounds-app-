@@ -656,7 +656,6 @@ const STRINGS = {
     switchReleaseBody: (naam: string) => `De plaats van ${naam} komt weer vrij voor iemand anders. Wat je al aanduidde en bevestigde gaat mee weg.`,
     toTableHome: "Naar het Resto-startscherm",
     person: "persoon",
-    ofWord: "van",
     persons: "personen",
     inviteModalTitle: "Deel je uitnodiging",
     inviteModalMsg: "Plak deze uitnodiging in WhatsApp, Messenger, sms of een andere berichtenservice en stuur ze naar je groep.",
@@ -671,7 +670,6 @@ const STRINGS = {
     yourselfStepSub: "\u2026 en eventueel je partner en/of kinderen als jullie samen betalen.",
     addYourselfBtn: "Vul je naam in",
     howManyAdminQ: "Voor hoeveel personen betaal jij?",
-    adminBadge: "admin",
     nameRequired: "Vul eerst je eigen naam in — anders weet niemand wie de rekening deelde.",
     personsFirst: "⚠️ Vul eerst in met hoeveel jullie zijn.",
     lockedPersons: "🔒 Eerst het aantal personen invullen",
@@ -679,26 +677,18 @@ const STRINGS = {
     nowAssignTitle: "Heeft iedereen gescand?",
     everyoneInTitle: "Iedereen zit erbij \u2713",
     everyoneInSub: "Alle plaatsen hebben een naam. Tijd om te verdelen.",
-    showSeats: "Toon plaatsen",
-    freeSeatsTitle: "Vrije plaatsen",
     freeSeatNoAssignTitle: "Lege stoel",
     freeSeatNoAssignBody: "Geef die plaats eerst een naam, of haal ze weg.",
     allTakenTitle: "Alle plaatsen ingenomen \u2713",
-    seatsFreeShort: (n: number) => `${n} vrij`,
-    waitingHeader: (n: number) => n === 1 ? "Nog 1 vrij \u2014 wacht op QR-scan" : `Nog ${n} vrij \u2014 wacht op QR-scan`,
-    byYouBadge: "door jou",
     removeFreeSeat: "Deze vrije plaats verwijderen",
     confirmRemoveFreeSeat: (van: number, naar: number) => `Deze vrije plaats weghalen? Jullie gaan van ${van} naar ${naar} personen.`,
-    showSeatsShort: "Toon",
     showSeatsLong: "Toon plaatsen",
     hideSeatsLong: "Verberg plaatsen",
     groupOfN: (n: number) => n === 1 ? "Groep van 1" : `Groep van ${n}`,
     onePersonLess: "Eén persoon minder",
     onePersonMore: "Eén persoon meer",
-    hideSeatsShort: "Verberg",
     addFreeSeat: "+ Vrije plaats toevoegen",
     freeSeatAdded: (n: number) => `Plaats bijgezet — jullie zijn nu met ${n}.`,
-    removeFreeSeatHint: "Te veel plaatsen aangemaakt? Met \u2715 haal je er \u00e9\u00e9n weg.",
     freeSeatRemoved: (n: number) => `Plaats weg \u2014 jullie zijn nu met ${n}.`,
     seatsStillFreeWarn: (n: number) => n === 1
       ? "Nog 1 plaats vrij. Je kan al beginnen, maar kijk de verdeling later nog eens na."
@@ -710,25 +700,17 @@ const STRINGS = {
     theirNamesQ: "Hoe heten ze?",
     addThisGuest: "Toevoegen",
     enterGuestName: "Vul eerst een naam in.",
-    seatsFreeTitle: (n: number) => n === 1 ? "Nog 1 plaats vrij" : `Nog ${n} plaatsen vrij`,
     // De kop telt niet meer alleen wat vrij is, maar toont hoever de tafel staat.
-    seatsProgress: (gedaan: number, totaal: number) => `${gedaan} van de ${totaal} plaatsen ingevuld`,
     seatsViaScan: (n: number) => `${n} via scan`,
     seatsByYou: (n: number) => `${n} door jou`,
-    optionalShort: "optioneel",
-    seatsAllNamed: "Alle plaatsen ingevuld ✓",
     // Een vrije plaats wacht; invullen gebeurt niet meer op de rij zelf maar via de
     // knop onder de QR. Daarom staat hier nog maar één ding.
-    collapseSeats: "Plaatsen verbergen",
-    selfJoinedBadge: "✓ zelf gescand",
     scannedBadge: "gescand",
     stillFreeTitle: (n: number) => n === 1 ? "Nog 1 vrij — wacht op een QR-scan" : `Nog ${n} vrij — wachten op een QR-scan`,
-    addNameRow: "+ naam",
     needMoreSpotsTitle: "Er is een plaats te weinig",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Dit vraagt ${tekort} plaats${tekort === 1 ? "" : "en"} meer dan er vrij ${tekort === 1 ? "is" : "zijn"}. Zal ik het aantal personen op ${totaal} zetten?`,
     raiseTotalBtn: (totaal: number) => `Ja, personen op ${totaal} zetten`,
     addAnother: "Nog iemand toevoegen",
-    qrJoinedLegend: "\ud83d\udcf1 = kwam via de link binnen en duidt normaal zelf aan.",
     seatFreedUp: "Die plaats telt nu voor 2 — er is één vrije plaats minder.",
     howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
     personsWord: "Aantal personen",
@@ -758,9 +740,7 @@ const STRINGS = {
     seatRequestFailed: "Je vraag kon niet verstuurd worden. Probeer het opnieuw.",
     seatRequestGranted: (naam: string) => `Plaats bijgezet voor ${naam}.`,
     shareStepTitle: "📱 Laat je gasten de QR scannen",
-    orSendLinkTitle: "Of stuur de link zelf door naar je gasten",
     orSendLinkShort: "Of stuur de link",
-    linkWord: "Link",
     copyWord: "Kopieer",
     copiedWord: "Gekopieerd",
     pasteAndShare: "Plak en deel in:",
@@ -768,14 +748,6 @@ const STRINGS = {
     scanThis: "Laat je gasten dit scannen",
     personWord: "Persoon",
     onlyOneShares: "⚠️ Maar 1 persoon deelt mee",
-    expectedHint: "Optioneel. Vul je het in, dan waarschuwt de app als er te weinig of te veel personen aantikken — tegenhouden doet ze niets.",
-    expectedForGuest: (n: number) => `Aantal verwachte delers: ${n}`,
-    expectedShort: (n: number) => `verwacht: ${n}`,
-    tooManySharedAdmin: (have: number, want: number) => `⚠️ ${have} personen duidden dit aan, maar je verwachtte er ${want}.`,
-    pickerDone: "Klaar",
-    tooManySharedGuest: (have: number, want: number) => `${have} personen duidden dit aan, maar het waren er ${want}. Tik opnieuw als jij dit niet deelde.`,
-    sharedBy: "Aangeduid door: ",
-    expectedFixTo: (n: number) => `Toch met ${n}`,
     sharedOverviewTitle: "Gedeelde items — wie deelde mee?",
     sharedByLabel: "gedeeld door",
     nobodyShared: "Nog niemand duidde dit item aan",
@@ -783,14 +755,11 @@ const STRINGS = {
     eachAmount: (b: number) => `\u20ac${b.toFixed(2).replace(".", ",")} elk`,
     dropsIfMore: "\u2192 daalt als er meer meedelen",
     youWord: "jij",
-    nobodySharedOf: (n: number) => `0 van ${n} delers`,
-    nobodySharedZero: "0 delers",
     sharedProblemTitle: "Let op — gedeelde items kloppen mogelijk niet:",
     sharedProblemAsk: "Toch afsluiten?",
     tipInclLabel: (a: string) => `incl. €${a} fooi`,
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} verschil`,
     taxSplitAtClose: "Toeslagen worden bij het afsluiten over iedereen verdeeld.",
-    ownNamePlaceholder: "Zet hier je eigen naam",
     allNamesFilled: "Alle namen zijn al ingevuld",
     isOneOfThemYou: "Is een van deze namen de jouwe? Tik ze aan.",
     takenHead: "Al ingenomen",
@@ -817,10 +786,7 @@ const STRINGS = {
     extraName: (n: number) => `Naam ${n}…`,
     showsAsOne: "Verschijnt als één plaats:",
     confirmRemoveLast: (name: string, n: number) => `${name} heeft al ${n} ${n === 1 ? "item" : "items"} aangetikt. Die toewijzingen gaan verloren. Toch verwijderen?`,
-    badgeSelf: "zelf aangemeld",
-    badgeMe: "jij",
     deleteTitle: "verwijderen",
-    emptyList: "Nog niemand in de lijst.",
     guestWord: "Gast",
     adminName: "Ik",
     close: "✕ Sluiten",
@@ -855,7 +821,6 @@ const STRINGS = {
     tagFree: "nog niemand",
     freeSpotName: "Vrije plaats",
     rescan: "🔄 Bon opnieuw scannen",
-    startScan: "📸 Scan je rekening",
     startHereTitle: "Start hier",
     startHereSub: "Maak een foto van de rekening — de rest volgt vanzelf.",
     startScanShort: "Scan je rekening",
@@ -880,12 +845,7 @@ const STRINGS = {
     changeAmount: "bedrag aanpassen",
     confirmAmountTitle: "Bevestig dit bedrag",
     yes: "Ja",
-    usuallyOneOf: "Meestal is het één van deze:",
     checkTaxShort: "BTW of korting",
-    checkPricesShort: "prijs of aantal",
-    checkSharedShort: "gedeeld item",
-    allOkTitle: "Alles klopt",
-    allOkSub: "Ga verder naar het delen met je gasten.",
     goGuestsBtn: "Naar Gasten & QR",
     scanModalTitle: "🧾 Rekening scannen",
     scanModalTitleAdded: "🧾 Foto toegevoegd",
@@ -933,20 +893,16 @@ const STRINGS = {
     closeWord: "Sluiten",
     confirmAdd: "✅ Bevestigen & toevoegen",
     itemsOnBill: "🧾 Items op de bon",
-    checkExcl: "Checken!",
     noItemsScan: "Nog geen items — scan de bon",
     justAddedEdit: "✨ Net toegevoegd — pas de naam aan met ✏️",
     scanDoubtTitle: "De scan twijfelde hier — tik voor details",
     sharedWord: "gedeeld",
-    sharedMultiQty: (q: number, tot: number) => `${q} stuks · €${tot.toFixed(2).replace(".", ",")} totaal — samen gedeeld`,
     sharedForN: (n: number) => `bestemd voor ${n} ${n === 1 ? "persoon" : "personen"}`,
-    perPieceSuffix: "/stuk",
     shareToggleOn: "gedeeld item — klik om uit te zetten",
     shareToggleOff: "maak hier een gedeeld item van (bv. water, wijn)",
     scanDoubtPre: "⚠️ De scan twijfelde hier",
     scanDoubtPost: ". Controleer even de naam, het aantal en de prijs.",
     notAssignedYet: "nog niet toegewezen",
-    sharedItemNoteShort: "Gedeeld item — de prijs wordt verdeeld over wie meedeelt.",
     zeroPriceWarn: "Geen prijs (€0,00) — vul de prijs in of verwijder dit item.",
     zeroPriceShort: "€0,00 — geen prijs",
     zeroPriceDelete: "Verwijderen",
@@ -962,9 +918,6 @@ const STRINGS = {
     orderedItems: "Bestelde items: ",
     taxShort: "BTW",
     totalWord: "Totaal",
-    overVsReceipt: (v: string) => `${v} te veel t.o.v. de bon`,
-    underVsReceipt: (v: string) => `${v} te weinig t.o.v. de bon`,
-    billCorrectGoGuests: "Bon correct? Ga naar Gasten en delen! →",
     editItemTitle: "✏️ Item bewerken",
     nameLabel: "Naam",
     qtyLabel: "Aantal",
@@ -979,8 +932,6 @@ const STRINGS = {
     turnIntoDiscount: "Dit is een korting, geen item",
     movedToDiscounts: (naam: string) => `"${naam}" staat nu onderaan bij de kortingen.`,
     deleteThisItem: "Dit item wissen",
-    editable: "pas aan",
-    orEditThis: "of pas dit aan",
     sharedByOthers: (names: string) => `Dit item is al toegewezen aan ${names}. Vraag de admin om het aan te passen.`,
     editMe: "✏️ Wijzig",
     sharedCheckbox: "Gedeeld item (wijn, water...) — splitsen over wie meedeelt",
@@ -1056,7 +1007,6 @@ const STRINGS = {
     nothingAssigned: "Niets aangeduid.",
     confirmReleaseSpot: (nm: string) => `"${nm}" hier weghalen? De plaats komt weer vrij — het aantal personen blijft gelijk.`,
     spotReleased: "Plaats is weer vrij.",
-    releaseTitle: "Plaats vrijgeven",
     allPerfect: "Bon en items kloppen perfect. Je kan verder naar Gasten & delen.",
     receiptConfirmedLabel: "Bon (bevestigd)",
     viaAdminTag: "(via admin)",
@@ -1065,12 +1015,9 @@ const STRINGS = {
     itemsBelowLabel: "Items hieronder",
     tooMuchInList: "Te veel in de lijst",
     tooLittleInList: "Te weinig in de lijst",
-    goToItemList: "Ga naar de itemlijst",
-    checkBelow: "\u2192 hieronder checken",
     roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
     roundingSub: "Aanvaarden en verdergaan",
     roundingDone: (d: string) => `€${d} afronding aanvaard. Je kan verder naar Gasten & delen.`,
-    shareDone: (n: number, each: number) => `Gedeeld door ${n} ${n === 1 ? "persoon" : "personen"} · €${each.toFixed(2).replace(".", ",")} elk`,
     noFreeSpots: "Alle plaatsen zijn bezet. Verhoog eerst het aantal personen bovenaan.",
     howManyAdminSub: "Een koppel dat samen betaalt? Kies 2.",
     noItemsYet: "Nog geen items op de bon.",
@@ -1087,14 +1034,9 @@ const STRINGS = {
     allAssignedBody: "Elk item op de rekening heeft een naam. Kijk alles nog even na.",
     allAssignedNotFinal: "Afsluiten is niet definitief \u2014 heropenen kan altijd met \u00e9\u00e9n tik.",
     allAssignedOk: "OK",
-    stickyTipNone: "Nog geen fooi",
-    stickyTipEdit: "wijzig",
-    stickyAllDone: "Alles toegewezen",
-    stickyOpenUnits: (n: number) => n === 1 ? "Nog 1 stuk zonder naam" : `Nog ${n} stuks zonder naam`,
     stickyCheckFirst: "Nog iets na te kijken",
     showDetailsBtn: "Toon details",
     closedBarTitle: "Rekening afgesloten",
-    reopenShort: "🔓 heropen",
     reopenWord: "Heropenen",
     reopenLong: "🔓 Iets wijzigen? Heropenen",
     closedListTitle: "De verdeling, zoals afgesloten",
@@ -1134,7 +1076,6 @@ const STRINGS = {
     notClaimedSuffix: "niet geclaimd",
     assignDots: "+ wijs toe…",
     sharedNobody: "— gedeeld, nog niemand",
-    sharedOnlyOne: "maar één plaats nam hiervan",
     nothingForPerson: (naam: string) => `${naam} duidde nog niets aan`,
     letShareDots: "+ laat meedelen…",
     perPersonTitle: "🧾 Per persoon",
@@ -1166,7 +1107,6 @@ const STRINGS = {
     tipPickWho: "Wie betaalt de fooi mee?",
     finalizeBtnOpen: (n: number) => n === 1 ? "Nog 1 stuk niet toegewezen" : `Nog ${n} stuks niet toegewezen`,
     finalizeConfirm: "De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.",
-    notFinalizedNote: "Sluit pas af als alles is aangetikt en nagekeken. Gasten krijgen dan een melding.",
     backToTop: "↑ Terug naar boven",
     cantFinalizeTitle: "De rekening kan nog niet afgesloten worden:",
     unitsNotAssigned: (n: number) => `${n} ${n === 1 ? "consumptie is" : "consumpties zijn"} nog niet toegewezen`,
@@ -1220,7 +1160,6 @@ const STRINGS = {
     addGuestsInTab1: 'Voeg eerst gasten toe in de tab "Gasten & delen".',
     totalLower: "totaal",
     notSelectedShare: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch laten meedelen?`,
-    assignForOther: (name: string | undefined) => `Dit aanduiden voor ${name}?`,
     openAssign: "open — wijs toe ▾",
     fullyClaimed: "volledig",
     removeOne: "verwijder er één",
@@ -1231,7 +1170,6 @@ const STRINGS = {
     assignOwnTitle: (name: string | undefined) => `Jij duidt aan voor ${name}`,
     assignOwnBody: (name: string | undefined) => `${name} kwam niet via de QR binnen, dus jij tikt aan wat hij nam. Dat is hier de gewone gang van zaken.\n\nDit vragen we maar één keer — daarna gaat het meteen door.`,
     assignOwnYes: "Ja, doorgaan",
-    assignToFreeSpot: (name: string | undefined) => `${name} is nog een vrije plaats zonder naam. Wat je hier toewijst, hoort straks bij wie die plaats inneemt.\n\nDit vragen we maar één keer.`,
     unitsClaimed: "Stuks geclaimd",
     sharedItemsHandled: "Gedeelde items geregeld",
     billTotalLabel: "Totaal rekening",
@@ -1260,7 +1198,6 @@ const STRINGS = {
     makeUnsharedTitle: "Delen stopzetten?",
     makeUnsharedBody: "Dit item wordt dan weer per stuk toegewezen.",
     makeSharedCancel: "Annuleren",
-    sharedBadge: "GEDEELD",
     makeSharedShort: "delen",
     sharedOnShort: "gedeeld",
     addItemBtn: "+ Item toevoegen",
@@ -1276,8 +1213,6 @@ const STRINGS = {
     sharedItemsQ: "Gedeelde items?",
     sharedByOther: "Alleen wie dit deelde of de beheerder kan het terugdraaien.",
     shareLocked: "Vastgezet door de beheerder",
-    sharingWaitReveal: "⏳ Je deelt mee. Het bedrag wordt verdeeld over iedereen die meedeelt — je deel en de namen verschijnen zodra iedereen klaar is met aantikken en bevestigen.",
-    tapShareHint: 'Tik "meedelen" als jij hiervan mee at of dronk. De prijs wordt gedeeld door iedereen die meedeelt — je betaalt dus niet de hele prijs.',
     stillFree: (n: number) => `nog ${n} vrij`,
     allClaimedWord: "alles genomen",
     aboutToConfirmTitle: "Dit ga ik bevestigen",
@@ -1297,7 +1232,6 @@ const STRINGS = {
     confirmStep3: "Beheerder sluit dan de rekening af",
     confirmStep4: "Hier verschijnt je definitieve bedrag",
     confirmStepNote: "eventuele btw, kortingen, kosten en fooien worden mee verrekend",
-    whatNowBtn: "Wat nu?",
     showAll: "toon alles",
     hideAll: "verberg alles",
     finalPopupTitle: "✅ De rekening is afgesloten",
@@ -1323,7 +1257,6 @@ const STRINGS = {
     addAnotherRemark: "➕ Nog een opmerking toevoegen",
     remarkReceived: "💬 De beheerder heeft je opmerking ontvangen en bekijkt ze.",
     withdraw: "toch intrekken",
-    assignFullMsg: "Alles is al toegewezen — haal eerst iemand weg.",
     assignFullTap: "Alles toegewezen — tik een naam om weg te halen",
     assignToWhom: "Aan wie toewijzen?",
     seatsControlTitle: "Voor hoeveel personen telt deze naam (bij gedeelde items)",
@@ -1427,7 +1360,6 @@ const STRINGS = {
     switchReleaseBody: (naam: string) => `La place de ${naam} redevient libre pour quelqu'un d'autre. Ce que tu as coché et confirmé disparaît aussi.`,
     toTableHome: "Vers l'accueil Resto",
     person: "personne",
-    ofWord: "sur",
     persons: "personnes",
     inviteModalTitle: "Partage ton invitation",
     inviteModalMsg: "Colle cette invitation dans WhatsApp, Messenger, SMS ou un autre service de messagerie et envoie-la à ton groupe.",
@@ -1442,7 +1374,6 @@ const STRINGS = {
     yourselfStepSub: "\u2026 et \u00e9ventuellement ton/ta partenaire et/ou tes enfants si vous payez ensemble.",
     addYourselfBtn: "Remplis ton nom",
     howManyAdminQ: "Pour combien de personnes paies-tu ?",
-    adminBadge: "admin",
     nameRequired: "Indique d'abord ton nom — sinon personne ne sait qui a partagé l'addition.",
     personsFirst: "⚠️ Indique d'abord combien vous êtes.",
     lockedPersons: "🔒 Indique d'abord le nombre de personnes",
@@ -1450,26 +1381,18 @@ const STRINGS = {
     nowAssignTitle: "Tout le monde a scanné ?",
     everyoneInTitle: "Tout le monde y est \u2713",
     everyoneInSub: "Chaque place a un nom. C'est le moment de r\u00e9partir.",
-    showSeats: "Voir les places",
-    freeSeatsTitle: "Places libres",
     freeSeatNoAssignTitle: "Place vide",
     freeSeatNoAssignBody: "Donne d\u2019abord un nom \u00e0 cette place, ou retire-la.",
     allTakenTitle: "Toutes les places sont prises \u2713",
-    seatsFreeShort: (n: number) => `${n} libre${n === 1 ? "" : "s"}`,
-    waitingHeader: (n: number) => n === 1 ? "Encore 1 libre \u2014 en attente d'un scan QR" : `Encore ${n} libres \u2014 en attente d'un scan QR`,
-    byYouBadge: "par toi",
     removeFreeSeat: "Supprimer cette place libre",
     confirmRemoveFreeSeat: (van: number, naar: number) => `Retirer cette place libre\u00a0? Vous passez de ${van} \u00e0 ${naar} personnes.`,
-    showSeatsShort: "Voir",
     showSeatsLong: "Voir les places",
     hideSeatsLong: "Masquer les places",
     groupOfN: (n: number) => n === 1 ? "Groupe de 1" : `Groupe de ${n}`,
     onePersonLess: "Une personne de moins",
     onePersonMore: "Une personne de plus",
-    hideSeatsShort: "Masquer",
     addFreeSeat: "+ Ajouter une place libre",
     freeSeatAdded: (n: number) => `Place ajoutée — vous êtes maintenant ${n}.`,
-    removeFreeSeatHint: "Trop de places cr\u00e9\u00e9es\u00a0? Avec \u2715 tu en retires une.",
     freeSeatRemoved: (n: number) => `Place retir\u00e9e \u2014 vous \u00eates maintenant ${n}.`,
     seatsStillFreeWarn: (n: number) => n === 1
       ? "Encore 1 place libre. Tu peux d\u00e9j\u00e0 commencer, mais rev\u00e9rifie la r\u00e9partition plus tard."
@@ -1481,22 +1404,14 @@ const STRINGS = {
     theirNamesQ: "Comment s\u2019appellent-ils ?",
     addThisGuest: "Ajouter",
     enterGuestName: "Entre d\u2019abord un nom.",
-    seatsFreeTitle: (n: number) => n === 1 ? "Encore 1 place libre" : `Encore ${n} places libres`,
-    seatsProgress: (gedaan: number, totaal: number) => gedaan === 1 ? `1 place sur ${totaal} remplie` : `${gedaan} places sur ${totaal} remplies`,
     seatsViaScan: (n: number) => `${n} via scan`,
     seatsByYou: (n: number) => `${n} par toi`,
-    optionalShort: "facultatif",
-    seatsAllNamed: "Toutes les places sont remplies ✓",
-    collapseSeats: "Masquer les places",
-    selfJoinedBadge: "✓ a scanné",
     scannedBadge: "scann\u00e9",
     stillFreeTitle: (n: number) => n === 1 ? "Encore 1 libre — en attente d'un scan QR" : `Encore ${n} libres — en attente d'un scan QR`,
-    addNameRow: "+ nom",
     needMoreSpotsTitle: "Il manque une place",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Cela demande ${tekort} place${tekort === 1 ? "" : "s"} de plus qu’il n’y en a de libre. Je mets le nombre de personnes à ${totaal} ?`,
     raiseTotalBtn: (totaal: number) => `Oui, mettre à ${totaal} personnes`,
     addAnother: "Ajouter quelqu\u2019un d\u2019autre",
-    qrJoinedLegend: "\ud83d\udcf1 = arriv\u00e9 via le lien et attribue normalement lui-m\u00eame.",
     seatFreedUp: "Cette place compte maintenant pour 2 — il y a une place libre en moins.",
     howManyGroupSub: "Tout le monde à table — toi compris.",
     personsWord: "Nombre de personnes",
@@ -1526,9 +1441,7 @@ const STRINGS = {
     seatRequestFailed: "Ta demande n'a pas pu être envoyée. Réessaie.",
     seatRequestGranted: (naam: string) => `Place ajoutée pour ${naam}.`,
     shareStepTitle: "📱 Fais scanner le QR à tes invités",
-    orSendLinkTitle: "Ou envoie le lien toi-même à tes invités",
     orSendLinkShort: "Ou envoie le lien",
-    linkWord: "Lien",
     copyWord: "Copier",
     copiedWord: "Copié",
     pasteAndShare: "Colle et partage dans :",
@@ -1536,14 +1449,6 @@ const STRINGS = {
     scanThis: "Fais scanner à tes invités",
     personWord: "Personne",
     onlyOneShares: "⚠️ Une seule personne partage",
-    expectedHint: "Optionnel. Si tu le remplis, l'app prévient quand trop peu ou trop de personnes cochent — elle ne bloque rien.",
-    expectedForGuest: (n: number) => `Nombre de partageurs attendus : ${n}`,
-    expectedShort: (n: number) => `attendu : ${n}`,
-    tooManySharedAdmin: (have: number, want: number) => `⚠️ ${have} personnes l'ont indiqué, mais tu en attendais ${want}.`,
-    pickerDone: "Terminé",
-    tooManySharedGuest: (have: number, want: number) => `${have} personnes l'ont indiqué, mais vous n'étiez que ${want}. Retire ta sélection si ce n'était pas toi.`,
-    sharedBy: "Indiqué par : ",
-    expectedFixTo: (n: number) => `Finalement à ${n}`,
     sharedOverviewTitle: "Articles partagés — qui a partagé ?",
     sharedByLabel: "partagé par",
     nobodyShared: "Personne n'a encore coché cet article",
@@ -1551,14 +1456,11 @@ const STRINGS = {
     eachAmount: (b: number) => `\u20ac${b.toFixed(2).replace(".", ",")} chacun`,
     dropsIfMore: "\u2192 baisse si d'autres partagent",
     youWord: "toi",
-    nobodySharedOf: (n: number) => `0 sur ${n} participants`,
-    nobodySharedZero: "0 participant",
     sharedProblemTitle: "Attention — les articles partagés semblent incorrects :",
     sharedProblemAsk: "Clôturer quand même ?",
     tipInclLabel: (a: string) => `pourboire de €${a} inclus`,
     totalsDiff: (d: number) => `⚠️ €${d.toFixed(2).replace(".", ",")} d'écart`,
     taxSplitAtClose: "Les suppléments sont répartis entre tous à la clôture.",
-    ownNamePlaceholder: "Mets ton propre nom ici",
     allNamesFilled: "Tous les noms sont déjà remplis",
     isOneOfThemYou: "Un de ces noms est le tien ? Touche-le.",
     takenHead: "Déjà pris",
@@ -1585,10 +1487,7 @@ const STRINGS = {
     extraName: (n: number) => `Prénom ${n}…`,
     showsAsOne: "Apparaît comme une seule place :",
     confirmRemoveLast: (name: string, n: number) => `${name} a déjà sélectionné ${n} ${n === 1 ? "article" : "articles"}. Ces attributions seront perdues. Supprimer quand même ?`,
-    badgeSelf: "inscrit via le lien",
-    badgeMe: "toi",
     deleteTitle: "supprimer",
-    emptyList: "Personne dans la liste pour l'instant.",
     guestWord: "Invité",
     adminName: "Moi",
     close: "✕ Fermer",
@@ -1623,7 +1522,6 @@ const STRINGS = {
     tagFree: "personne",
     freeSpotName: "Place libre",
     rescan: "🔄 Rescanner l'addition",
-    startScan: "📸 Scanne ton ticket",
     startHereTitle: "Commence ici",
     startHereSub: "Prends une photo de l'addition — le reste suit tout seul.",
     startScanShort: "Scanne ton addition",
@@ -1648,12 +1546,7 @@ const STRINGS = {
     changeAmount: "modifier le montant",
     confirmAmountTitle: "Confirme ce montant",
     yes: "Oui",
-    usuallyOneOf: "C’est généralement l’un de ceux-ci :",
     checkTaxShort: "TVA ou remise",
-    checkPricesShort: "prix ou quantité",
-    checkSharedShort: "article partagé",
-    allOkTitle: "Tout est correct",
-    allOkSub: "Continue vers le partage avec tes invit\u00e9s.",
     goGuestsBtn: "Vers Invités & QR",
     scanModalTitle: "🧾 Scanner l'addition",
     scanModalTitleAdded: "🧾 Photo ajoutée",
@@ -1701,20 +1594,16 @@ const STRINGS = {
     closeWord: "Fermer",
     confirmAdd: "✅ Confirmer et ajouter",
     itemsOnBill: "🧾 Articles sur l'addition",
-    checkExcl: "À vérifier !",
     noItemsScan: "Aucun article — scanne l'addition",
     justAddedEdit: "✨ Vient d'être ajouté — modifie le nom avec ✏️",
     scanDoubtTitle: "Le scan a hésité ici — touche pour les détails",
     sharedWord: "partagé",
-    sharedMultiQty: (q: number, tot: number) => `${q} pièces · €${tot.toFixed(2).replace(".", ",")} au total — partagé ensemble`,
     sharedForN: (n: number) => `destiné à ${n} ${n === 1 ? "personne" : "personnes"}`,
-    perPieceSuffix: "/pièce",
     shareToggleOn: "article partagé — clique pour désactiver",
     shareToggleOff: "en faire un article partagé (ex. eau, vin)",
     scanDoubtPre: "⚠️ Le scan a hésité ici",
     scanDoubtPost: ". Vérifie le nom, la quantité et le prix.",
     notAssignedYet: "pas encore attribué(s)",
-    sharedItemNoteShort: "Article partagé — le prix est réparti entre ceux qui le partagent.",
     zeroPriceWarn: "Pas de prix (0,00 €) — indiquez le prix ou supprimez cet article.",
     zeroPriceShort: "0,00 € — pas de prix",
     zeroPriceDelete: "Supprimer",
@@ -1730,9 +1619,6 @@ const STRINGS = {
     orderedItems: "Articles commandés : ",
     taxShort: "TVA",
     totalWord: "Total",
-    overVsReceipt: (v: string) => `${v} de trop vs le ticket`,
-    underVsReceipt: (v: string) => `${v} en moins vs le ticket`,
-    billCorrectGoGuests: "Addition correcte ? Vers Invités et partage ! →",
     editItemTitle: "✏️ Modifier l'article",
     nameLabel: "Nom",
     qtyLabel: "Quantité",
@@ -1747,8 +1633,6 @@ const STRINGS = {
     turnIntoDiscount: "Ceci est une réduction, pas un article",
     movedToDiscounts: (naam: string) => `« ${naam} » figure maintenant en bas, dans les réductions.`,
     deleteThisItem: "Supprimer cet article",
-    editable: "modifiable",
-    orEditThis: "ou modifie ceci",
     sharedByOthers: (names: string) => `Cet article est déjà attribué à ${names}. Demande à l'hôte de le modifier.`,
     editMe: "✏️ Modifier",
     sharedCheckbox: "Article partagé (vin, eau…) — répartir entre ceux qui le partagent",
@@ -1824,7 +1708,6 @@ const STRINGS = {
     nothingAssigned: "Rien de coché.",
     confirmReleaseSpot: (nm: string) => `Retirer « ${nm} » ici ? La place redevient libre — le nombre de personnes reste identique.`,
     spotReleased: "La place est de nouveau libre.",
-    releaseTitle: "Libérer la place",
     allPerfect: "L'addition et les articles correspondent. Tu peux continuer.",
     receiptConfirmedLabel: "Ticket (confirm\u00e9)",
     viaAdminTag: "(via admin)",
@@ -1833,12 +1716,9 @@ const STRINGS = {
     itemsBelowLabel: "Articles ci-dessous",
     tooMuchInList: "En trop dans la liste",
     tooLittleInList: "Manque dans la liste",
-    goToItemList: "Vers la liste d\u2019articles",
-    checkBelow: "\u2192 \u00e0 v\u00e9rifier ci-dessous",
     roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
     roundingSub: "Accepter et continuer",
     roundingDone: (d: string) => `Écart d'arrondi de €${d} accepté. Tu peux continuer.`,
-    shareDone: (n: number, each: number) => `Partagé par ${n} personne${n === 1 ? "" : "s"} · €${each.toFixed(2).replace(".", ",")} chacun`,
     noFreeSpots: "Toutes les places sont prises. Augmente d'abord le nombre de personnes en haut.",
     howManyAdminSub: "Un couple qui paie ensemble ? Choisis 2.",
     noItemsYet: "Aucun article sur l'addition.",
@@ -1852,14 +1732,9 @@ const STRINGS = {
     allAssignedBody: "Chaque article de l'addition a un nom. Vérifie encore le tout.",
     allAssignedNotFinal: "Clôturer n'est pas définitif — tu peux toujours rouvrir en un clic.",
     allAssignedOk: "OK",
-    stickyTipNone: "Pas de pourboire",
-    stickyTipEdit: "modifier",
-    stickyAllDone: "Tout est attribué",
-    stickyOpenUnits: (n: number) => n === 1 ? "Encore 1 article sans nom" : `Encore ${n} articles sans nom`,
     stickyCheckFirst: "Encore quelque chose à vérifier",
     showDetailsBtn: "Afficher les détails",
     closedBarTitle: "Addition clôturée",
-    reopenShort: "🔓 rouvrir",
     reopenWord: "Rouvrir",
     reopenLong: "🔓 Quelque chose à changer ? Rouvrir",
     closedListTitle: "La répartition, telle que clôturée",
@@ -1896,7 +1771,6 @@ const STRINGS = {
     notClaimedSuffix: "non attribué(s)",
     assignDots: "+ attribuer…",
     sharedNobody: "— partagé, personne encore",
-    sharedOnlyOne: "une seule place en a pris",
     nothingForPerson: (naam: string) => `${naam} n'a encore rien indiqué`,
     letShareDots: "+ faire participer…",
     perPersonTitle: "🧾 Par personne",
@@ -1928,7 +1802,6 @@ const STRINGS = {
     tipPickWho: "Qui participe au pourboire ?",
     finalizeBtnOpen: (n: number) => n === 1 ? "Encore 1 article non attribué" : `Encore ${n} articles non attribués`,
     finalizeConfirm: "Clôturer l'addition ? Les invités ne pourront plus rien cocher ni modifier jusqu'à ce que tu la rouvres.",
-    notFinalizedNote: "Ne clôture que lorsque tout est coché et vérifié. Les invités reçoivent alors une notification.",
     backToTop: "↑ Retour en haut",
     cantFinalizeTitle: "L'addition ne peut pas encore être clôturée :",
     unitsNotAssigned: (n: number) => `${n} ${n === 1 ? "consommation non attribuée" : "consommations non attribuées"}`,
@@ -1982,7 +1855,6 @@ const STRINGS = {
     addGuestsInTab1: "Ajoute d'abord des invités dans l'onglet « Invités et partage ».",
     totalLower: "total",
     notSelectedShare: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. Le faire participer quand même ?`,
-    assignForOther: (name: string | undefined) => `Attribuer ceci à ${name} ?`,
     openAssign: "à prendre — attribuer ▾",
     fullyClaimed: "complet",
     removeOne: "en retirer un",
@@ -1993,7 +1865,6 @@ const STRINGS = {
     assignOwnTitle: (name: string | undefined) => `Tu attribues pour ${name}`,
     assignOwnBody: (name: string | undefined) => `${name} n'est pas arrivé via le QR, c'est donc toi qui coches ce qu'il a pris. C'est le fonctionnement normal ici.\n\nOn ne te le demande qu'une seule fois — ensuite ça passe directement.`,
     assignOwnYes: "Oui, continuer",
-    assignToFreeSpot: (name: string | undefined) => `${name} est encore une place libre sans nom. Ce que tu attribues ici ira à celui qui prendra cette place.\n\nOn ne te le demande qu'une seule fois.`,
     unitsClaimed: "Unités attribuées",
     sharedItemsHandled: "Articles partagés réglés",
     billTotalLabel: "Total de l'addition",
@@ -2022,7 +1893,6 @@ const STRINGS = {
     makeUnsharedTitle: "Arrêter le partage ?",
     makeUnsharedBody: "Cet article sera de nouveau attribué à l'unité.",
     makeSharedCancel: "Annuler",
-    sharedBadge: "PARTAGÉ",
     makeSharedShort: "partager",
     sharedOnShort: "partagé",
     addItemBtn: "+ Ajouter un article",
@@ -2038,8 +1908,6 @@ const STRINGS = {
     sharedItemsQ: "Articles partagés ?",
     sharedByOther: "Seul celui qui l'a partagé ou l'organisateur peut l'annuler.",
     shareLocked: "Verrouillé par l'administrateur",
-    sharingWaitReveal: "⏳ Tu participes. Le montant est réparti entre tous ceux qui en boivent — ta part et les noms apparaissent dès que tout le monde a coché et confirmé.",
-    tapShareHint: "Coche « participer » si tu en as bu. Le prix est réparti entre tous ceux qui en boivent — tu ne paies donc pas le prix entier.",
     stillFree: (n: number) => `encore ${n} de libre`,
     allClaimedWord: "tout est pris",
     aboutToConfirmTitle: "Ce que je vais confirmer",
@@ -2055,7 +1923,6 @@ const STRINGS = {
     confirmStep3: "L’hôte clôture ensuite l’addition",
     confirmStep4: "Ton montant définitif apparaît ici",
     confirmStepNote: "TVA, remises, frais et pourboires éventuels sont aussi répartis",
-    whatNowBtn: "Et maintenant ?",
     showAll: "tout afficher",
     hideAll: "tout masquer",
     finalPopupTitle: "✅ L’addition est clôturée",
@@ -2081,7 +1948,6 @@ const STRINGS = {
     addAnotherRemark: "➕ Ajouter une autre remarque",
     remarkReceived: "💬 L'hôte a reçu ta remarque et l'examine.",
     withdraw: "retirer finalement",
-    assignFullMsg: "Tout est déjà attribué — retire d'abord quelqu'un.",
     assignFullTap: "Tout attribué — touchez un nom pour le retirer",
     assignToWhom: "À qui attribuer ?",
     seatsControlTitle: "Pour combien de personnes compte ce nom (pour les articles partagés)",
@@ -2418,7 +2284,6 @@ export default function RundoTable() {
   const [showNamesBlock, setShowNamesBlock] = useState(false)
   const [guestSeats, setGuestSeats] = useState(1)
   const [guestNames, setGuestNames] = useState<string[]>([""])
-  const [showGuestList, setShowGuestList] = useState(false)  // namenlijst op de delen-tab in-/uitklappen
   const [linkCopied, setLinkCopied] = useState(false)  // terugkoppeling na het kopiëren van de uitnodigingslink
   const [newGuest, setNewGuest] = useState("")
   const [claimSpot, setClaimSpot] = useState<string | null>(null)
@@ -5797,7 +5662,9 @@ export default function RundoTable() {
                     {vrijeRijen.length > 0 && (
                       <>
                         {/* Dit is de kop van het rijtje eronder, geen voetnoot: op 14px grijs
-                            las niemand hem. Nu twee regels, in de kleur van gewone tekst. */}
+                            las niemand hem. "Wacht op een QR-scan" stond er als grijze
+                            ondertitel onder en viel weg; nu staat het in dezelfde grootte
+                            achter de telling, op één regel. */}
                         <div style={{ marginTop: 14, marginBottom: 8, fontSize: 17, fontWeight: 800, color: "#123a42", lineHeight: 1.35 }}>{L.stillFreeTitle(vrijeZit)}</div>
                         <div style={{ display: "grid", gridTemplateColumns: vrijeRijen.length > 4 ? "1fr 1fr" : "1fr", gap: 7 }}>
                           {vrijeRijen.map((q) => (
@@ -5860,101 +5727,6 @@ export default function RundoTable() {
           </div>
 
 
-          {/* Deze kaart bevat enkel de uitklapbare namenlijst. Stond die dicht, dan bleef er
-              een leeg wit vak op het scherm staan. */}
-          {showGuestList && (
-          <div style={{ ...S.card, order: 4 }} id="wie-duid-ik-aan">
-            {(() => {
-              const twoCol = participants.length > 5
-              const isPlaceholderName = (p: Participant) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName
-              const splitNames = (p: Participant) => {
-                if (isPlaceholderName(p)) return []
-                return p.name.split(/\s*&\s*/).map((x) => x.trim()).filter(Boolean)
-              }
-              // Eén rij kan meerdere personen bevatten (bv. een koppel). Dan tonen we per persoon
-              // een naamveld en slaan we ze samen op als "Els & Tom" — zij betalen samen.
-              const namesBlock = (p: Participant, fontSize: number) => {
-                const seats = Math.max(1, p.seats ?? 1)
-                const parts = splitNames(p)
-                const commit = (idx: number, val: string) => {
-                  const next = Array.from({ length: seats }, (_, i) => (i === idx ? val.trim() : (parts[i] ?? "")))
-                  const joined = next.filter(Boolean).join(" & ")
-                  if (joined && joined !== p.name) renameGuest(p.id, joined)
-                }
-                return (
-                  <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-                    {Array.from({ length: seats }, (_, i) => i).map((i) => (
-                      <input key={`${p.id}-${i}-${p.name}`} defaultValue={parts[i] ?? ""}
-                        placeholder={p.id === meId && i === 0 ? L.ownNamePlaceholder : seats > 1 ? (i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)) : (isPlaceholderName(p) ? p.name : L.namePlaceholder)}
-                        onBlur={(e) => commit(i, e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                        style={{ width: "100%", border: "none", borderBottom: "1px dashed rgba(18,58,66,0.22)", background: "transparent", fontSize, fontWeight: 600, color: "#123a42", padding: "6px 2px", outline: "none" }} />
-                    ))}
-                  </div>
-                )
-              }
-              // De admin zelf kan niet weg. Een gast die jij toevoegde geef je vrij:
-              // de plaats blijft bestaan, zodat het aantal personen niet verandert.
-              const delBtn = (p: Participant) => (
-                p.id === meId ? null : (
-                  <button onClick={() => releaseSpot(p.id)} title={L.releaseTitle}
-                    style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.08)", color: "#c0392b", fontSize: 16.5, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-                )
-              )
-              const Row = (p: Participant) => {
-                const isMe = p.id === meId
-                // Enkel wie zich via de link aanmeldde krijgt een badge; dat jij voor de
-                // rest aanduidt spreekt voor zich.
-                const origin = p.self_joined
-                  ? { label: L.badgeSelf, color: "#1f8a4c", bg: "rgba(39,174,96,0.1)" }
-                  : null
-                const badge = isMe ? { label: `${L.badgeMe} · ${L.adminBadge}`, color: "#1f8a4c", bg: "rgba(39,174,96,0.15)" } : origin
-                if (twoCol) {
-                  return (
-                    <div key={p.id} style={{ border: isMe ? "1.5px solid rgba(39,174,96,0.45)" : "1px solid rgba(18,58,66,0.08)", borderRadius: 12, padding: "9px 8px", background: isMe ? "rgba(39,174,96,0.07)" : "#fff" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        {namesBlock(p, 13.5)}
-                        <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
-                        {delBtn(p)}
-                      </div>
-                      <div style={{ marginTop: 5 }}>
-                        {badge && <span style={{ fontSize: 13.5, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "3px 6px" }}>{badge.label}</span>}
-                      </div>
-                    </div>
-                  )
-                }
-                return (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 6px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: isMe ? 10 : 0, background: isMe ? "rgba(39,174,96,0.07)" : "transparent" }}>
-                    <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 7 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>{namesBlock(p, 15)}</div>
-                      {badge && <span style={{ flexShrink: 0, fontSize: 15, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 7, padding: "4px 7px", whiteSpace: "nowrap" }}>{badge.label}</span>}
-                    </div>
-                    <SeatsControl n={Math.max(1, p.seats ?? 1)} onChange={(next) => setSeats(p.id, next)} compact />
-                    {delBtn(p)}
-                  </div>
-                )
-              }
-              const isPh = (nm?: string) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test((nm || "").trim())
-              // Deze lijst toont enkel wie JIJ regelt: jezelf, de gasten die je een naam gaf,
-              // en de vrije plaats die je op dit moment aan het invullen bent.
-              const mine = participants.filter((p) =>
-                p.id === meId ||
-                (!p.self_joined && (!isPh(p.name) || fillingSpots.includes(p.id)))
-              )
-              const displayList = [...mine].sort((a, b) => (isPh(a.name) ? 1 : 0) - (isPh(b.name) ? 1 : 0))
-              const gridRows = Math.ceil(displayList.length / 2)
-              return (
-                <div style={{ marginTop: participants.length > 0 ? 8 : 12 }}>
-                  {participants.length === 0
-                    ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.emptyList}</div>
-                    : twoCol
-                    ? <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: `repeat(${gridRows}, auto)`, gridAutoFlow: "column", gap: 6 }}>{displayList.map(Row)}</div>
-                    : displayList.map(Row)}
-                </div>
-              )
-            })()}
-          </div>
-          )}
           {/* Groen en pulserend pas wanneer je er ook echt naartoe kan: zolang je eigen
               naam ontbreekt is dit blok gedempt en de knop niet aanklikbaar. Anders staat
               er een uitnodigende knop die bij een tik alleen een foutmelding geeft. */}
