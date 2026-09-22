@@ -673,6 +673,7 @@ const STRINGS = {
     waitingHeader: (n: number) => n === 1 ? "Nog 1 vrij \u2014 wacht op QR-scan" : `Nog ${n} vrij \u2014 wacht op QR-scan`,
     byYouBadge: "door jou",
     removeFreeSeat: "Deze vrije plaats verwijderen",
+    confirmRemoveFreeSeat: (van: number, naar: number) => `Deze vrije plaats weghalen? Jullie gaan van ${van} naar ${naar} personen.`,
     showSeatsShort: "Toon",
     showSeatsLong: "Toon plaatsen",
     hideSeatsLong: "Verberg plaatsen",
@@ -706,6 +707,8 @@ const STRINGS = {
     freeSpotHow: "wacht op een QR-scan",
     collapseSeats: "Plaatsen verbergen",
     selfJoinedBadge: "✓ zelf gescand",
+    scannedBadge: "gescand",
+    stillFreeTitle: (n: number) => n === 1 ? "Nog 1 vrij" : `Nog ${n} vrij`,
     addNameRow: "+ naam",
     needMoreSpotsTitle: "Er is een plaats te weinig",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Dit vraagt ${tekort} plaats${tekort === 1 ? "" : "en"} meer dan er vrij ${tekort === 1 ? "is" : "zijn"}. Zal ik het aantal personen op ${totaal} zetten?`,
@@ -1435,6 +1438,7 @@ const STRINGS = {
     waitingHeader: (n: number) => n === 1 ? "Encore 1 libre \u2014 en attente d'un scan QR" : `Encore ${n} libres \u2014 en attente d'un scan QR`,
     byYouBadge: "par toi",
     removeFreeSeat: "Supprimer cette place libre",
+    confirmRemoveFreeSeat: (van: number, naar: number) => `Retirer cette place libre\u00a0? Vous passez de ${van} \u00e0 ${naar} personnes.`,
     showSeatsShort: "Voir",
     showSeatsLong: "Voir les places",
     hideSeatsLong: "Masquer les places",
@@ -1465,6 +1469,8 @@ const STRINGS = {
     freeSpotHow: "en attente d'un scan QR",
     collapseSeats: "Masquer les places",
     selfJoinedBadge: "✓ a scanné",
+    scannedBadge: "scann\u00e9",
+    stillFreeTitle: (n: number) => n === 1 ? "Encore 1 libre" : `Encore ${n} libres`,
     addNameRow: "+ nom",
     needMoreSpotsTitle: "Il manque une place",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Cela demande ${tekort} place${tekort === 1 ? "" : "s"} de plus qu’il n’y en a de libre. Je mets le nombre de personnes à ${totaal} ?`,
@@ -3096,17 +3102,19 @@ export default function RundoTable() {
     setToast(L.freeSeatAdded(totalPersons + 1))
   }
 
-  // Een lege stoel weghalen mag meteen: er staat niets op, en wie zich vergist zet de
-  // teller bovenaan gewoon weer een hoger. Een bevestigingsvenster zou hier enkel in de
-  // weg staan.
+  // Ook een lege stoel weghalen vraagt eerst. Er staat niets op, maar het verandert wel
+  // met hoeveel jullie zijn — en dat bepaalt straks hoe gedeelde items verdeeld worden.
   const verwijderVrijePlaats = async (id: string) => {
     if (!group) return
     if (group.finalized) { setToast(L.finalizedReopenFirst); return }
     const p = participants.find((x) => x.id === id)
     if (!p || !isFreeSpot(p) || p.self_joined) return
-    await supabase.from("table_participants").delete().eq("id", id)
-    await loadAll(group.id)
-    setToast(L.freeSeatRemoved(Math.max(0, totalPersons - Math.max(1, p.seats ?? 1))))
+    const naar = Math.max(0, totalPersons - Math.max(1, p.seats ?? 1))
+    askConfirm(L.confirmRemoveFreeSeat(totalPersons, naar), L.removeGuestYes, async () => {
+      await supabase.from("table_participants").delete().eq("id", id)
+      await loadAll(group.id)
+      setToast(L.freeSeatRemoved(naar))
+    }, { title: L.removeFreeSeat, danger: true })
   }
 
   // Zet het aantal gasten in één beweging. Omhoog = extra gasten aanmaken.
@@ -3335,7 +3343,12 @@ export default function RundoTable() {
       await loadAll(group.id)
     }
     if (used > 0) { askConfirm(L.confirmRemoveLast(last.name, used), L.yes, () => { void wisLaatste() }, { danger: true }); return }
-    await wisLaatste()
+    // Ook zonder aangeduide items: staat er een naam op die plaats, dan vragen we het.
+    if (!isFreeSpot(last) || last.self_joined) {
+      askConfirm(L.confirmRemoveGuest(last.name, cur, n), L.removeGuestYes, () => { void wisLaatste() }, { title: L.removeGuestTitle, danger: true })
+      return
+    }
+    askConfirm(L.confirmRemoveFreeSeat(cur, n), L.removeGuestYes, () => { void wisLaatste() }, { title: L.removeFreeSeat, danger: true })
   }
 
   // De groepsnaam is het enige wat op elke pagina bovenaan staat, dus hier hoort hij ook
@@ -5665,7 +5678,9 @@ export default function RundoTable() {
                               {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
                             </span>
                             {q.self_joined && !ikZelf && (
-                              <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>{L.selfJoinedBadge}</span>
+                              <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>
+                                <GsmVinkIcon /> {L.scannedBadge}
+                              </span>
                             )}
                             {/* Alleen je eigen naam pas je hier aan. Bij een ander zou jij een naam
                                 zetten die hij zelf al gaf of straks nog geeft, en dan staan er twee
@@ -5689,7 +5704,12 @@ export default function RundoTable() {
                         van zes stoelen zes keer dezelfde zin. */}
                     {vrijeRijen.length > 0 && (
                       <>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: "#5b7378", marginTop: 14, marginBottom: 8 }}>{L.waitingHeader(vrijeZit)}</div>
+                        {/* Dit is de kop van het rijtje eronder, geen voetnoot: op 14px grijs
+                            las niemand hem. Nu twee regels, in de kleur van gewone tekst. */}
+                        <div style={{ marginTop: 14, marginBottom: 8 }}>
+                          <div style={{ fontSize: 17, fontWeight: 800, color: "#123a42" }}>{L.stillFreeTitle(vrijeZit)}</div>
+                          <div style={{ fontSize: 14.5, fontWeight: 600, color: "#7d949a", marginTop: 2 }}>{L.freeSpotHow}</div>
+                        </div>
                         <div style={{ display: "grid", gridTemplateColumns: vrijeRijen.length > 4 ? "1fr 1fr" : "1fr", gap: 7 }}>
                           {vrijeRijen.map((q) => (
                             <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1.5px dashed rgba(18,58,66,0.28)", borderRadius: 12, padding: "10px", background: "#fbfcfd" }}>
@@ -8888,6 +8908,19 @@ function ClaimScreen(props: {
         </div>
       )}
     </div>
+  )
+}
+
+// Gevulde telefoon met een wit scherm en het vinkje daarin: op badgeformaat leest een
+// dicht silhouet beter dan lijnwerk, en het vinkje zit waar de gast het aantikte.
+function GsmVinkIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ display: "block", flexShrink: 0 }} aria-hidden="true">
+      <rect x="6" y="2" width="12" height="20" rx="2.8" fill="currentColor" />
+      <rect x="7.7" y="4.4" width="8.6" height="12.4" rx="1.3" fill="#ffffff" />
+      <path d="M9.5 10.6l1.7 1.7 3.3-3.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <rect x="10.4" y="18.7" width="3.2" height="1.4" rx="0.7" fill="#ffffff" />
+    </svg>
   )
 }
 
