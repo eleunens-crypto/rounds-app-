@@ -673,6 +673,15 @@ const STRINGS = {
     waitingHeader: (n: number) => n === 1 ? "Nog 1 vrij \u2014 wacht op QR-scan" : `Nog ${n} vrij \u2014 wacht op QR-scan`,
     byYouBadge: "door jou",
     removeFreeSeat: "Deze vrije plaats verwijderen",
+    showSeatsShort: "Toon",
+    showSeatsLong: "Toon plaatsen",
+    hideSeatsLong: "Verberg plaatsen",
+    groupOfN: (n: number) => n === 1 ? "Groep van 1" : `Groep van ${n}`,
+    onePersonLess: "Eén persoon minder",
+    onePersonMore: "Eén persoon meer",
+    hideSeatsShort: "Verberg",
+    addFreeSeat: "+ Vrije plaats toevoegen",
+    freeSeatAdded: (n: number) => `Plaats bijgezet — jullie zijn nu met ${n}.`,
     removeFreeSeatHint: "Te veel plaatsen aangemaakt? Met \u2715 haal je er \u00e9\u00e9n weg.",
     freeSeatRemoved: (n: number) => `Plaats weg \u2014 jullie zijn nu met ${n}.`,
     seatsStillFreeWarn: (n: number) => n === 1
@@ -1426,6 +1435,15 @@ const STRINGS = {
     waitingHeader: (n: number) => n === 1 ? "Encore 1 libre \u2014 en attente d'un scan QR" : `Encore ${n} libres \u2014 en attente d'un scan QR`,
     byYouBadge: "par toi",
     removeFreeSeat: "Supprimer cette place libre",
+    showSeatsShort: "Voir",
+    showSeatsLong: "Voir les places",
+    hideSeatsLong: "Masquer les places",
+    groupOfN: (n: number) => n === 1 ? "Groupe de 1" : `Groupe de ${n}`,
+    onePersonLess: "Une personne de moins",
+    onePersonMore: "Une personne de plus",
+    hideSeatsShort: "Masquer",
+    addFreeSeat: "+ Ajouter une place libre",
+    freeSeatAdded: (n: number) => `Place ajoutée — vous êtes maintenant ${n}.`,
     removeFreeSeatHint: "Trop de places cr\u00e9\u00e9es\u00a0? Avec \u2715 tu en retires une.",
     freeSeatRemoved: (n: number) => `Place retir\u00e9e \u2014 vous \u00eates maintenant ${n}.`,
     seatsStillFreeWarn: (n: number) => n === 1
@@ -3065,6 +3083,17 @@ export default function RundoTable() {
       await loadAll(group.id)
       setToast(L.guestRemoved(p.name))
     }, { title: L.removeGuestTitle, danger: true })
+  }
+
+  // Spiegelbeeld van het kruisje: een stoel bijzetten verhoogt het aantal personen,
+  // precies zoals de + bij de teller bovenaan. Zo hoeft de beheerder niet terug te
+  // scrollen om één extra gast toe te laten.
+  const voegVrijePlaatsToe = async () => {
+    if (!group) return
+    if (group.finalized) { setToast(L.finalizedReopenFirst); return }
+    await addGuest(L.guestWord, false, 1)
+    setPersonsTouched(true)
+    setToast(L.freeSeatAdded(totalPersons + 1))
   }
 
   // Een lege stoel weghalen mag meteen: er staat niets op, en wie zich vergist zet de
@@ -5396,6 +5425,10 @@ export default function RundoTable() {
       )}
       {isAdmin && adminTab === "guests" && (
         <div style={{ display: "flex", flexDirection: "column" }}>
+          {/* Deze kaart is de eerste stap en niets meer: aantal instellen en je naam
+              invullen. Zodra dat gebeurd is, staan beide onder de QR en zou ze hier
+              alleen nog een tweede plek zijn waar hetzelfde getal kan veranderen. */}
+          {!adminNamed && (
           <div style={{ ...S.card, order: 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
               <h3 style={{ ...S.h3, marginBottom: 0, minWidth: 0 }}>{L.howManyGroupTitle}</h3>
@@ -5463,6 +5496,7 @@ export default function RundoTable() {
 
 
           </div>
+          )}
 
           <div id="qr-kaart" style={{ ...S.card, order: 2, border: "1.5px solid rgba(20,153,176,0.4)", ...((!personsSet || !adminNamed) ? { opacity: 0.5 } : {}) }}>
             {(!personsSet || !adminNamed) ? (
@@ -5539,17 +5573,24 @@ export default function RundoTable() {
             const vrijeRijen = participants.filter((q) => isFreeSpot(q) && !q.self_joined)
             return (
               <div style={{ borderTop: vol ? "1px solid rgba(39,174,96,0.3)" : "1px solid rgba(18,58,66,0.08)", paddingTop: 13 }}>
-                <button onClick={() => setShowNamesBlock((v) => !v)}
-                  style={{ width: "100%", display: "block", textAlign: "left", cursor: "pointer", background: "transparent", border: "none", padding: 0, fontFamily: "inherit" }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 800, color: vol ? "#1f8a4c" : "#123a42" }}>
-                      {vol ? L.allTakenTitle : L.freeSeatsTitle}
-                    </span>
-                    <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#4a6e73" }}>
-                      {vol ? `${totaalZit} van ${totaalZit}` : L.seatsFreeShort(vrijeZit)}
-                    </span>
-                    <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#4a6e73", lineHeight: 1 }}>{showNamesBlock ? "\u25b4" : "\u25be"}</span>
+                {/* De groepsgrootte staat bovenaan met haar teller erbij: eerst weet je met
+                    hoeveel je bent, dan hoe ver het staat, dan wie erbij zit. Daarmee kan de
+                    kaart "Met hoeveel zijn jullie?" bovenaan verdwijnen zodra je naam er staat. */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: vol ? "#1f8a4c" : "#123a42" }}>{L.groupOfN(totaalZit)}</span>
+                    {vol && <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginTop: 2 }}>{L.allTakenTitle}</span>}
                   </span>
+                  <span style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                    <button onClick={() => setGuestCount(totalPersons - 1)} disabled={totalPersons <= 1} aria-label={L.onePersonLess}
+                      style={{ width: 30, height: 30, borderRadius: 9, border: "none", background: "rgba(18,58,66,0.05)", color: "#4a6e73", fontSize: 19, fontWeight: 800, cursor: totalPersons > 1 ? "pointer" : "default", opacity: totalPersons > 1 ? 1 : 0.4, fontFamily: "inherit" }}>−</button>
+                    <b style={{ minWidth: 16, textAlign: "center", fontSize: 18, color: "#123a42" }}>{totaalZit}</b>
+                    <button onClick={() => setGuestCount(totalPersons + 1)} aria-label={L.onePersonMore}
+                      style={{ width: 30, height: 30, borderRadius: 9, border: "none", background: "rgba(27,42,74,0.12)", color: "#123a42", fontSize: 19, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>+</button>
+                  </span>
+                </div>
+
+                <div>
 
                   {/* Eén vakje per stoel zolang dat te tellen valt; aan een lange tafel wordt
                       het één balk op verhouding, anders zie je enkel streepjes. */}
@@ -5589,6 +5630,16 @@ export default function RundoTable() {
                       </span>
                     ))}
                   </span>
+                </div>
+
+                {/* Eén brede knop in plaats van een pijltje: op een telefoon is dat het
+                    verschil tussen "ik zie het niet" en "ik tik erop". */}
+                <button onClick={() => setShowNamesBlock((v) => !v)}
+                  style={{ width: "100%", marginTop: 12, minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    cursor: "pointer", border: "1.5px solid rgba(20,153,176,0.45)", borderRadius: 11, background: "#fff",
+                    color: "#0b6473", fontSize: 14.5, fontWeight: 800, fontFamily: "inherit" }}>
+                  {showNamesBlock ? L.hideSeatsLong : L.showSeatsLong}
+                  <span style={{ fontSize: 15, lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
                 </button>
 
                 {seatRequests.length > 0 && (
@@ -5645,13 +5696,21 @@ export default function RundoTable() {
                               <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", border: "1.5px dashed rgba(18,58,66,0.25)", color: "#b3bac6", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800 }}>?</span>
                               <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: "#5b7378", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.freeSpotName}</span>
                               <button onClick={() => void verwijderVrijePlaats(q.id)} aria-label={L.removeFreeSeat} title={L.removeFreeSeat}
-                                style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.08)", color: "#c0392b", fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>\u2715</button>
+                                style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.08)", color: "#c0392b", fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
                             </div>
                           ))}
                         </div>
-                        <div style={{ fontSize: 13, color: "#8aa3a6", lineHeight: 1.45, marginTop: 10 }}>{L.removeFreeSeatHint}</div>
                       </>
                     )}
+                    {/* Er komt iemand bij die je nog niet verwachtte: hier zet je een stoel
+                        bij zonder eerst naar de teller bovenaan te moeten. Het aantal
+                        personen gaat mee omhoog, net als bij die teller. */}
+                    <button onClick={() => void voegVrijePlaatsToe()}
+                      style={{ width: "100%", marginTop: vrijeRijen.length > 0 ? 10 : 14, minHeight: 44, cursor: "pointer",
+                        border: "1.5px dashed rgba(20,153,176,0.5)", borderRadius: 12, background: "rgba(20,153,176,0.05)",
+                        color: "#0b6473", fontSize: 15, fontWeight: 800, fontFamily: "inherit" }}>
+                      {L.addFreeSeat}
+                    </button>
                   </>
                 )}
               </div>
