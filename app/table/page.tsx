@@ -1327,8 +1327,10 @@ const STRINGS = {
     finalizedReopenFirst: "De rekening is afgesloten — heropen ze eerst om te wijzigen.",
     billClosedToast: "Rekening afgesloten — gasten kunnen niet meer wijzigen",
     billReopenedToast: "Rekening heropend",
-    scanTotalOk: "✅ Bon gescand — totaal klopt. Controleer de items.",
-    itemsAddedCheck: (n: number) => `${n} item${n !== 1 ? "s" : ""} toegevoegd — controleer ze op de Bon-tab.`,
+    scanDoneTitle: (n: number) => `Bon gescand · ${n} item${n !== 1 ? "s" : ""}`,
+    scanDoneAsk: "Klopt dit bedrag met je rekening?",
+    scanDoneNoTotal: "Er stond geen totaal bij. Vul het zo meteen zelf in.",
+    scanDoneFill: "Totaal invullen",
   },
   fr: {
     errCantReadPhoto: "Impossible de lire la photo",
@@ -2085,8 +2087,10 @@ const STRINGS = {
     finalizedReopenFirst: "L'addition est clôturée — rouvre-la d'abord pour modifier.",
     billClosedToast: "Addition clôturée — les invités ne peuvent plus modifier",
     billReopenedToast: "Addition rouverte",
-    scanTotalOk: "✅ Addition scannée — le total correspond. Vérifie les articles.",
-    itemsAddedCheck: (n: number) => `${n} article${n !== 1 ? "s" : ""} ajouté${n !== 1 ? "s" : ""} — vérifie-les dans l'onglet Addition.`,
+    scanDoneTitle: (n: number) => `Addition scannée · ${n} article${n !== 1 ? "s" : ""}`,
+    scanDoneAsk: "Ce montant correspond-il à ton addition ?",
+    scanDoneNoTotal: "Aucun total trouvé. Saisis-le toi-même juste après.",
+    scanDoneFill: "Saisir le total",
   },
 }
 
@@ -2343,6 +2347,8 @@ export default function RundoTable() {
   // tabwissel of het heropenen van een groep moest je alles opnieuw bevestigen terwijl
   // het al groen stond. Nu herstelt hij zichzelf uit de groep.
   const [receiptConfirmed, setReceiptConfirmed] = useState(false)
+  // De vraag na een scan: hoeveel items eruit kwamen, en welk bontotaal er nu staat.
+  const [scanKlaar, setScanKlaar] = useState<{ items: number; totaal: number | null } | null>(null)
   // De beheerder klikte "Neen" en past het rekeningtotaal aan.
   const [receiptEditing, setReceiptEditing] = useState(false)
   const receiptInputRef = useRef<HTMLInputElement>(null)
@@ -3632,14 +3638,14 @@ export default function RundoTable() {
       const { error: tErr } = await supabase.from("table_groups").update({ receipt_total: billNum }).eq("id", group.id)
       if (!tErr) setGroup((g) => g ? { ...g, receipt_total: billNum } : g)
     }
-    // Klopt het ingevulde totaal met items + BTW? Dan enkel een korte bevestiging.
-    const computedNow = preview.filter((x) => !x.distribute).reduce((s, it) => s + (it.unit_price || 0) * (it.quantity || 0), 0) + preview.filter((x) => x.distribute).reduce((s, it) => s + (it.unit_price || 0), 0)
-    const totalOk = !isNaN(billNum) && billNum > 0 && Math.abs(billNum - computedNow) < 0.01
     setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null)
     if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) }
     setShowScan(false)
     await loadAll(group.id)
-    setToast(totalOk ? L.scanTotalOk : L.itemsAddedCheck(rows.length))
+    // Hier stond een balkje dat na 2,4 s wegviel en beweerde dat het totaal klopte —
+    // iets wat de app niet kan weten. Nu wacht er één vraag: het bedrag staat erbij,
+    // je bon ligt nog in je hand, en pas jouw antwoord zet de rekening op groen.
+    setScanKlaar({ items: rows.length, totaal: !isNaN(billNum) && billNum > 0 ? billNum : null })
   }
 
   const addManualItem = async () => {
@@ -6565,6 +6571,51 @@ export default function RundoTable() {
       )}
 
       {/* ─── Waarschuwing: afsluiten terwijl item- en bontotaal niet overeenkomen (onomkeerbaar) ─── */}
+      {/* ─── Venster: bon gescand, klopt het totaal? ─── */}
+      {scanKlaar && (() => {
+        const naarVeld = () => {
+          setScanKlaar(null)
+          setReceiptConfirmed(false)
+          setReceiptEditing(true)
+          if (typeof window === "undefined") return
+          window.setTimeout(() => {
+            receiptInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+            receiptInputRef.current?.focus()
+            receiptInputRef.current?.select()
+          }, 120)
+        }
+        return (
+          <div style={{ ...S.overlay, zIndex: 3100 }}>
+            <div style={{ ...S.modal, width: "min(340px, 92vw)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ width: 52, height: 52, margin: "0 auto 10px", borderRadius: "50%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 27, fontWeight: 800 }}>✓</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#123a42", marginBottom: 12 }}>{L.scanDoneTitle(scanKlaar.items)}</div>
+              {scanKlaar.totaal != null ? (
+                <>
+                  {/* Het bedrag groot en apart: dat is wat je met je bon vergelijkt. */}
+                  <div style={{ background: "rgba(90,108,166,0.07)", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>{L.totalOnBill}</div>
+                    <div style={{ fontSize: 30, fontWeight: 800, color: "#123a42", lineHeight: 1.2, marginTop: 2 }}>€{scanKlaar.totaal.toFixed(2).replace(".", ",")}</div>
+                  </div>
+                  <div style={{ fontSize: 16.5, fontWeight: 700, color: "#2b4f56", lineHeight: 1.4, marginBottom: 14 }}>{L.scanDoneAsk}</div>
+                  <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false); setScanKlaar(null) }}
+                    style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.yesMatches}</button>
+                  <button onClick={naarVeld}
+                    style={{ ...S.btn, width: "100%", marginTop: 8, padding: "12px 0", fontSize: 16.5, fontWeight: 800, color: "#2b4f56", background: "#fff", border: "2px solid rgba(18,58,66,0.28)" }}>{L.noAdjust}</button>
+                </>
+              ) : (
+                <>
+                  {/* Zonder bedrag valt er niets te bevestigen: dan is er maar één weg,
+                      en die zet je meteen in het invoerveld. */}
+                  <div style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.45, marginBottom: 14 }}>{L.scanDoneNoTotal}</div>
+                  <button onClick={naarVeld}
+                    style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.scanDoneFill}</button>
+                </>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
       {showTipReminder && (
         <div style={{ ...S.overlay, zIndex: 3000 }} onClick={() => setShowTipReminder(false)}>
           <div style={{ ...S.modal, width: "min(350px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
