@@ -841,6 +841,10 @@ const STRINGS = {
     markResolved: "Markeer als opgelost",
     reopenBill: "🔓 Rekening heropenen — gasten kunnen weer wijzigen",
     viewReceipt: "🧾 Bon bekijken",
+    bonViewerTitle: "Je gescande bon",
+    toTotalBtn: "⤓ Naar het totaal",
+    fitBtn: "Passend",
+    pinchHint: "Knijp met twee vingers om te zoomen · dubbeltik om te wisselen",
     groupWord: "Groep",
     nStillFree: (n: number) => `${n} nog vrij`,
     tagAdmin: "jij \u00b7 admin",
@@ -1339,7 +1343,8 @@ const STRINGS = {
     finalizedReopenFirst: "De rekening is afgesloten — heropen ze eerst om te wijzigen.",
     billClosedToast: "Rekening afgesloten — gasten kunnen niet meer wijzigen",
     billReopenedToast: "Rekening heropend",
-    scanDoneTitle: (n: number) => `Bon gescand · ${n} item${n !== 1 ? "s" : ""}`,
+    scanDoneTitle: "Bon gescand",
+    scanDoneOnScan: "Totaal op de scan",
     scanDoneAsk: "Klopt dit bedrag met je rekening?",
     scanDoneNoTotal: "Er stond geen totaal bij. Vul het zo meteen zelf in.",
     scanDoneFill: "Totaal invullen",
@@ -1610,6 +1615,10 @@ const STRINGS = {
     markResolved: "Marquer comme réglé",
     reopenBill: "🔓 Rouvrir l'addition — les invités peuvent à nouveau modifier",
     viewReceipt: "🧾 Voir l'addition",
+    bonViewerTitle: "Ton addition scannée",
+    toTotalBtn: "⤓ Aller au total",
+    fitBtn: "Ajuster",
+    pinchHint: "Pince à deux doigts pour zoomer · double-tape pour basculer",
     groupWord: "Groupe",
     nStillFree: (n: number) => `${n} encore libre${n !== 1 ? "s" : ""}`,
     tagAdmin: "toi \u00b7 admin",
@@ -2098,7 +2107,8 @@ const STRINGS = {
     finalizedReopenFirst: "L'addition est clôturée — rouvre-la d'abord pour modifier.",
     billClosedToast: "Addition clôturée — les invités ne peuvent plus modifier",
     billReopenedToast: "Addition rouverte",
-    scanDoneTitle: (n: number) => `Addition scannée · ${n} article${n !== 1 ? "s" : ""}`,
+    scanDoneTitle: "Addition scannée",
+    scanDoneOnScan: "Total sur le scan",
     scanDoneAsk: "Ce montant correspond-il à ton addition ?",
     scanDoneNoTotal: "Aucun total trouvé. Saisis-le toi-même juste après.",
     scanDoneFill: "Saisir le total",
@@ -2409,7 +2419,6 @@ export default function RundoTable() {
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [showGroupPeek, setShowGroupPeek] = useState(false)  // groepsoverzicht in-/uitklappen
-  const [receiptZoom, setReceiptZoom] = useState(1)  // 1 = passend op het scherm
   // Popup waarin de beheerder zichzelf toevoegt: eerst met hoeveel, dan de naam/namen.
   const [showSelfModal, setShowSelfModal] = useState(false)
   const [selfSeats, setSelfSeats] = useState(1)
@@ -6608,17 +6617,28 @@ export default function RundoTable() {
         }
         return (
           <div style={{ ...S.overlay, zIndex: 3100 }}>
-            <div style={{ ...S.modal, width: "min(340px, 92vw)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ width: 52, height: 52, margin: "0 auto 10px", borderRadius: "50%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 27, fontWeight: 800 }}>✓</div>
-              <div style={{ fontSize: 19, fontWeight: 800, color: "#123a42", marginBottom: 12 }}>{L.scanDoneTitle(scanKlaar.items)}</div>
+            <div style={{ ...S.modal, width: "min(340px, 92vw)", textAlign: "center", position: "relative" }} onClick={(e) => e.stopPropagation()}>
+              {/* Je papieren bon ligt niet altijd meer op tafel. Rechtsboven, los van de
+                  vraag, staat daarom de foto die je net maakte — daar lees je hetzelfde
+                  totaal van af. */}
+              {group.receipt_url && (
+                <button onClick={() => setViewReceipt(group.receipt_url!)}
+                  style={{ position: "absolute", top: 12, right: 12, cursor: "pointer", fontFamily: "inherit", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.4)", color: "#0f7488", borderRadius: 10, padding: "7px 10px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap" }}>{L.viewReceipt}</button>
+              )}
+              <div style={{ width: 52, height: 52, margin: `${group.receipt_url ? 14 : 0}px auto 10px`, borderRadius: "50%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 27, fontWeight: 800 }}>✓</div>
+              <div style={{ fontSize: 19, fontWeight: 800, color: "#123a42", marginBottom: 12 }}>{L.scanDoneTitle}</div>
               {scanKlaar.totaal != null ? (
                 <>
-                  {/* Het bedrag groot en apart: dat is wat je met je bon vergelijkt. */}
-                  <div style={{ background: "rgba(90,108,166,0.07)", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>{L.totalOnBill}</div>
-                    <div style={{ fontSize: 30, fontWeight: 800, color: "#123a42", lineHeight: 1.2, marginTop: 2 }}>€{scanKlaar.totaal.toFixed(2).replace(".", ",")}</div>
+                  {/* Het bedrag groot en apart: dat is wat je met je bon vergelijkt. Het heet
+                      "op de scan" en niet "op de bon" — het is wat de scan eruit haalde, en
+                      of dat klopt moet jij hieronder nog zeggen. */}
+                  <div style={{ background: "rgba(90,108,166,0.07)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>{L.scanDoneOnScan}</div>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: "#123a42", lineHeight: 1.15, marginTop: 2 }}>€{scanKlaar.totaal.toFixed(2).replace(".", ",")}</div>
                   </div>
-                  <div style={{ fontSize: 16.5, fontWeight: 700, color: "#2b4f56", lineHeight: 1.4, marginBottom: 14 }}>{L.scanDoneAsk}</div>
+                  {/* De vraag is waarvoor dit venster bestaat, dus ze mag even zwaar wegen
+                      als de kop erboven. Klein en grijs las je eroverheen. */}
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#123a42", lineHeight: 1.3, marginBottom: 14 }}>{L.scanDoneAsk}</div>
                   <button onClick={() => { setReceiptConfirmed(true); setReceiptEditing(false); setScanKlaar(null) }}
                     style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.yesMatches}</button>
                   <button onClick={naarVeld}
@@ -7580,31 +7600,7 @@ export default function RundoTable() {
         </div>
       )}
       {viewReceipt && (
-        <div style={S.overlay} onClick={() => { setViewReceipt(null); setReceiptZoom(1) }}>
-          <div style={{ position: "relative", maxWidth: "92vw", maxHeight: "90vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
-            {/* Meerdere foto's van dezelfde bon staan als spatie-gescheiden URL's opgeslagen. */}
-            {viewReceipt.split(/\s+/).filter(Boolean).map((url, i, arr) => (
-              <div key={i} style={{ marginBottom: i < arr.length - 1 ? 10 : 0 }}>
-                {arr.length > 1 && (
-                  <div style={{ fontSize: 15.5, fontWeight: 800, color: "#fff", background: "rgba(0,0,0,0.55)", borderRadius: 7, padding: "5px 9px", display: "inline-block", marginBottom: 5 }}>{L.photoOfN(i + 1, arr.length)}</div>
-                )}
-                {/* Tik op de bon om te wisselen tussen passend en ingezoomd. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt={L.scannedReceiptAlt} onClick={() => setReceiptZoom((z) => (z >= 3 ? 1 : z === 1 ? 2 : 3))}
-                  style={{ display: "block", width: receiptZoom === 1 ? "auto" : `${92 * receiptZoom}vw`, maxWidth: receiptZoom === 1 ? "92vw" : "none", maxHeight: receiptZoom === 1 ? (arr.length > 1 ? "70vh" : "82vh") : "none", borderRadius: 12, objectFit: "contain", cursor: receiptZoom >= 3 ? "zoom-out" : "zoom-in" }} />
-              </div>
-            ))}
-            {/* Zoomknoppen blijven in beeld terwijl je over de bon scrolt. */}
-            <div style={{ position: "sticky", bottom: 0, left: 0, display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
-              <button onClick={() => setReceiptZoom((z) => Math.max(1, +(z - 0.5).toFixed(1)))} disabled={receiptZoom <= 1}
-                style={{ ...S.btn, flexShrink: 0, width: 54, padding: "12px 0", fontSize: 22, fontWeight: 800, opacity: receiptZoom <= 1 ? 0.4 : 1 }}>−</button>
-              <span style={{ flexShrink: 0, minWidth: 58, textAlign: "center", fontSize: 16.5, fontWeight: 800, color: "#fff", background: "rgba(0,0,0,0.6)", borderRadius: 9, padding: "11px 6px" }}>{Math.round(receiptZoom * 100)}%</span>
-              <button onClick={() => setReceiptZoom((z) => Math.min(4, +(z + 0.5).toFixed(1)))} disabled={receiptZoom >= 4}
-                style={{ ...S.btn, flexShrink: 0, width: 54, padding: "12px 0", fontSize: 22, fontWeight: 800, opacity: receiptZoom >= 4 ? 0.4 : 1 }}>+</button>
-              <button onClick={() => { setViewReceipt(null); setReceiptZoom(1) }} style={{ ...S.btn, flex: 1, padding: "12px 0", fontWeight: 800 }}>{L.close}</button>
-            </div>
-          </div>
-        </div>
+        <BonKijker urls={viewReceipt.split(/\s+/).filter(Boolean)} onClose={() => setViewReceipt(null)} />
       )}
     </div>
   )
@@ -7613,6 +7609,133 @@ export default function RundoTable() {
 // ═══════════════════════════════════════════════════════════════════════════
 // SUB-COMPONENTEN
 // ═══════════════════════════════════════════════════════════════════════════
+// ─── De bon bekijken: volledig scherm, bediend met je vingers ───────────────
+// Hier stonden vroeger een − en een + met een percentage ertussen. Zoomen met knoppen is
+// traag en onnauwkeurig, en de pagina zelf staat vast op 100% (nodig omdat telefoons
+// anders inzoomen op invoervelden en die stand vasthouden), dus knijpen liet de browser
+// niet toe. Daarom doet dit venster het zelf: twee vingers voor de schaal, één vinger om
+// te slepen, dubbeltik om te wisselen. Plus één knop naar de onderkant, want daar staat
+// het totaal en daarvoor open je dit meestal.
+function BonKijker({ urls, onClose }: { urls: string[]; onClose: () => void }) {
+  const [lang] = useLang()
+  const L = STRINGS[lang]
+  const [schaal, setSchaal] = useState(1)
+  const [tx, setTx] = useState(0)
+  const [ty, setTy] = useState(0)
+  const doosRef = useRef<HTMLDivElement>(null)
+  const inhoudRef = useRef<HTMLDivElement>(null)
+  // Actieve vingers op het scherm, en waar de knijpbeweging begon.
+  const vingers = useRef<Map<number, { x: number; y: number }>>(new Map())
+  const start = useRef<{ afstand: number; schaal: number; x: number; y: number; tx: number; ty: number } | null>(null)
+  const laatsteTik = useRef(0)
+
+  // Buiten de randen slepen laat de bon van het scherm verdwijnen zonder weg te kunnen.
+  const binnenGrens = (s: number, nx: number, ny: number) => {
+    const doos = doosRef.current, inhoud = inhoudRef.current
+    if (!doos || !inhoud) return { x: nx, y: ny }
+    const maxX = Math.max(0, (inhoud.offsetWidth * s - doos.clientWidth) / 2)
+    const maxY = Math.max(0, (inhoud.offsetHeight * s - doos.clientHeight) / 2 + 40)
+    return { x: Math.max(-maxX, Math.min(maxX, nx)), y: Math.max(-maxY, Math.min(maxY, ny)) }
+  }
+
+  const zet = (s: number, nx: number, ny: number) => {
+    const g = Math.max(1, Math.min(5, s))
+    const p = binnenGrens(g, g === 1 ? 0 : nx, g === 1 ? 0 : ny)
+    setSchaal(g); setTx(p.x); setTy(p.y)
+  }
+
+  const afstandVan = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y)
+
+  const opDown = (e: React.PointerEvent) => {
+    (e.target as Element).setPointerCapture?.(e.pointerId)
+    vingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const lijst = [...vingers.current.values()]
+    if (lijst.length === 2) {
+      start.current = { afstand: afstandVan(lijst[0], lijst[1]), schaal, x: (lijst[0].x + lijst[1].x) / 2, y: (lijst[0].y + lijst[1].y) / 2, tx, ty }
+    } else if (lijst.length === 1) {
+      start.current = { afstand: 0, schaal, x: e.clientX, y: e.clientY, tx, ty }
+      // Dubbeltik: heen en weer tussen passend en tweeënhalf keer.
+      const nu = Date.now()
+      if (nu - laatsteTik.current < 300) { zet(schaal > 1.05 ? 1 : 2.5, 0, 0); laatsteTik.current = 0 }
+      else laatsteTik.current = nu
+    }
+  }
+
+  const opMove = (e: React.PointerEvent) => {
+    if (!vingers.current.has(e.pointerId) || !start.current) return
+    vingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const lijst = [...vingers.current.values()]
+    if (lijst.length >= 2 && start.current.afstand > 0) {
+      const nuAfstand = afstandVan(lijst[0], lijst[1])
+      const factor = nuAfstand / start.current.afstand
+      const mx = (lijst[0].x + lijst[1].x) / 2
+      const my = (lijst[0].y + lijst[1].y) / 2
+      zet(start.current.schaal * factor, start.current.tx + (mx - start.current.x), start.current.ty + (my - start.current.y))
+      return
+    }
+    // Eén vinger schuift alleen iets op als er iets te schuiven valt.
+    if (schaal <= 1.01) return
+    const p = binnenGrens(schaal, start.current.tx + (e.clientX - start.current.x), start.current.ty + (e.clientY - start.current.y))
+    setTx(p.x); setTy(p.y)
+  }
+
+  const opUp = (e: React.PointerEvent) => {
+    vingers.current.delete(e.pointerId)
+    if (vingers.current.size === 0) start.current = null
+    else {
+      const lijst = [...vingers.current.values()]
+      start.current = { afstand: 0, schaal, x: lijst[0].x, y: lijst[0].y, tx, ty }
+    }
+  }
+
+  // Het totaal staat onderaan de bon. Deze knop zoomt in en schuift naar die onderkant.
+  const naarTotaal = () => {
+    const doos = doosRef.current, inhoud = inhoudRef.current
+    if (!doos || !inhoud) return
+    const s = 2.2
+    const nodig = doos.clientHeight / 2 - 96 - (inhoud.offsetHeight * s) / 2
+    zet(s, 0, nodig)
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 4000, background: "#0b0f12", overscrollBehavior: "contain" }}>
+      <div ref={doosRef}
+        onPointerDown={opDown} onPointerMove={opMove} onPointerUp={opUp} onPointerCancel={opUp}
+        style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", touchAction: "none", cursor: schaal > 1.01 ? "grab" : "zoom-in" }}>
+        <div ref={inhoudRef} style={{ width: "92vw", transform: `translate(${tx}px, ${ty}px) scale(${schaal})`, transformOrigin: "center center", transition: start.current ? "none" : "transform 160ms ease-out" }}>
+          {urls.map((url, i) => (
+            <div key={i} style={{ marginBottom: i < urls.length - 1 ? 10 : 0 }}>
+              {urls.length > 1 && (
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", background: "rgba(0,0,0,0.55)", borderRadius: 7, padding: "4px 8px", display: "inline-block", marginBottom: 4 }}>{L.photoOfN(i + 1, urls.length)}</div>
+              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt={L.scannedReceiptAlt} draggable={false}
+                style={{ display: "block", width: "100%", borderRadius: 10, userSelect: "none", pointerEvents: "none" }} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ position: "absolute", top: "calc(10px + env(safe-area-inset-top))", left: 12, right: 12, display: "flex", justifyContent: "space-between", alignItems: "center", pointerEvents: "none" }}>
+        <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 13.5, fontWeight: 700 }}>{L.bonViewerTitle}</span>
+        <button onClick={onClose} aria-label={L.close}
+          style={{ pointerEvents: "auto", cursor: "pointer", fontFamily: "inherit", background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 10, padding: "7px 12px", fontSize: 15, fontWeight: 800 }}>✕</button>
+      </div>
+
+      {schaal <= 1.01 && (
+        <div style={{ position: "absolute", bottom: "calc(74px + env(safe-area-inset-bottom))", left: 16, right: 16, textAlign: "center", color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 700, lineHeight: 1.4, pointerEvents: "none" }}>{L.pinchHint}</div>
+      )}
+
+      <div style={{ position: "absolute", bottom: "calc(14px + env(safe-area-inset-bottom))", left: 12, right: 12, display: "flex", gap: 8 }}>
+        <button onClick={naarTotaal}
+          style={{ flex: 1, cursor: "pointer", fontFamily: "inherit", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 16, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{L.toTotalBtn}</button>
+        <button onClick={() => zet(1, 0, 0)}
+          style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 12, padding: "13px 18px", fontSize: 16, fontWeight: 800 }}>{L.fitBtn}</button>
+      </div>
+    </div>
+  )
+}
+
 function TopBar({ group, isAdmin, onHome, totalPersons, status, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; status?: { bon: string; bonOk: boolean; open: string; openOk: boolean } }) {
   const [lang] = useLang()
   const [naamBewerkt, setNaamBewerkt] = useState(false)
