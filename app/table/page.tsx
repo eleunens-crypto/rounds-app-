@@ -1098,8 +1098,6 @@ const STRINGS = {
     reopenShort: "🔓 heropen",
     reopenWord: "Heropenen",
     reopenLong: "🔓 Iets wijzigen? Heropenen",
-    whoSharesBtn: "Wie deelt? ✏️",
-    whoSharesPanel: "Wie deelt mee?",
     closedListTitle: "De verdeling, zoals afgesloten",
     lockedWord: "op slot",
     closedBarAll: "Afgesloten · alles verdeeld",
@@ -1253,10 +1251,7 @@ const STRINGS = {
     totalSharedByDrinkers: " totaal · wordt gedeeld door wie meedeelt",
     iShareYes: "✓ Ik nam hiervan",
     iShareNo: "Ik nam hiervan",
-    pickWhoShared: "Tik wie meedeelde — of kies iedereen in één keer.",
     pickWhoTook: "Tik wie ervan nam — meerdere mag.",
-    allOfThem: (n: number) => n === 2 ? "👥 Allebei" : `👥 Allemaal (${n})`,
-    whoSharedOf: (nm: string, n: number) => `Wie van ${nm} (${n}) deelde hiervan mee?`,
     sharesInstead: (a: number, b: number) => `Jullie betalen ${a} ${a === 1 ? "aandeel" : "aandelen"} in plaats van ${b}.`,
     makeSharedTitle: "Dit item delen?",
     multiQtyShareHint: (q: number, tot: number) => `Let op: dit zijn ${q} stuks. Als gedeeld item wordt de volle €${tot.toFixed(2).replace(".", ",")} verdeeld over wie meedeelt — het aantal telt dan niet meer apart mee. Wil je liever per stuk toewijzen? Zet het dan niet op gedeeld.`,
@@ -1869,8 +1864,6 @@ const STRINGS = {
     reopenShort: "🔓 rouvrir",
     reopenWord: "Rouvrir",
     reopenLong: "🔓 Quelque chose à changer ? Rouvrir",
-    whoSharesBtn: "Qui partage ? ✏️",
-    whoSharesPanel: "Qui partage ?",
     closedListTitle: "La répartition, telle que clôturée",
     lockedWord: "verrouillé",
     closedBarAll: "Clôturée · tout est réparti",
@@ -2021,10 +2014,7 @@ const STRINGS = {
     totalSharedByDrinkers: " au total · réparti entre ceux qui en boivent",
     iShareYes: "✓ J'en ai pris",
     iShareNo: "J'en ai pris",
-    pickWhoShared: "Touche qui a partagé — ou choisis tout le monde d'un coup.",
     pickWhoTook: "Touche qui en a pris — plusieurs, c'est possible.",
-    allOfThem: (n: number) => n === 2 ? "👥 Tous les deux" : `👥 Tous (${n})`,
-    whoSharedOf: (nm: string, n: number) => `Qui de ${nm} (${n}) a partagé ?`,
     sharesInstead: (a: number, b: number) => `Vous payez ${a} ${a === 1 ? "part" : "parts"} au lieu de ${b}.`,
     makeSharedTitle: "Partager cet article ?",
     multiQtyShareHint: (q: number, tot: number) => `Attention : il s'agit de ${q} pièces. En article partagé, les €${tot.toFixed(2).replace(".", ",")} entiers sont répartis entre ceux qui partagent — le nombre ne compte plus séparément. Tu préfères attribuer à l'unité ? Ne le mets pas en partagé.`,
@@ -3020,7 +3010,7 @@ export default function RundoTable() {
     }
     const nuSeats = claimSeats - tekort
     await supabase.from("table_participants").update({ name: finalName, seats: nuSeats, self_joined: true }).eq("id", claimSpot)
-    pickMe(claimSpot)
+    pickMe(claimSpot, false)
     setClaimSpot(null); setClaimSeats(1); setClaimNames([""])
     if (tekort > 0) {
       // Geen apart venster meer: je komt meteen op het wachtscherm terecht, dat
@@ -3033,14 +3023,17 @@ export default function RundoTable() {
     await loadAll(group.id)
   }
 
-  const pickMe = async (participantId: string) => {
+  // `vraagNaam` staat uit wanneer de gast zijn naam net zelf invulde: de lijst in het
+  // geheugen draagt dan nog de oude naam ("Gast 2"), en zonder deze schakelaar klapte
+  // het naamscherm meteen opnieuw open bovenop het scherm dat je net had ingevuld.
+  const pickMe = async (participantId: string, vraagNaam = true) => {
     if (!group) return
     setMeIdStored(group.id, participantId); setMeId(participantId)
     // Neemt een gast een plaats over die nog de standaardnaam draagt, dan vragen we
     // meteen om zijn naam. Anders staat hij de hele avond als "Gast 2" in de lijst —
     // bij zichzelf, bij de andere gasten en in de afrekening van de beheerder.
     const zonderNaam = participants.find((q) => q.id === participantId)
-    if (!isAdmin && zonderNaam && isFreeSpot(zonderNaam)) {
+    if (vraagNaam && !isAdmin && zonderNaam && isFreeSpot(zonderNaam)) {
       window.setTimeout(() => editMySpot(participantId), 60)
     }
     // Tikt iemand via de link een naam aan die jij al had ingevuld, dan duidt die persoon
@@ -3977,12 +3970,6 @@ export default function RundoTable() {
   }
 
   // Iedereen van een plaats in één keer aan of uit.
-  const toggleShareAll = async (itemId: string, pid: string, seats: number) => {
-    const sel = claimMembers(itemId, pid)
-    if (sel.length === seats) { await setClaim(itemId, pid, 0, []); return }
-    await setClaim(itemId, pid, seats, Array.from({ length: seats }, (_, i) => i))
-  }
-
   const shareHeads = (itemId: string) =>
     claims.filter((c) => c.item_id === itemId && c.quantity > 0).reduce((s, c) => s + c.quantity, 0)
 
@@ -6097,7 +6084,7 @@ export default function RundoTable() {
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             onRename={renameGuest}
             onEditMe={!isAdmin ? editMySpot : undefined}
-            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} toggleShareAll={toggleShareAll} magOntdelen={magOntdelen} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined}
+            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} magOntdelen={magOntdelen} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined}
             onAllAssigned={() => { if (allesToegewezenGezien.current) return; allesToegewezenGezien.current = true; setAllesPopup(true) }}
             klapSignaal={klapToewijzenSignaal}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
@@ -8215,7 +8202,6 @@ function ClaimScreen(props: {
   setSeats: (pid: string, n: number) => void
   setClaim: (itemId: string, pid: string, qty: number, members?: number[] | null) => void; toggleShareClaim: (itemId: string, pid: string) => void
   toggleShareMember: (itemId: string, pid: string, i: number) => void
-  toggleShareAll: (itemId: string, pid: string, seats: number) => void
   onToggleShared: (it: BillItem) => void
   claimMembers: (itemId: string, pid: string) => number[]
   warnCount?: number
@@ -8241,7 +8227,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, toggleShareAll, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm, onNaarGasten } = props
+  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm, onNaarGasten } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
@@ -8354,14 +8340,6 @@ function ClaimScreen(props: {
   const _sharedDone = _shared.filter((i) => sharerIds(i.id).length > 0).length
   const allDone = (_totalU > 0 || _shared.length > 0) && _claimedU >= _totalU && _sharedDone === _shared.length
   const [claimCollapsed, setClaimCollapsed] = useState(false)
-  // Welke meerpersoonsplaats de beheerder net bevestigd heeft, als "itemId:pid".
-  const [ledenOpen, setLedenOpen] = useState<string | null>(null)
-  // Welk gedeeld item zijn keuzepillen openstaan heeft. Bij een gewoon item gebeurt dat
-  // al zo; bij een gedeeld item stonden alle namen altijd open, waardoor het item drie
-  // keer zo lang was als bij de gast en je de delers uit de opgelichte pillen moest
-  // afleiden. Nu leest het item hetzelfde als op het gastenscherm, en opent de beheerder
-  // de pillen wanneer hij iets wil rechtzetten — wat hij nog altijd overal mag.
-  const [delenOpen, setDelenOpen] = useState<string | null>(null)
   // Welke namen zet je op de deel-chips van één plaats? Bij een plaats met twee personen
   // stond er altijd "Lore & Jan", ook als enkel Lore van de fles dronk — de anderen aan
   // tafel konden dus niet zien wie het écht nam. Deelden ze allebei mee, dan klopt de
@@ -8511,16 +8489,9 @@ function ClaimScreen(props: {
                             <div style={{ fontSize: 18, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 15.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "3px 6px" }}>{L.sharedWord}</span></div>
                             <div style={{ fontSize: 15.5, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} {L.totalLower}</div>
                           </div>
-                          {/* De telbadge zei "3 personen" zonder te zeggen wélke; dat staat nu
-                              in het kader eronder, precies zoals de gast het ziet. Op die plek
-                              past beter de knop die zegt dat jij het mag rechtzetten. */}
-                          <button onClick={() => setDelenOpen(delenOpen === it.id ? null : it.id)}
-                            style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", fontSize: 14.5, fontWeight: 800, borderRadius: 10, padding: "6px 10px", whiteSpace: "nowrap",
-                              ...(delenOpen === it.id
-                                ? { color: "#fff", background: "linear-gradient(135deg,#0f7d90,#3ec9d8)", border: "none" }
-                                : { color: "#0f7488", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.4)" }) }}>
-                            {L.whoSharesBtn}
-                          </button>
+                          {/* De telbadge zei "3 personen" zonder te zeggen wélke, en de knop
+                              die hier stond opende een venster om dat te bekijken. Beide zijn
+                              overbodig: de namen staan nu gewoon open in het kader eronder. */}
                           {isAdmin && shareBtn(it)}
                         </div>
                         {/* Hetzelfde kader als op het gastenscherm: eerst hoeveel delers en wat
@@ -8599,126 +8570,51 @@ function ClaimScreen(props: {
                             </div>
                           )
                         })()}
-                        {delenOpen === it.id && (
-                        <div style={{ marginTop: 9, marginLeft: 25, padding: "10px 11px", borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.3)" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                          <span style={{ fontSize: 14.5, fontWeight: 800, color: "#4a6e73" }}>{L.whoSharesPanel}</span>
-                          <button aria-label={L.whoSharesPanel} onClick={() => setDelenOpen(null)}
-                            style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, color: "#8aa3a6", fontWeight: 800, fontFamily: "inherit" }}>✕</button>
-                        </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                        {/* Alle namen staan open, en elke persoon is één pil — ook de twee
+                            helften van een koppel. Zo zet je Jan af zonder Lore aan te raken,
+                            en hoef je geen venster te openen om één naam recht te zetten. */}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8, marginLeft: 25, alignItems: "center" }}>
                           {named.length === 0
                             ? <span style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</span>
-                            : toewijsbaar.map((p, i) => {
-                                // Ook oplichten wanneer het kiesvenster openstaat maar er nog
-                                // niemand gekozen is — anders lijkt de knop uit terwijl er
-                                // onderaan een venster van hem hangt dat je niet kwijtraakt.
-                                const on = sh.includes(p.id)
+                            : toewijsbaar.flatMap((p, i) => {
                                 const pSeats = Math.max(1, p.seats ?? 1)
-                                const pHeads = myShareHeads(it.id, p.id)
                                 const viaLink = !!p.self_joined
-                                return (
-                                  <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                                    {i === eersteLinkGast && eersteLinkGast > 0 && (
-                                      <span style={{ width: 1, height: 22, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
-                                    )}
-                                    <button onClick={() => {
-                                      // Aanduiden voor iemand anders vraagt altijd een bevestiging:
-                                      // het is zijn rekening, niet de jouwe. Alleen voor je eigen
-                                      // plaats gaat het meteen door.
-                                      if (!on && p.id !== meId) {
-                                        // Bij een plaats met meerdere personen kiest de beheerder daarna
-                                        // wie van hen meedeelde; die namen stonden er eerst altijd al,
-                                        // en dan kon je ze zonder vraag aantikken.
-                                        const doe = pSeats > 1
-                                          ? () => setLedenOpen(`${it.id}:${p.id}`)
-                                          : () => toggleShareClaim(it.id, p.id)
-                                        if (vrijFn(p)) { askConfirm(L.freeSeatNoAssignBody, L.goGuestsBtn, () => onNaarGasten?.(), { title: L.freeSeatNoAssignTitle }); return }
-                                        if (explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(p.name), L.yes, doe); return }
-                                        if (viaLink) { askConfirm(L.assignToQrGuest(naamVan(p), it.name), L.assignQrYes, doe, { title: L.assignQrTitle(naamVan(p)) }); return }
-                                        if (uitlegGezien("ander")) { doe(); return }
-                                        askConfirm(L.assignOwnBody(naamVan(p)), L.assignOwnYes, () => { markUitleg("ander"); doe() }, { title: L.assignOwnTitle(naamVan(p)) }); return
-                                      }
-                                      // Staat er al iemand van deze plaats op? Dan haalt deze tik ze
-                                      // er allemaal af en sluit het keuzeblokje — anders bleef er een
-                                      // venster openstaan over een plaats die niets meer deelt.
-                                      if (pSeats > 1 && pHeads > 0) { setLedenOpen(null); toggleShareClaim(it.id, p.id); return }
-                                      if (pSeats > 1) { setLedenOpen(`${it.id}:${p.id}`); return }
-                                      toggleShareClaim(it.id, p.id)
-                                    }} style={{
-                                      fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "5px 10px", cursor: "pointer",
-                                      display: "inline-flex", alignItems: "center", gap: 5,
-                                      border: on ? "none" : viaLink ? "1.5px dashed rgba(18,58,66,0.3)" : "1.5px solid rgba(20,153,176,0.45)",
-                                      background: on ? (p.id === adminPid ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : viaLink ? "transparent" : "rgba(20,153,176,0.06)",
-                                      color: on ? "#5a4a1a" : viaLink ? "#8aa3a6" : "#123a42",
-                                      opacity: on ? 1 : viaLink ? 0.8 : 1,
-                                    }}>
-                                {on ? "✓ " : ""}{viaLink && !on && <GsmIcon />}{naamVan(p)}
-                                {/* Een plaats met meerdere personen telt voor meerdere delers. Zonder
-                                    deze teller zie je niet of er nul, één of allebei meedoen — en dan
-                                    klopt het totaal in de badge wel, maar weet je niet waarvandaan. */}
-                                {pSeats > 1 && (
-                                  <span style={{ fontWeight: 800, marginLeft: 5, opacity: pHeads > 0 ? 1 : 0.55 }}>{pHeads}/{pSeats}</span>
-                                )}
-                              </button>
-                                  </span>
-                                )
+                                const delen = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+                                const leden = claimMembers(it.id, p.id)
+                                return Array.from({ length: pSeats }, (_, k) => k).map((k) => {
+                                  const on = pSeats > 1 ? leden.includes(k) : sh.includes(p.id)
+                                  const naam = pSeats > 1 ? (delen[k] || `${L.personWord} ${k + 1}`) : naamVan(p)
+                                  const doe = () => { if (pSeats > 1) toggleShareMember(it.id, p.id, k); else toggleShareClaim(it.id, p.id) }
+                                  // Aanduiden voor iemand anders vraagt een bevestiging: het is zijn
+                                  // rekening. Weghalen niet — dat herstelt hoogstens een vergissing.
+                                  const klik = () => {
+                                    if (on || p.id === meId) { doe(); return }
+                                    if (vrijFn(p)) { askConfirm(L.freeSeatNoAssignBody, L.goGuestsBtn, () => onNaarGasten?.(), { title: L.freeSeatNoAssignTitle }); return }
+                                    if (explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(naamVan(p)), L.yes, doe); return }
+                                    if (viaLink) { askConfirm(L.assignToQrGuest(naamVan(p), it.name), L.assignQrYes, doe, { title: L.assignQrTitle(naamVan(p)) }); return }
+                                    if (uitlegGezien("ander")) { doe(); return }
+                                    askConfirm(L.assignOwnBody(naamVan(p)), L.assignOwnYes, () => { markUitleg("ander"); doe() }, { title: L.assignOwnTitle(naamVan(p)) })
+                                  }
+                                  return (
+                                    <span key={`${p.id}:${k}`} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                      {/* Streepje vóór de eerste gast die zelf binnenkwam: die duidt
+                                          normaal zelf aan, jij vult de anderen in. */}
+                                      {i === eersteLinkGast && eersteLinkGast > 0 && k === 0 && (
+                                        <span style={{ width: 1, height: 22, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
+                                      )}
+                                      <button onClick={klik} style={{
+                                        fontSize: 15, borderRadius: 10, padding: "6px 10px", cursor: "pointer", fontFamily: "inherit",
+                                        display: "inline-flex", alignItems: "center", gap: 5,
+                                        border: on ? "none" : viaLink ? "1.5px dashed rgba(18,58,66,0.3)" : "1.5px solid rgba(20,153,176,0.45)",
+                                        background: on ? (p.id === meId ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : viaLink ? "transparent" : "#fff",
+                                        color: on ? "#5a4a1a" : viaLink ? "#8aa3a6" : "#123a42",
+                                        fontWeight: on ? 800 : 700,
+                                      }}>{on ? "\u2713 " : ""}{viaLink && !on && <GsmIcon />}{naam}</button>
+                                    </span>
+                                  )
+                                })
                               })}
                         </div>
-                        {toewijsbaar.map((p) => {
-                          const pSeats = Math.max(1, p.seats ?? 1)
-                          const key = `${it.id}:${p.id}`
-                          // Bij een gast blijft dit venster staan zolang hij meedeelt; bij de
-                          // beheerder verdween het zodra er iemand gekozen was. Daarom moest er
-                          // een ±-knopje bij dat het aantal blind ophoogde — langs de grens
-                          // heen én zonder te weten wíé het was. Nu overal hetzelfde venster.
-                          if (pSeats <= 1 || fixed) return null
-                            // Alleen na een tik op de pil. Anders hangt er een keuzeblokje onder
-                            // een lijst die je gewoon aan het lezen bent; de teller op de pil
-                            // zelf (1/2) vertelt al hoe het ervoor staat.
-                            if (ledenOpen !== key) return null
-                          // Zelfde vraag als bij de gasten: wie van dit koppel deelde mee?
-                          const parts = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
-                          const sel = claimMembers(it.id, p.id)
-                          const allOn = sel.length === pSeats
-                          const toggle = (i: number) => { toggleShareMember(it.id, p.id, i) }
-                          const setAll = () => { toggleShareAll(it.id, p.id, pSeats) }
-                          return (
-                            <div key={key} style={{ marginTop: 9, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.3)", borderRadius: 12, padding: "11px 12px" }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 9 }}>
-                                <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>🍴 {L.whoSharedOf(p.name, pSeats)}</span>
-                                {/* Deze knop wisselde van "Allebei" naar "Wissen" zodra iedereen
-                                    aanstond — dezelfde knop, andere betekenis onder je vinger.
-                                    Hij doet nu één ding en verdwijnt als er niets meer bij kan;
-                                    weghalen doe je, net als bij de gast, door de naam weer uit
-                                    te tikken. */}
-                                {!allOn && (
-                                  <button onClick={setAll} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#0f7d90", background: "rgba(20,153,176,0.1)", border: "1px solid rgba(20,153,176,0.35)", borderRadius: 9, padding: "7px 9px", cursor: "pointer", whiteSpace: "nowrap" }}>
-                                    {L.allOfThem(pSeats)}
-                                  </button>
-                                )}
-                                {/* Zonder deze knop raakte je dit venster niet kwijt: het sloot
-                                    alleen door opnieuw op de naamknop erboven te tikken. */}
-                              </div>
-                              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-                                {Array.from({ length: pSeats }, (_, i) => i).map((i) => {
-                                  const on = sel.includes(i)
-                                  return (
-                                    <button key={i} onClick={() => toggle(i)} style={{
-                                      flex: 1, minWidth: 80, fontSize: 16.5, fontWeight: 800, borderRadius: 10, padding: "10px 8px", cursor: "pointer",
-                                      border: on ? "none" : "1px solid rgba(18,58,66,0.15)",
-                                      background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
-                                      color: on ? "#5c4200" : "#123a42",
-                                    }}>{on ? "✓ " : ""}{parts[i] || `${L.personWord} ${i + 1}`}</button>
-                                  )
-                                })}
-                              </div>
-                              <div style={{ fontSize: 15.5, color: "#4a6e73", marginTop: 8, lineHeight: 1.4 }}>{L.pickWhoShared}</div>
-                            </div>
-                          )
-                        })}
-                        </div>
-                        )}
                       </div>
                     )
                   }
