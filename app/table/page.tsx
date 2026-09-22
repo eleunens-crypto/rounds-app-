@@ -3002,6 +3002,13 @@ export default function RundoTable() {
   const pickMe = async (participantId: string) => {
     if (!group) return
     setMeIdStored(group.id, participantId); setMeId(participantId)
+    // Neemt een gast een plaats over die nog de standaardnaam draagt, dan vragen we
+    // meteen om zijn naam. Anders staat hij de hele avond als "Gast 2" in de lijst —
+    // bij zichzelf, bij de andere gasten en in de afrekening van de beheerder.
+    const zonderNaam = participants.find((q) => q.id === participantId)
+    if (!isAdmin && zonderNaam && isFreeSpot(zonderNaam)) {
+      window.setTimeout(() => editMySpot(participantId), 60)
+    }
     // Tikt iemand via de link een naam aan die jij al had ingevuld, dan duidt die persoon
     // vanaf nu zelf aan. Zonder deze markering bleef er "✍️ jij duidt aan" staan terwijl
     // hij gewoon meekijkt op zijn eigen gsm.
@@ -3222,12 +3229,20 @@ export default function RundoTable() {
   const vrijeNummers = (() => {
     const m: Record<string, number> = {}
     let n = 0
-    participants.forEach((p) => { if (isFreeSpot(p)) { n += 1; m[p.id] = n } })
+    // Alleen stoelen waar nog niemand zit. Nam iemand deze plaats in — hij scande, of
+    // tikte zijn naam aan — dan is het zijn plaats, ook als de naam nog de standaardnaam
+    // is. Zonder die voorwaarde verscheen zo'n gast overal als "Vrije plaats 2", ook bij
+    // zichzelf ("Vrije plaats 2 · jij") en in de delerslijst van de beheerder.
+    participants.forEach((p) => { if (isFreeSpot(p) && !p.self_joined) { n += 1; m[p.id] = n } })
     return m
   })()
   // Eén naam voor een lege stoel, overal: in de plaatsenlijst, op de toewijspillen en
   // in het eindoverzicht. "Gast 1" klonk als iemand die er al zat.
   const naamVan = (p: Participant) => vrijeNummers[p.id] ? `${L.freeSpotName} ${vrijeNummers[p.id]}` : p.name
+  // Een plaats die iemand innam, is geen lege stoel meer — ook al staat er nog geen naam.
+  // De toewijsschermen moeten daarop kijken, anders blokkeert de beheerder op een gast
+  // die er wel degelijk zit.
+  const echtVrij = (p: Participant) => isFreeSpot(p) && !p.self_joined
   // Een gast zonder plaats kan er een vragen. De beheerder houdt de controle, want
   // het aantal personen bepaalt mee hoe gedeelde items verdeeld worden.
   // Deze twee moeten bóven elke vroege return staan: hooks mogen niet overgeslagen
@@ -6040,7 +6055,7 @@ export default function RundoTable() {
         <>
           <ClaimScreen
             items={baseItems} meId={meId} me={me} isAdmin={isAdmin}
-            participants={participants} vrijFn={isFreeSpot} naamVan={naamVan}
+            participants={participants} vrijFn={echtVrij} naamVan={naamVan}
             claimedQty={claimedQty} myQty={myQty} sharerIds={sharerIds}
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             onRename={renameGuest}
