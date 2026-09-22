@@ -1063,7 +1063,6 @@ const STRINGS = {
     settleAskKeep: "Je groepje blijft daarna 7 dagen op het startscherm staan, onder \u201cJouw groepen\u201d.",
     settleAskYes: "Ja, sluit af en bewaar",
     settleDoneTitle: "Alles verrekend",
-    settleDoneKeepTitle: "📂 Bewaard",
     // Kort en hetzelfde voor beheerder en gast: waar het staat, en niets over codes of
     // links — daar hoef je niets voor te doen.
     settleDoneKeep: "Je groepje staat 7 dagen op het startscherm, onder \u201cJouw groepen\u201d. Daarna wordt het automatisch gewist.",
@@ -1081,16 +1080,7 @@ const STRINGS = {
       "\ud83e\udd7e Wandeling met een caf\u00e9 halverwege",
       "\ud83c\udfad Quiz of pubquiz \u2014 met dezelfde tafelnamen",
     ],
-    settleShareHint: "Wil je het langer houden, deel het dan nu.",
-    settleShareBtn: "Deel het overzicht",
-    settleShareCopied: "Overzicht gekopieerd — plak het waar je wil",
-    settleShareFailed: "Kopiëren lukte niet. Probeer het opnieuw.",
     // Kop van de tekst die je deelt, plus de regel per persoon en de sluitregel.
-    shareHead: (naam: string) => `${naam || "Rekening"} — verdeling`,
-    shareLine: (naam: string, bedrag: string) => `${naam}: €${bedrag}`,
-    shareTotal: (bedrag: string) => `Samen: €${bedrag}`,
-    shareFoot: "Verdeeld met Rundo Resto",
-    tryRundoTitle: "Probeer ook Rundo eens!",
     settleGuestTitle: "De rekening is verrekend",
     settleGuestBody: "De beheerder heeft alles afgerond. Je bedrag hieronder blijft staan zoals het is.",
     settleSavedToast: "Afgesloten en bewaard",
@@ -1787,7 +1777,6 @@ const STRINGS = {
     settleAskKeep: "Ton groupe reste ensuite 7 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb.",
     settleAskYes: "Oui, clôturer et garder",
     settleDoneTitle: "Tout est réglé",
-    settleDoneKeepTitle: "📂 Gardé",
     settleDoneKeep: "Ton groupe reste 7 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb. Ensuite il est effacé automatiquement.",
     keptShortPre: "📂 Encore 7 jours sur ",
     whatNowHead: "Encore un truc avec le groupe ?",
@@ -1803,15 +1792,6 @@ const STRINGS = {
       "🥾 Balade avec un café à mi-chemin",
       "🎭 Quiz — avec les mêmes équipes qu'à table",
     ],
-    settleShareHint: "Tu veux le garder plus longtemps ? Partage-le maintenant.",
-    settleShareBtn: "Partager le récapitulatif",
-    settleShareCopied: "Récapitulatif copié — colle-le où tu veux",
-    settleShareFailed: "La copie n\u2019a pas fonctionné. Réessaie.",
-    shareHead: (naam: string) => `${naam || "Addition"} — répartition`,
-    shareLine: (naam: string, bedrag: string) => `${naam} : €${bedrag}`,
-    shareTotal: (bedrag: string) => `Ensemble : €${bedrag}`,
-    shareFoot: "Partagé avec Rundo Resto",
-    tryRundoTitle: "Essaie aussi Rundo !",
     settleGuestTitle: "L\u2019addition est réglée",
     settleGuestBody: "L\u2019hôte a tout clôturé. Ton montant ci-dessous reste tel quel.",
     settleSavedToast: "Clôturée et gardée",
@@ -2843,20 +2823,6 @@ export default function RundoTable() {
     }
   }, [isAdmin, meId, group])
 
-  // Delen van het overzicht. Het systeemdeelvenster gebruiken we hier niet: bij de
-  // uitnodiging bleek dat het bericht te vaak ergens anders belandde of niet aankwam.
-  // Kopiëren en zelf plakken is voorspelbaar, en werkt in elke app.
-  const deelOverzicht = async () => {
-    if (!group) return
-    const regels = participants.map((p) => L.shareLine(naamVan(p), personTotal(p.id).settled.toFixed(2).replace(".", ",")))
-    const samen = participants.reduce((a, p) => a + personTotal(p.id).settled, 0)
-    const tekst = [L.shareHead(group.name), "", ...regels, "", L.shareTotal(samen.toFixed(2).replace(".", ",")), "", L.shareFoot].join("\n")
-    try {
-      if (!navigator.clipboard) { setToast(L.settleShareFailed); return }
-      await navigator.clipboard.writeText(tekst)
-      setToast(L.settleShareCopied)
-    } catch { setToast(L.settleShareFailed) }
-  }
 
   const flagDispute = async (name: string, on: boolean, comment = "") => {
     if (!group) return
@@ -6841,6 +6807,13 @@ export default function RundoTable() {
       {!isAdmin && settleGastPopup && meId && (
         <div style={{ ...S.overlay, zIndex: 3400 }}>
           <div style={{ ...S.modal, width: "min(380px, 92vw)", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            {/* De knop onderaan trok het oog voorbij de twee rijen erboven: je las het
+                venster van boven naar onder en tikte de laatste knop aan. Sluiten kan nu
+                met het kruisje rechtsboven, waar je het bij een venster verwacht. */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -8, marginBottom: -14 }}>
+              <button onClick={() => setSettleGastPopup(false)} aria-label={L.closeWord}
+                style={{ cursor: "pointer", border: "none", fontFamily: "inherit", background: "rgba(18,58,66,0.06)", color: "#4a6e73", borderRadius: "50%", width: 34, height: 34, fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✕</button>
+            </div>
             <div style={{ textAlign: "center", marginBottom: 13 }}>
               <div style={{ width: 58, height: 58, borderRadius: "50%", background: "rgba(39,174,96,0.16)", border: "2px solid rgba(39,174,96,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 10px", color: "#1f8a4c", fontWeight: 800 }}>✓</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: "#1f8a4c" }}>{L.settleGuestTitle}</div>
@@ -6895,12 +6868,6 @@ export default function RundoTable() {
                 <span style={{ flexShrink: 0, fontSize: 16, color: "#b3892a" }}>→</span>
               </button>
             )}
-            {/* Gecentreerd en niet over de volle breedte: dit sluit alleen het venster, het
-                is geen stap die je nog moet zetten. */}
-            <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
-              <button onClick={() => setSettleGastPopup(false)}
-                style={{ ...S.btn, ...S.btnPrimary, minWidth: "55%", padding: "13px 26px", fontSize: 17, fontWeight: 800 }}>{L.settleOk}</button>
-            </div>
           </div>
         </div>
       )}
@@ -6925,27 +6892,59 @@ export default function RundoTable() {
       {isAdmin && settleKlaar && (
         <div style={{ ...S.overlay, zIndex: 3400 }}>
           <div style={{ ...S.modal, width: "min(380px, 92vw)", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            {/* Zelfde reden als bij de gast: het kruisje sluit, zodat de twee rijen
+                eronder de enige knoppen zijn die je nog kan aantikken. */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -8, marginBottom: -14 }}>
+              <button onClick={() => setSettleKlaar(false)} aria-label={L.closeWord}
+                style={{ cursor: "pointer", border: "none", fontFamily: "inherit", background: "rgba(18,58,66,0.06)", color: "#4a6e73", borderRadius: "50%", width: 34, height: 34, fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✕</button>
+            </div>
             <div style={{ textAlign: "center", marginBottom: 14 }}>
               <div style={{ width: 62, height: 62, borderRadius: "50%", background: "rgba(39,174,96,0.16)", border: "2px solid rgba(39,174,96,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, margin: "0 auto 10px", color: "#1f8a4c", fontWeight: 800 }}>✓</div>
               <div style={{ fontSize: 21, fontWeight: 800, color: "#1f8a4c" }}>{L.settleDoneTitle}</div>
               <div style={{ fontSize: 16, color: "#8aa3a6", marginTop: 3 }}>{group.name || L.groupWord} · €{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</div>
             </div>
-            <div style={{ background: "rgba(20,153,176,0.07)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 12, padding: "11px 13px" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#0f7488", marginBottom: 4 }}>{L.settleDoneKeepTitle}</div>
-              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45 }}>{L.settleDoneKeep}</div>
-              {/* De uitweg voor wie het lánger wil houden: de verdeling gaat als tekst mee
-                  naar zijn eigen gesprek, en niet naar onze databank. */}
-              <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45, marginTop: 7 }}>{L.settleShareHint}</div>
-              <button onClick={() => void deelOverzicht()}
-                style={{ ...S.btn, width: "100%", marginTop: 9, padding: "11px 0", fontSize: 15.5, fontWeight: 800, background: "#fff", color: "#0f7488", border: "1.5px solid rgba(20,153,176,0.45)" }}>
-                🔗 {L.settleShareBtn}
-              </button>
+            {/* Zelfde vorm als bij de gast: één regel over het bewaren, met het adres als
+                link. Het blauwe kader met de deelknop is weg — wie het overzicht wil
+                doorsturen, heeft de verdeling zelf al voor zich. */}
+            <div style={{ fontSize: 15.5, color: "#4a6e73", lineHeight: 1.45, textAlign: "center" }}>
+              {L.keptShortPre}
+              <a href="https://www.rundo.be" style={{ fontWeight: 800, color: "#0f7488" }}>www.rundo.be</a>
             </div>
-            {/* De verwijzing kreeg een kopje: zonder dat leest dat zwarte blok als een
-                advertentie die er plots staat. Nu is het een uitnodiging. */}
-            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "16px 0 -4px" }}>{L.tryRundoTitle}</div>
-            <div style={{ marginTop: 4 }}>{renderPartyVerwijzing()}</div>
-            <button onClick={() => setSettleKlaar(false)} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.settleOk}</button>
+
+            {/* De avond is klaar, de rekening staat vast — en dan pas komt dit. Het icoontje
+                wisselt, zodat de knop niet meteen verklapt waar hij over gaat. */}
+            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "18px 0 8px" }}>{L.whatNowHead}</div>
+            <button onClick={() => setIdeeLijst(true)}
+              style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
+                border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 13, padding: "12px 13px" }}>
+              <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(20,153,176,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}><IdeeIcoon /></span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>{L.ideaBtnTitle}</span>
+                <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#0f7488", lineHeight: 1.3, marginTop: 1 }}>{L.ideaBtnSub}</span>
+              </span>
+              <span style={{ flexShrink: 0, fontSize: 16, color: "#0f7488" }}>→</span>
+            </button>
+
+            {/* De zwarte Rundo-kaart woog zwaarder dan de rekening erboven en stond als een
+                blok apart. Ze hoort bij dezelfde vraag — wat doen we nu? — dus staat ze nu
+                als tweede regel in dezelfde sectie. Tik je erop, dan klapt het volledige
+                Rundo-scherm open zoals voorheen. */}
+            {partyInfo ? (
+              <div style={{ marginTop: 8 }}>{renderPartyVerwijzing()}</div>
+            ) : (
+              <button onClick={() => setPartyInfo(true)}
+                style={{ width: "100%", boxSizing: "border-box", marginTop: 8, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
+                  border: "1.5px solid rgba(240,193,75,0.75)", background: "rgba(240,193,75,0.09)", borderRadius: 13, padding: "12px 13px" }}>
+                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(240,179,1,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <RundoLogo size={24} />
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: "#123a42" }}>{L.cafeAfterQ}</span>
+                  <span style={{ display: "block", fontSize: 13, color: "#8aa3a6", lineHeight: 1.35, marginTop: 1 }}>{L.seeWhatItDoes}</span>
+                </span>
+                <span style={{ flexShrink: 0, fontSize: 16, color: "#b3892a" }}>→</span>
+              </button>
+            )}
           </div>
         </div>
       )}
