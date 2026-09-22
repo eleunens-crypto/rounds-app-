@@ -719,11 +719,10 @@ const STRINGS = {
     seatsAllNamed: "Alle plaatsen ingevuld ✓",
     // Een vrije plaats wacht; invullen gebeurt niet meer op de rij zelf maar via de
     // knop onder de QR. Daarom staat hier nog maar één ding.
-    freeSpotHow: "wacht op een QR-scan",
     collapseSeats: "Plaatsen verbergen",
     selfJoinedBadge: "✓ zelf gescand",
     scannedBadge: "gescand",
-    stillFreeTitle: (n: number) => n === 1 ? "Nog 1 vrij" : `Nog ${n} vrij`,
+    stillFreeTitle: (n: number) => n === 1 ? "Nog 1 vrij — wacht op een QR-scan" : `Nog ${n} vrij — wachten op een QR-scan`,
     addNameRow: "+ naam",
     needMoreSpotsTitle: "Er is een plaats te weinig",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Dit vraagt ${tekort} plaats${tekort === 1 ? "" : "en"} meer dan er vrij ${tekort === 1 ? "is" : "zijn"}. Zal ik het aantal personen op ${totaal} zetten?`,
@@ -1488,11 +1487,10 @@ const STRINGS = {
     seatsByYou: (n: number) => `${n} par toi`,
     optionalShort: "facultatif",
     seatsAllNamed: "Toutes les places sont remplies ✓",
-    freeSpotHow: "en attente d'un scan QR",
     collapseSeats: "Masquer les places",
     selfJoinedBadge: "✓ a scanné",
     scannedBadge: "scann\u00e9",
-    stillFreeTitle: (n: number) => n === 1 ? "Encore 1 libre" : `Encore ${n} libres`,
+    stillFreeTitle: (n: number) => n === 1 ? "Encore 1 libre — en attente d'un scan QR" : `Encore ${n} libres — en attente d'un scan QR`,
     addNameRow: "+ nom",
     needMoreSpotsTitle: "Il manque une place",
     needMoreSpotsBody: (tekort: number, totaal: number) => `Cela demande ${tekort} place${tekort === 1 ? "" : "s"} de plus qu’il n’y en a de libre. Je mets le nombre de personnes à ${totaal} ?`,
@@ -4332,18 +4330,20 @@ export default function RundoTable() {
 
   const groepPeekKnop = () => {
     const vrij = participants.filter((p) => isFreeSpot(p) && !p.self_joined).reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
-    // Iemand anders dan jij al ingevuld? (QR-gast of door jou aangeduid)
-    const iemandIngevuld = participants.some((p) => p.id !== ownerPid && !isFreeSpot(p))
-    // Kleur volgt de fase: compleet = groen, bezig-met-gaten = zacht oranje,
-    // net begonnen = neutraal grijs. Nooit rood — lege plekken zijn normaal.
-    const kleur = vrij === 0 ? "#1f8a4c" : iemandIngevuld ? "#b5591a" : "#4a6e73"
+    // Op het toewijsscherm is een lege stoel geen detail meer: alles wat daarnaartoe gaat,
+    // gaat naar niemand. Vandaar een rood uitroepteken zodra er nog plaatsen vrij zijn —
+    // elders in de app blijft het rustige oranje, want daar ben je ze net aan het vullen.
+    const kleur = vrij === 0 ? "#1f8a4c" : "#c0392b"
     return (
       <button onClick={() => setShowGroupPeek((v) => !v)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: kleur, padding: "4px 4px", display: "inline-flex", alignItems: "center", gap: 7 }}>
         👥 {L.groupWord}{vrij === 0
           ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 12, padding: "2px 9px" }}>✓ {totalPersons}</span>
-          : iemandIngevuld
-          ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#b5591a", background: "rgba(243,156,18,0.14)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 12, padding: "2px 9px" }}>{L.nStillFree(vrij)}</span>
-          : <span style={{ fontSize: 13.5, fontWeight: 800, color: "#4a6e73", background: "rgba(18,58,66,0.06)", borderRadius: 12, padding: "2px 9px" }}>{totalPersons}</span>} {showGroupPeek ? "▴" : "▾"}
+          : (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <span aria-hidden style={{ flexShrink: 0, width: 19, height: 19, borderRadius: "50%", background: "#c0392b", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, lineHeight: 1 }}>!</span>
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: "#c0392b", background: "rgba(224,107,94,0.14)", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "2px 9px" }}>{L.nStillFree(vrij)}</span>
+            </span>
+          )} {showGroupPeek ? "▴" : "▾"}
       </button>
     )
   }
@@ -4414,8 +4414,19 @@ export default function RundoTable() {
           : ikDuidAan
           ? { icon: "✍️", label: L.tagByYou, color: "#8a5e0f", bg: "rgba(243,156,18,0.14)", brd: "transparent" }
           : { icon: "✓", label: L.tagAdded, color: "#4a6e73", bg: "rgba(18,58,66,0.06)", brd: "transparent" }
+        // Een lege stoel is het enige waar je hier iets aan kan doen, en dat kan alleen op
+        // de andere tab. Tik erop en je staat er meteen, met de plaatsen opengeklapt.
+        const naarPlaatsen = () => {
+          setAdminTab("guests")
+          setShowNamesBlock(true)
+          setShowGroupPeek(false)
+          if (typeof window !== "undefined") {
+            window.setTimeout(() => document.getElementById("plaatsen-sectie")?.scrollIntoView({ behavior: "smooth", block: "start" }), 220)
+          }
+        }
         return (
-          <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+          <div key={p.id} onClick={vrij ? naarPlaatsen : undefined}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)", cursor: vrij ? "pointer" : "default" }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#8aa3a6" : "#123a42", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
               <span style={{ flexShrink: 0 }}>{cat.icon}</span>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{vrij ? naamVan(p) : p.name}{!vrij && (p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}</span>
@@ -4423,7 +4434,7 @@ export default function RundoTable() {
             {/* Namen invullen gebeurt op de gasten-tab. Hier stond ook een veldje, maar
                 dat kon geen plaats voor twee personen aan, en dan heb je twee plekken
                 die hetzelfde half doen. Deze lijst toont nu alleen de stand. */}
-            <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: cat.color, background: cat.bg, border: `1px solid ${cat.brd}`, borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{cat.label}</span>
+            <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: cat.color, background: cat.bg, border: `1px solid ${cat.brd}`, borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{cat.label}{vrij ? " →" : ""}</span>
           </div>
         )
       })}
@@ -5666,7 +5677,7 @@ export default function RundoTable() {
             const bezet = participants.filter((q) => !(isFreeSpot(q) && !q.self_joined))
             const vrijeRijen = participants.filter((q) => isFreeSpot(q) && !q.self_joined)
             return (
-              <div style={{ borderTop: vol ? "1px solid rgba(39,174,96,0.3)" : "1px solid rgba(18,58,66,0.08)", paddingTop: 13 }}>
+              <div id="plaatsen-sectie" style={{ borderTop: vol ? "1px solid rgba(39,174,96,0.3)" : "1px solid rgba(18,58,66,0.08)", paddingTop: 13, scrollMarginTop: 12 }}>
                 {/* De groepsgrootte staat bovenaan met haar teller erbij: eerst weet je met
                     hoeveel je bent, dan hoe ver het staat, dan wie erbij zit. Daarmee kan de
                     kaart "Met hoeveel zijn jullie?" bovenaan verdwijnen zodra je naam er staat. */}
@@ -5787,10 +5798,7 @@ export default function RundoTable() {
                       <>
                         {/* Dit is de kop van het rijtje eronder, geen voetnoot: op 14px grijs
                             las niemand hem. Nu twee regels, in de kleur van gewone tekst. */}
-                        <div style={{ marginTop: 14, marginBottom: 8 }}>
-                          <div style={{ fontSize: 17, fontWeight: 800, color: "#123a42" }}>{L.stillFreeTitle(vrijeZit)}</div>
-                          <div style={{ fontSize: 14.5, fontWeight: 600, color: "#7d949a", marginTop: 2 }}>{L.freeSpotHow}</div>
-                        </div>
+                        <div style={{ marginTop: 14, marginBottom: 8, fontSize: 17, fontWeight: 800, color: "#123a42", lineHeight: 1.35 }}>{L.stillFreeTitle(vrijeZit)}</div>
                         <div style={{ display: "grid", gridTemplateColumns: vrijeRijen.length > 4 ? "1fr 1fr" : "1fr", gap: 7 }}>
                           {vrijeRijen.map((q) => (
                             <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1.5px dashed rgba(18,58,66,0.28)", borderRadius: 12, padding: "10px", background: "#fbfcfd" }}>
@@ -6094,7 +6102,12 @@ export default function RundoTable() {
             onPickMe={pickMe}
             finalized={!!group.finalized} iDispute={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name)} iResolved={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name && d.resolved)} iComment={(me && parseDisputes(group.disputed_by || "").find((d) => d.name === me.name)?.comment) || ""} onToggleDispute={(on, comment) => { if (me) flagDispute(me.name, on, comment) }}
             askConfirm={askConfirm}
-            onNaarGasten={() => { setAdminTab("guests"); scrollTop() }}
+            onNaarGasten={() => {
+              // Niet zomaar naar de tab: naar de plaatsen zelf, opengeklapt. Anders sta je
+              // boven aan een lange pagina en mag je alsnog gaan zoeken.
+              setAdminTab("guests"); setShowNamesBlock(true); scrollTop()
+              if (typeof window !== "undefined") window.setTimeout(() => document.getElementById("plaatsen-sectie")?.scrollIntoView({ behavior: "smooth", block: "start" }), 220)
+            }}
           />
         </>
       )}
