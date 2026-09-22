@@ -767,6 +767,10 @@ const STRINGS = {
     sharedOverviewTitle: "Gedeelde items — wie deelde mee?",
     sharedByLabel: "gedeeld door",
     nobodyShared: "Nog niemand duidde dit item aan",
+    nSharers: (n: number) => n === 1 ? "1 deler" : `${n} delers`,
+    eachAmount: (b: number) => `\u20ac${b.toFixed(2).replace(".", ",")} elk`,
+    dropsIfMore: "\u2192 daalt als er meer meedelen",
+    youWord: "jij",
     nobodySharedOf: (n: number) => `0 van ${n} delers`,
     nobodySharedZero: "0 delers",
     sharedProblemTitle: "Let op — gedeelde items kloppen mogelijk niet:",
@@ -1534,6 +1538,10 @@ const STRINGS = {
     sharedOverviewTitle: "Articles partagés — qui a partagé ?",
     sharedByLabel: "partagé par",
     nobodyShared: "Personne n'a encore coché cet article",
+    nSharers: (n: number) => n === 1 ? "1 participant" : `${n} participants`,
+    eachAmount: (b: number) => `\u20ac${b.toFixed(2).replace(".", ",")} chacun`,
+    dropsIfMore: "\u2192 baisse si d'autres partagent",
+    youWord: "toi",
     nobodySharedOf: (n: number) => `0 sur ${n} participants`,
     nobodySharedZero: "0 participant",
     sharedProblemTitle: "Attention — les articles partagés semblent incorrects :",
@@ -8555,8 +8563,15 @@ function ClaimScreen(props: {
                       )
                     })
                   })() : (
+                    // Deelt er nog niemand mee, dan blijft dit bedrag onverdeeld liggen —
+                    // dus mag de knop dat ook laten zien in plaats van grijs af te wachten.
                     <button onClick={() => toggleShareClaim(it.id, meId)}
-                      style={{ ...S.btn, flexShrink: 0, fontWeight: 700, ...(iShare ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" } : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
+                      style={{ ...S.btn, flexShrink: 0, fontWeight: 700,
+                        ...(iShare
+                          ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" }
+                          : shareHeads(it.id) === 0
+                          ? { background: "rgba(243,156,18,0.12)", color: "#8a5a00", border: "1.5px solid rgba(243,156,18,0.6)" }
+                          : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
                   )}
                 </div>
                 {/* Niets aangeduid: één regeltje uitleg, geen kader. Zodra er iemand aan staat,
@@ -8575,39 +8590,50 @@ function ClaimScreen(props: {
                   )
                 })()}
                 {it.is_shared && (() => {
-                  const st = sharedStatus(it)
-                  const heads = st.heads
+                  const heads = shareHeads(it.id)
                   const total = itemTotal(it)
-                    const nowEach = heads > 0 ? total / heads : total
-                    // Niemand duidde aan: dat is een échte fout, want er blijft geld onverdeeld.
-                    const isError = heads === 0
-                    // Zonder verwacht aantal is "klaar" pas klaar als de rekening dicht is;
-                    // daarvoor kan er altijd nog iemand bijkomen en zakt het bedrag.
-                    const isDone = heads > 0 && finalized
-                    const isOver = false
-                    const who = sharerIds(it.id).map((q) => participants.find((x) => x.id === q)?.name).filter(Boolean).join(", ")
-                    const msg = isError ? L.nobodyShared
-                      : !revealed ? L.sharingWaitReveal
-                      : isDone ? L.shareDone(heads, nowEach)
-                      : L.shareOpen(heads, nowEach)
+                  const nowEach = heads > 0 ? total / heads : total
+                  // Niemand duidde aan: dat is een échte fout, want er blijft geld onverdeeld.
+                  const isError = heads === 0
+                  const isDone = heads > 0 && finalized
+                  // De namen van de andere delers stonden hier niet: je zag enkel "3 delers"
+                  // en moest maar aannemen wie dat waren. Met de namen erbij kan je zelf
+                  // zien of er iemand vergeten is — en dat is precies waar je op let.
+                  const delers = sharerIds(it.id)
+                    .map((q) => participants.find((x) => x.id === q))
+                    .filter(Boolean) as Participant[]
                   return (
-                    <div style={{ marginTop: 8, borderRadius: 10, padding: "9px 11px",
-                      background: isOver ? "rgba(224,107,94,0.1)" : isError ? "rgba(243,156,18,0.1)" : isDone ? "rgba(39,174,96,0.07)" : "rgba(90,108,166,0.07)",
-                      border: isOver ? "1.5px solid rgba(192,57,43,0.55)" : isError ? "1px solid rgba(243,156,18,0.45)" : isDone ? "1px solid rgba(39,174,96,0.4)" : "1px solid rgba(90,108,166,0.25)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ flexShrink: 0, fontSize: 16.5 }}>{isOver ? "🚫" : isDone ? "✅" : "👥"}</span>
-                        <span style={{ fontSize: 16, lineHeight: 1.45, fontWeight: isError || isOver ? 700 : 400,
-                          color: isOver ? "#c0392b" : isError ? "#b5591a" : isDone ? "#1f8a4c" : "#2b4f56" }}>{msg}</span>
-                      </div>
-                      {isOver && who && (
-                        <div style={{ fontSize: 15.5, color: "#a5443a", marginTop: 4, lineHeight: 1.4 }}>{L.sharedBy}{who}</div>
+                    <div style={{ marginTop: 8, borderRadius: 10, padding: "10px 11px",
+                      background: isError ? "rgba(243,156,18,0.1)" : isDone ? "rgba(39,174,96,0.07)" : "rgba(90,108,166,0.07)",
+                      border: isError ? "1px solid rgba(243,156,18,0.45)" : isDone ? "1px solid rgba(39,174,96,0.4)" : "1px solid rgba(90,108,166,0.25)" }}>
+                      {isError ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ flexShrink: 0, fontSize: 16.5 }}>👥</span>
+                          <span style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 700, color: "#b5591a" }}>{L.nobodyShared}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 15.5, color: isDone ? "#1f8a4c" : "#2b4f56", lineHeight: 1.4, marginBottom: 7 }}>
+                            <b>{L.nSharers(heads)}</b> · {L.eachAmount(nowEach)}
+                            {!isDone && <span style={{ color: "#8aa3a6" }}> {L.dropsIfMore}</span>}
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                            {delers.map((q) => {
+                              const ikZelf = q.id === meId
+                              return (
+                                <span key={q.id} style={{ fontSize: 14, fontWeight: ikZelf ? 800 : 700, borderRadius: 9, padding: "5px 9px",
+                                  background: ikZelf ? "rgba(20,153,176,0.14)" : "rgba(18,58,66,0.06)",
+                                  color: ikZelf ? "#0f7488" : "#4a6e73" }}>
+                                  {naamVan(q)}{ikZelf ? ` · ${L.youWord}` : ""}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        </>
                       )}
                     </div>
                   )
                 })()}
-                {!iShare && (
-                  <div style={{ marginTop: 6, fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.4 }}>{L.tapShareHint}</div>
-                )}
               </div>
             )
           }
