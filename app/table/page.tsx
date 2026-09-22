@@ -3060,6 +3060,19 @@ export default function RundoTable() {
 
   // Zodra je eigen naam er staat, wordt het groene blok onderaan actief. Zonder deze
   // sprong staat het onder de QR-kaart, die op een telefoon bijna het hele scherm vult.
+  const naamWasGezet = useRef(false)
+  useEffect(() => {
+    if (!isAdmin || adminTab !== "guests") return
+    if (adminNamed && !naamWasGezet.current) {
+      naamWasGezet.current = true
+      window.setTimeout(() => document.getElementById("qr-kaart")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250)
+    }
+    if (!adminNamed) naamWasGezet.current = false
+  }, [adminNamed, isAdmin, adminTab])
+  // Het aantal personen is pas "ingevuld" als de organisator de teller bewust zette
+  // (of als er al meer dan één persoon aan tafel zit, bv. bij een herladen groep).
+  const personsSet = personsTouched || totalPersons > 1
+
   // Alle stoelen hebben een naam: dan is wachten zinloos geworden en mag het scherm je
   // naar de volgende stap sturen.
   const zitKlaar = adminNamed && personsSet && vrijeZitplaatsen === 0
@@ -3073,18 +3086,6 @@ export default function RundoTable() {
     if (!zitKlaar) tafelWasVol.current = false
   }, [zitKlaar, isAdmin, adminTab])
 
-  const naamWasGezet = useRef(false)
-  useEffect(() => {
-    if (!isAdmin || adminTab !== "guests") return
-    if (adminNamed && !naamWasGezet.current) {
-      naamWasGezet.current = true
-      window.setTimeout(() => document.getElementById("qr-kaart")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250)
-    }
-    if (!adminNamed) naamWasGezet.current = false
-  }, [adminNamed, isAdmin, adminTab])
-  // Het aantal personen is pas "ingevuld" als de organisator de teller bewust zette
-  // (of als er al meer dan één persoon aan tafel zit, bv. bij een herladen groep).
-  const personsSet = personsTouched || totalPersons > 1
   const requirePersons = (): boolean => {
     if (personsSet) return true
     setToast(L.personsFirst)
