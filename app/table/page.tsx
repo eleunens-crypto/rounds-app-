@@ -8163,6 +8163,18 @@ function ClaimScreen(props: {
   // afleiden. Nu leest het item hetzelfde als op het gastenscherm, en opent de beheerder
   // de pillen wanneer hij iets wil rechtzetten — wat hij nog altijd overal mag.
   const [delenOpen, setDelenOpen] = useState<string | null>(null)
+  // Welke namen zet je op de deel-chips van één plaats? Bij een plaats met twee personen
+  // stond er altijd "Lore & Jan", ook als enkel Lore van de fles dronk — de anderen aan
+  // tafel konden dus niet zien wie het écht nam. Deelden ze allebei mee, dan klopt de
+  // volledige naam wel, en houden we die.
+  const delerNamen = (itemId: string, q: Participant): string[] => {
+    const zit = Math.max(1, q.seats ?? 1)
+    if (zit <= 1) return [naamVan(q)]
+    const leden = claimMembers(itemId, q.id)
+    if (leden.length === 0 || leden.length >= zit) return [naamVan(q)]
+    const delen = (q.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+    return leden.map((i) => delen[i] || `${L.personWord} ${i + 1}`)
+  }
   // De knop "Wie nam wat" in het overzicht klapt deze lijst open (en scrollt ernaartoe).
   useEffect(() => { if (jumpToAssign) setClaimCollapsed(false) }, [jumpToAssign])
   // Vrije plaatsen (nog niemand) horen niet in de toewijslijst: enkel wie een naam heeft.
@@ -8334,19 +8346,57 @@ function ClaimScreen(props: {
                                     {!fixed && <span style={{ color: "#8aa3a6" }}> {L.dropsIfMore}</span>}
                                   </div>
                                   <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                                    {delers.map((q) => {
-                                      const ikZelf = q.id === adminPid
-                                      return (
-                                        <span key={q.id} style={{ fontSize: 14, fontWeight: ikZelf ? 800 : 700, borderRadius: 9, padding: "5px 9px",
+                                    {delers.flatMap((q) => {
+                                      const ikZelf = q.id === meId
+                                      return delerNamen(it.id, q).map((nm, k) => (
+                                        <span key={`${q.id}:${k}`} style={{ fontSize: 14, fontWeight: ikZelf ? 800 : 700, borderRadius: 9, padding: "5px 9px",
                                           background: ikZelf ? "rgba(233,196,95,0.35)" : "rgba(18,58,66,0.06)",
                                           color: ikZelf ? "#5a4a1a" : "#4a6e73" }}>
-                                          {naamVan(q)}{ikZelf ? ` · ${L.youWord}` : ""}
+                                          {nm}{ikZelf ? ` · ${L.youWord}` : ""}
                                         </span>
-                                      )
+                                      ))
                                     })}
                                   </div>
                                 </>
                               )}
+                            </div>
+                          )
+                        })()}
+                        {/* De beheerder moest langs "Wie deelt?" om zichzelf aan te duiden,
+                            terwijl een gast daar één knop voor heeft. Dit is diezelfde knop:
+                            voor jezelf, meteen. Zit je met meer op één plaats, dan kies je
+                            net als de gast wie van jullie meedeelde. */}
+                        {meId && (() => {
+                          const mijnZit = seatsOf(meId)
+                          const ikDeel = sh.includes(meId)
+                          const mijnNaam = participants.find((q) => q.id === meId)?.name ?? ""
+                          const mijnDelen = mijnNaam.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+                          const gekozen = claimMembers(it.id, meId)
+                          if (fixed) return null
+                          return (
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 8, marginLeft: 25 }}>
+                              {mijnZit > 1
+                                ? Array.from({ length: mijnZit }, (_, i) => i).map((i) => {
+                                    const aan = gekozen.includes(i)
+                                    return (
+                                      <button key={i} onClick={() => toggleShareMember(it.id, meId, i)}
+                                        style={{ flexShrink: 0, maxWidth: mijnZit > 2 ? 104 : 132, fontSize: mijnZit > 2 ? 13.5 : 14.5, fontWeight: 800, padding: "9px 13px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", color: "#123a42",
+                                          background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
+                                          border: aan ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.18)",
+                                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                        {aan ? "✓ " : ""}{mijnDelen[i] || `${L.personWord} ${i + 1}`}
+                                      </button>
+                                    )
+                                  })
+                                : (
+                                  <button onClick={() => toggleShareClaim(it.id, meId)}
+                                    style={{ ...S.btn, flexShrink: 0, fontWeight: 700,
+                                      ...(ikDeel
+                                        ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" }
+                                        : heads === 0
+                                        ? { background: "rgba(243,156,18,0.12)", color: "#8a5a00", border: "1.5px solid rgba(243,156,18,0.6)" }
+                                        : {}) }}>{ikDeel ? L.iShareYes : L.iShareNo}</button>
+                                )}
                             </div>
                           )
                         })()}
@@ -8753,15 +8803,15 @@ function ClaimScreen(props: {
                             {!isDone && <span style={{ color: "#8aa3a6" }}> {L.dropsIfMore}</span>}
                           </div>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                            {delers.map((q) => {
+                            {delers.flatMap((q) => {
                               const ikZelf = q.id === meId
-                              return (
-                                <span key={q.id} style={{ fontSize: 14, fontWeight: ikZelf ? 800 : 700, borderRadius: 9, padding: "5px 9px",
+                              return delerNamen(it.id, q).map((nm, k) => (
+                                <span key={`${q.id}:${k}`} style={{ fontSize: 14, fontWeight: ikZelf ? 800 : 700, borderRadius: 9, padding: "5px 9px",
                                   background: ikZelf ? "rgba(20,153,176,0.14)" : "rgba(18,58,66,0.06)",
                                   color: ikZelf ? "#0f7488" : "#4a6e73" }}>
-                                  {naamVan(q)}{ikZelf ? ` · ${L.youWord}` : ""}
+                                  {nm}{ikZelf ? ` · ${L.youWord}` : ""}
                                 </span>
-                              )
+                              ))
                             })}
                           </div>
                         </>
