@@ -308,10 +308,13 @@ export default function Home() {
 
           {modusKaart("table")}
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0" }}>
-            <span style={{ flex: 1, height: 1, background: K.lijn }} />
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: K.zacht }}>{t.orWord}</span>
-            <span style={{ flex: 1, height: 1, background: K.lijn }} />
+          {/* "of" tussen de twee modi: een duidelijk wit bolletje op een lijn, zodat je
+              ziet dat je hier kiest tussen twee dingen. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "8px 0", flexShrink: 0 }}>
+            <span style={{ flex: 1, height: 1.5, background: "#D9D2C3" }} />
+            <span style={{ fontSize: 15, fontWeight: 800, color: K.tekst, background: "#FFFFFF", border: "1.5px solid #D9D2C3",
+              borderRadius: 999, padding: "4px 16px", lineHeight: 1.2, boxShadow: "0 4px 10px -6px rgba(14,26,46,0.35)" }}>{t.orWord}</span>
+            <span style={{ flex: 1, height: 1.5, background: "#D9D2C3" }} />
           </div>
 
           {modusKaart("party")}
