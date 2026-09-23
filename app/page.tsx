@@ -242,10 +242,15 @@ export default function Home() {
     const [regel1, regel2] = resto ? t.tableSub : t.partySub
     return (
       <div style={{ ...S.kaart, background: md.kaart, border: `1.5px solid ${md.kleur}99`, boxShadow: `0 12px 26px -18px ${md.schaduw}` }}>
+        {/* Foto in twee lagen: over de hele kaart een zachte, vervaagde waas (zo schemert
+            de foto links heel licht door), en rechts de scherpe foto zelf, zodat wat erop
+            staat goed zichtbaar blijft. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={resto ? "/table-image.png" : "/party-image.png"} alt="" style={S.cardPhotoWaas} />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={resto ? "/table-image.png" : "/party-image.png"} alt="" style={S.cardPhoto} />
         <div style={{ position: "absolute", inset: 0, zIndex: 1,
-          background: `linear-gradient(90deg, rgba(${md.kaartRgb},0.9) 0%, rgba(${md.kaartRgb},0.88) 30%, rgba(${md.kaartRgb},0.72) 46%, rgba(${md.kaartRgb},0.3) 66%, rgba(${md.kaartRgb},0) 90%)` }} />
+          background: `linear-gradient(90deg, rgba(${md.kaartRgb},0.86) 0%, rgba(${md.kaartRgb},0.84) 30%, rgba(${md.kaartRgb},0.6) 46%, rgba(${md.kaartRgb},0.15) 66%, rgba(${md.kaartRgb},0) 82%)` }} />
         <div style={{ position: "relative", zIndex: 2, flex: 1, padding: "16px 16px 16px" }}>
           <span style={{ display: "inline-block", filter: `drop-shadow(0 0 8px rgb(${md.kaartRgb})) drop-shadow(0 0 3px rgb(${md.kaartRgb}))` }}><RundoLogo size={46} resto={resto} opDonker={false} /></span>
           {/* Ondertitel op twee regels: de actie vet, het vervolg lichter eronder. Een
@@ -432,8 +437,13 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: 20, overflow: "hidden",
   },
   cardPhoto: {
-    position: "absolute", top: 0, right: 0, bottom: 0, width: "100%", height: "100%", objectFit: "cover",
+    position: "absolute", top: 0, right: 0, bottom: 0, width: "72%", height: "100%", objectFit: "cover",
     display: "block", zIndex: 0,
+    WebkitMaskImage: "linear-gradient(90deg, transparent 0%, #000 40%)", maskImage: "linear-gradient(90deg, transparent 0%, #000 40%)",
+  },
+  cardPhotoWaas: {
+    position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+    display: "block", zIndex: 0, filter: "blur(10px) saturate(1.1)", opacity: 0.55, transform: "scale(1.15)",
   },
   logoSub: {
     fontSize: 19, fontWeight: 700, letterSpacing: -0.2, lineHeight: 1.25, color: K.zacht,
