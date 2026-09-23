@@ -5,29 +5,13 @@ import { useRouter } from "next/navigation"
 import { useLang, LanguageToggle } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
 import { RundoLogo, RundoDealsLogo } from "@/lib/RundoLogo"
-import { Icoon, type IcoonNaam } from "@/lib/RundoIconen"
-
-type Stap = { icoon: IcoonNaam; label: string }
+import { Icoon } from "@/lib/RundoIconen"
 
 const T = {
   nl: {
     tagline: "Rondjes en rekeningen zonder gedoe!",
-    partySub: "Rondjes opnemen en splitten zonder gedoe",
-    // Heel korte stappen, als blokjes naast elkaar. Alles staat meteen in beeld.
-    partyFlow: [
-      { icoon: "noteer", label: "neem op" },
-      { icoon: "lijstje", label: "handig barlijstje" },
-      { icoon: "euro", label: "afrekenen" },
-    ] as Stap[],
-    tableSub: "Scan de rekening en verdeel in groep",
-    tableFlow: [
-      { icoon: "scan", label: "scan" },
-      { icoon: "qr", label: "deel" },
-      { icoon: "tik", label: "tik aan" },
-      { icoon: "euro", label: "verdeeld!" },
-    ] as Stap[],
-    restoTab: "Uit eten",
-    partyTab: "Op café",
+    partySub: ["Rondjes opnemen", "… en splitten zonder gedoe"],
+    tableSub: ["Scan de rekening", "… en verdeel in groep"],
     dealsKorting: "korting",
     dealsLabel: "Groepsdeals",
     dealsSub: "Samen op stap = samen korting bij deelnemende zaken",
@@ -53,21 +37,8 @@ const T = {
   },
   fr: {
     tagline: "Tournées et additions, sans prise de tête !",
-    partySub: "Prendre les tournées et partager, sans prise de tête",
-    partyFlow: [
-      { icoon: "noteer", label: "note" },
-      { icoon: "lijstje", label: "liste bar pratique" },
-      { icoon: "euro", label: "règle" },
-    ] as Stap[],
-    tableSub: "Scanne l'addition et partage en groupe",
-    tableFlow: [
-      { icoon: "scan", label: "scanne" },
-      { icoon: "qr", label: "partage" },
-      { icoon: "tik", label: "coche" },
-      { icoon: "euro", label: "partagé !" },
-    ] as Stap[],
-    restoTab: "Au resto",
-    partyTab: "Au bar",
+    partySub: ["Note les tournées", "… et partage sans prise de tête"],
+    tableSub: ["Scanne l'addition", "… et partage en groupe"],
     dealsKorting: "remise",
     dealsLabel: "Deals groupe",
     dealsSub: "Sortir ensemble = réduction ensemble chez les partenaires",
@@ -245,93 +216,53 @@ export default function Home() {
     )
   }
 
-  // Eén vormtaal voor het hele scherm: witte kaarten op een warme lichte achtergrond,
-  // marineblauwe tekst en iconen. Elke modus heeft één eigen tint (turquoise voor
-  // Resto, goud voor Rundo) die terugkomt in de kaart, de nummers en de startknop.
-  // Stappenblokjes, in drie stijlen (kies met BLOK_STIJL onderaan):
-  //   "glas"      – half doorzichtig wit met vervaging: de foto schemert erdoor
-  //   "open"      – geen kader, enkel icoon + woord met een zachte witte gloed
-  //   "fotoBoven" – foto vervaagt ook naar onder, stappen staan kaderloos op de kaart
-  const blokken = (m: Mode, stappen: Stap[]) => (
-    <div style={{ display: "grid", gridTemplateColumns: `repeat(${stappen.length}, 1fr)`, gap: BLOK_STIJL === "fotoBoven" ? 0 : 6, marginTop: 14 }}>
-      {stappen.map((s, i) => (
-        <div key={i} style={{ position: "relative", borderRadius: 14, padding: "12px 4px 10px",
-          textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
-          ...(BLOK_STIJL === "glas" ? { background: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.8)",
-                backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" } : {}),
-          ...(BLOK_STIJL === "fotoBoven" && i > 0 ? { borderLeft: `1px solid ${MODUS[m].kleur}55`, borderRadius: 0 } : {}) }}>
-          <span style={{ position: "absolute", top: 5, left: 8, fontSize: 10, fontWeight: 800, color: MODUS[m].diep,
-            textShadow: BLOK_STIJL === "open" ? GLOED : undefined }}>{i + 1}</span>
-          <span style={{ ...S.icoonVak, boxShadow: BLOK_STIJL === "glas" ? undefined : "0 4px 12px -6px rgba(14,26,46,0.35)" }}><Icoon naam={s.icoon} size={21} /></span>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: K.tekst, lineHeight: 1.15,
-            textShadow: BLOK_STIJL === "open" ? GLOED : undefined }}>{s.label}</span>
-        </div>
-      ))}
-    </div>
-  )
+  // Eén vormtaal voor het hele scherm: lichte kaarten op een warme achtergrond,
+  // marineblauwe tekst. Elke modus heeft één eigen tint (turquoise-blauw voor Resto,
+  // goud voor Rundo) die terugkomt in de rand, de kaartkleur en de startbalk.
 
-  // Startbalk over de hele onderkant van de kaart, in de kleur van de modus
-  // (Resto donker turquoise met witte letters, Rundo goud met marineblauw).
-  // Dit is het énige wat doorklikt: de rest van de kaart reageert niet op een tik.
+  // Startbalk over de hele onderkant van de kaart. Dit is het énige wat doorklikt:
+  // de rest van de kaart reageert niet op een tik.
   const startKnop = (m: Mode) => (
-    <button type="button" onClick={() => starten(m)} className={`rundo-start rundo-start-${m}`}
+    <button type="button" onClick={() => starten(m)} className="rundo-start"
       style={{ position: "relative", zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-        width: "100%", height: 62, padding: "0 18px", border: "none", borderRadius: 0,
-        fontSize: 19, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", letterSpacing: 0.2,
+        width: "100%", height: 58, padding: "0 18px", border: "none", borderRadius: 0, flexShrink: 0,
+        fontSize: 18, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", letterSpacing: 0.2,
         background: MODUS[m].knop, color: MODUS[m].knopTekst, transition: "filter .15s ease, transform .1s ease" }}>
       {t.start}
-      <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+      <svg aria-hidden width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
     </button>
   )
 
-  // Hoe de twee modi zich van elkaar onderscheiden. Drie varianten; kies er één
-  // met KAART_STIJL bovenaan dit bestand.
-  //   "lint" – witte kaart met een gekleurde band bovenaan en een getinte schaduw
-  //   "tint" – de hele kaart zacht ingekleurd, met een gekleurde rand
-  //   "tab"  – een tabje boven de kaart ("Uit eten" / "Op café") en een gekleurde rand
+  // Kaart: logo en ondertitel links, je foto rechts die naar links in de kaartkleur
+  // vervaagt, startbalk onderaan. De kaarten rekken mee zodat het startscherm
+  // (beide modi + Groepsdeals) precies één gsm-scherm vult.
   const modusKaart = (m: Mode) => {
     const resto = m === "table"
     const md = MODUS[m]
-    const vlak = KAART_STIJL === "tint" ? md.kaart : "#FFFFFF"
-    const rgb = KAART_STIJL === "tint" ? md.kaartRgb : "255,255,255"
-    const kaart = (
-      <div className="rundo-card" style={{ ...S.kaart, background: vlak,
-        border: KAART_STIJL === "lint" ? `1px solid ${K.lijn}` : `1.5px solid ${md.kleur}99`,
-        borderTopLeftRadius: KAART_STIJL === "tab" ? 6 : 22,
-        boxShadow: `0 14px 30px -18px ${md.schaduw}` }}>
+    const [regel1, regel2] = resto ? t.tableSub : t.partySub
+    return (
+      <div style={{ ...S.kaart, background: md.kaart, border: `1.5px solid ${md.kleur}99`, boxShadow: `0 12px 26px -18px ${md.schaduw}` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={resto ? "/table-image.png" : "/party-image.png"} alt="" style={S.cardPhoto} />
         <div style={{ position: "absolute", inset: 0, zIndex: 1,
-          background: `linear-gradient(90deg, rgb(${rgb}) 0%, rgb(${rgb}) 40%, rgba(${rgb},0.88) 55%, rgba(${rgb},0.45) 72%, rgba(${rgb},0.05) 100%)` }} />
-        {BLOK_STIJL === "fotoBoven" && <div style={{ position: "absolute", inset: 0, zIndex: 1,
-          background: `linear-gradient(180deg, rgba(${rgb},0) 0%, rgba(${rgb},0) 34%, rgba(${rgb},0.9) 52%, rgb(${rgb}) 62%)` }} />}
-        {KAART_STIJL === "lint" && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, zIndex: 3, background: md.kleur }} />}
-        <div style={{ position: "relative", zIndex: 2, padding: KAART_STIJL === "lint" ? "22px 16px 18px" : "18px 16px 18px" }}>
-          <div style={{ maxWidth: "76%" }}>
-            <span style={{ display: "block", marginBottom: 6 }}><RundoLogo size={40} resto={resto} opDonker={false} /></span>
-            <div style={S.logoSub}>{resto ? t.tableSub : t.partySub}</div>
+          background: `linear-gradient(90deg, rgb(${md.kaartRgb}) 0%, rgb(${md.kaartRgb}) 42%, rgba(${md.kaartRgb},0.85) 56%, rgba(${md.kaartRgb},0.35) 76%, rgba(${md.kaartRgb},0) 100%)` }} />
+        <div style={{ position: "relative", zIndex: 2, flex: 1, padding: "18px 16px 20px" }}>
+          <RundoLogo size={46} resto={resto} opDonker={false} />
+          {/* Ondertitel op twee regels: de actie vet, het vervolg lichter eronder. */}
+          <div style={{ ...S.logoSub, marginTop: 6 }}>
+            <span style={{ display: "block", color: K.tekst, fontWeight: 800 }}>{regel1}</span>
+            <span style={{ display: "block" }}>{regel2}</span>
           </div>
-          {blokken(m, resto ? t.tableFlow : t.partyFlow)}
         </div>
         {startKnop(m)}
-      </div>
-    )
-    if (KAART_STIJL !== "tab") return kaart
-    return (
-      <div style={{ marginBottom: 0 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px 5px", borderRadius: "12px 12px 0 0",
-          background: md.kleur, color: K.tekst, fontSize: 12, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-          <Icoon naam={resto ? "scan" : "lijstje"} size={14} dikte={2.2} /> {resto ? t.restoTab : t.partyTab}
-        </span>
-        {kaart}
       </div>
     )
   }
 
   const chip = (tekst: string, vol: boolean) => (
-    <span style={{ fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", borderRadius: 999, padding: "3px 8px",
-      whiteSpace: "nowrap", background: vol ? K.goud : "transparent", color: vol ? K.tekst : K.zacht,
-      border: `1px solid ${vol ? K.goud : K.lijn}` }}>{tekst}</span>
+    <span style={{ fontSize: 9.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", borderRadius: 999, padding: "3px 8px",
+      whiteSpace: "nowrap", background: vol ? DEALS.kleur : "transparent", color: vol ? "#FFFFFF" : K.zacht,
+      border: `1px solid ${vol ? DEALS.kleur : K.lijn}` }}>{tekst}</span>
   )
 
   // Groepenlijst: kop per app met het eigen logo, rijen in dezelfde witte stijl.
@@ -364,47 +295,51 @@ export default function Home() {
 
   return (
     <div style={S.page}>
-      <div style={{ maxWidth: 360, margin: "0 auto", paddingTop: "max(18px, env(safe-area-inset-top))", paddingBottom: 28 }}>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 2 }}>
-          <LanguageToggle />
-        </div>
-
-        <div style={{ textAlign: "left", marginTop: -30, marginBottom: 18, paddingLeft: 6 }}>
-          <span style={{ display: "inline-block", marginBottom: 6 }}><RundoLogo size={68} opDonker={false} /></span>
-          <p style={{ color: K.zacht, fontSize: 17, fontWeight: 600, margin: 0 }}>{t.tagline}</p>
-        </div>
-
-        {modusKaart("table")}
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 12px" }}>
-          <span style={{ flex: 1, height: 1, background: K.lijn }} />
-          <span style={{ fontSize: 14, fontWeight: 700, color: K.zacht }}>{t.orWord}</span>
-          <span style={{ flex: 1, height: 1, background: K.lijn }} />
-        </div>
-
-        {modusKaart("party")}
-
-        {/* GROEPSDEALS — oogt als een coupon: gouden stippelrand, een afscheurstrook
-            met % rechts en twee uitsparingen op de scheurlijn. Kleiner, niet klikbaar
-            en zonder knop: het werkt nog niet. */}
-        <div aria-disabled="true" style={{ position: "relative", display: "flex", borderRadius: 18, marginTop: 4, marginBottom: 14,
-          background: "#FFFFFF", border: `1.5px dashed ${K.goud}` }}>
-          <div style={{ flex: 1, minWidth: 0, padding: "14px 14px 14px 16px" }}>
-            <RundoDealsLogo size={28} label={t.dealsLabel} kleur={K.goud} opDonker={false} />
-            <span style={{ display: "flex", gap: 5, marginTop: 8 }}>{chip(t.dealsNew, true)}{chip(t.dealsSoon, false)}</span>
-            <div style={{ marginTop: 9, fontSize: 13, fontWeight: 600, color: K.zacht, lineHeight: 1.3 }}>{t.dealsSub}</div>
+      <div style={{ maxWidth: 400, margin: "0 auto" }}>
+        {/* Eerste scherm: kop, beide modi en Groepsdeals vullen samen precies de
+            schermhoogte. Je groepen (als je die hebt) volgen daaronder. */}
+        <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column",
+          paddingTop: "max(16px, env(safe-area-inset-top))", paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 2px" }}>
+            <RundoLogo size={46} opDonker={false} />
+            <LanguageToggle />
           </div>
-          <div style={{ position: "relative", width: 84, flexShrink: 0, borderLeft: `1.5px dashed ${K.goud}`,
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, color: K.goud }}>
-            <span style={{ position: "absolute", left: -10, top: -10, width: 18, height: 18, borderRadius: "50%", background: K.achtergrond, borderBottom: `1.5px dashed ${K.goud}` }} />
-            <span style={{ position: "absolute", left: -10, bottom: -10, width: 18, height: 18, borderRadius: "50%", background: K.achtergrond, borderTop: `1.5px dashed ${K.goud}` }} />
-            <Icoon naam="groep" size={38} dikte={1.6} />
-            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: K.goudDiep }}>{t.dealsKorting}</span>
+          <p style={{ color: K.zacht, fontSize: 14.5, fontWeight: 600, margin: "4px 4px 14px" }}>{t.tagline}</p>
+
+          {modusKaart("table")}
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0" }}>
+            <span style={{ flex: 1, height: 1, background: K.lijn }} />
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: K.zacht }}>{t.orWord}</span>
+            <span style={{ flex: 1, height: 1, background: K.lijn }} />
           </div>
+
+          {modusKaart("party")}
+
+          {/* GROEPSDEALS — oogt als een coupon: groene stippelrand, een afscheurstrook
+              rechts met groepsicoon en "korting", twee uitsparingen op de scheurlijn.
+              Niet klikbaar en zonder knop: het werkt nog niet. */}
+          <div aria-disabled="true" style={{ position: "relative", display: "flex", flexShrink: 0, borderRadius: 16, marginTop: 12,
+            background: "#FFFFFF", border: `1.5px dashed ${DEALS.kleur}` }}>
+            <div style={{ flex: 1, minWidth: 0, padding: "11px 12px 11px 14px" }}>
+              <RundoDealsLogo size={24} label={t.dealsLabel} kleur={DEALS.kleur} opDonker={false} />
+              <span style={{ display: "flex", gap: 5, marginTop: 6 }}>{chip(t.dealsNew, true)}{chip(t.dealsSoon, false)}</span>
+              <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: K.zacht, lineHeight: 1.3 }}>{t.dealsSub}</div>
+            </div>
+            <div style={{ position: "relative", width: 78, flexShrink: 0, borderLeft: `1.5px dashed ${DEALS.kleur}`, borderRadius: "0 15px 15px 0",
+              background: DEALS.zacht, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, color: DEALS.kleur }}>
+              <span style={{ position: "absolute", left: -9, top: -9, width: 16, height: 16, borderRadius: "50%", background: K.achtergrond, borderBottom: `1.5px dashed ${DEALS.kleur}` }} />
+              <span style={{ position: "absolute", left: -9, bottom: -9, width: 16, height: 16, borderRadius: "50%", background: K.achtergrond, borderTop: `1.5px dashed ${DEALS.kleur}` }} />
+              <Icoon naam="groep" size={32} dikte={1.7} />
+              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: DEALS.diep }}>{t.dealsKorting}</span>
+            </div>
+          </div>
+
+          <div style={{ textAlign: "center", padding: "12px 0 4px", fontSize: 12, color: K.zacht, fontWeight: 600 }}>{t.footer}</div>
         </div>
 
         {(groepen.length > 0 || tafels.length > 0) && (
-          <div style={{ marginTop: 22 }}>
+          <div style={{ marginTop: 10, paddingBottom: 28 }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: K.zacht, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 9 }}>{t.yourGroups}</div>
             {melding && (
               <div style={{ fontSize: 12.5, fontWeight: 700, color: K.goudDiep, background: K.goudZacht, border: `1px solid ${K.goud}`, borderRadius: 10, padding: "8px 11px", marginBottom: 8 }}>{melding}</div>
@@ -443,7 +378,6 @@ export default function Home() {
           </div>
         )}
 
-        <div style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: K.zacht, fontWeight: 600 }}>{t.footer}</div>
       </div>
 
       <style>{`
@@ -457,17 +391,10 @@ export default function Home() {
   )
 }
 
-// Hoe de twee modi zich onderscheiden: "lint", "tint" of "tab" (zie modusKaart).
-const KAART_STIJL: "lint" | "tint" | "tab" = "tint"
-// Stijl van de stappenblokjes: "glas", "open" of "fotoBoven" (zie blokken).
-const BLOK_STIJL: "glas" | "open" | "fotoBoven" = "glas"
-// Witte gloed achter tekst die over de foto kan lopen (stijl "open").
-const GLOED = "0 0 3px #fff, 0 0 8px #fff, 0 0 14px rgba(255,255,255,0.9)"
-
-// Het hele palet van dit scherm. Meer kleuren zijn er niet.
+// Het basispalet van dit scherm (plus de tint per modus en het Groepsdeals-groen hieronder).
 const K = {
   achtergrond: "#F6F3EC", // warm gebroken wit
-  vlak: "#F4F1EA",        // stappenblokjes, kleine vlakken
+  vlak: "#F4F1EA",        // kleine vlakken (tellers, chips)
   lijn: "#E6E0D4",        // randen en scheidingslijnen
   tekst: "#0E1A2E",       // marineblauw van het logo
   zacht: "#5E6675",       // ondertitels en bijschriften
@@ -476,11 +403,14 @@ const K = {
   goudZacht: "#FFF4D6",
 }
 
-// Eén tint per modus: turquoise uit het Resto-logo, goud uit het Rundo-logo.
+// Eén tint per modus: turquoise-blauw bij het Resto-logo, goud uit het Rundo-logo.
 const MODUS = {
-  table: { knop: "#12796F", knopTekst: "#FFFFFF", kleur: "#3FBFB3", diep: "#12796F", zacht: "#E7F6F4", kaart: "#F3FBFA", kaartRgb: "243,251,250", schaduw: "rgba(18,121,111,0.35)" },
-  party: { knop: "#F5B301", knopTekst: "#0E1A2E", kleur: "#F5B301", diep: "#A87800", zacht: "#FFF4D6", kaart: "#FFFAEC", kaartRgb: "255,250,236", schaduw: "rgba(168,120,0,0.35)" },
+  table: { knop: "#138C9A", knopTekst: "#FFFFFF", kleur: "#3FBFB3", kaart: "#F3FBFA", kaartRgb: "243,251,250", schaduw: "rgba(19,140,154,0.35)" },
+  party: { knop: "#F5B301", knopTekst: "#0E1A2E", kleur: "#F5B301", kaart: "#FFFAEC", kaartRgb: "255,250,236", schaduw: "rgba(168,120,0,0.35)" },
 }
+
+// Groepsdeals krijgt een eigen groen, zodat het niet op de modi erboven lijkt.
+const DEALS = { kleur: "#2E9E6A", diep: "#1F7A50", zacht: "#E6F5EC" }
 
 const S: Record<string, React.CSSProperties> = {
   page: {
@@ -488,20 +418,20 @@ const S: Record<string, React.CSSProperties> = {
     background: K.achtergrond,
     minHeight: "100dvh",
     color: K.tekst,
-    padding: "4px 16px 18px",
+    padding: "0 16px",
     WebkitFontSmoothing: "antialiased",
     MozOsxFontSmoothing: "grayscale",
   },
   kaart: {
-    position: "relative", borderRadius: 22, marginBottom: 12, overflow: "hidden",
-    background: "#FFFFFF", border: `1px solid ${K.lijn}`, boxShadow: "0 10px 28px -18px rgba(14,26,46,0.22)",
+    position: "relative", flex: 1, minHeight: 190, display: "flex", flexDirection: "column",
+    borderRadius: 20, overflow: "hidden",
   },
   cardPhoto: {
-    position: "absolute", top: 0, right: 0, bottom: 0, width: "62%", objectFit: "cover",
+    position: "absolute", top: 0, right: 0, bottom: 0, width: "60%", height: "100%", objectFit: "cover",
     display: "block", zIndex: 0,
   },
   logoSub: {
-    fontSize: 16, fontWeight: 600, letterSpacing: -0.2, lineHeight: 1.25, color: K.zacht,
+    fontSize: 19, fontWeight: 700, letterSpacing: -0.2, lineHeight: 1.25, color: K.zacht,
     fontFamily: "'Nunito', 'Baloo 2', 'DM Sans', -apple-system, 'Segoe UI', sans-serif",
   },
   icoonVak: {
