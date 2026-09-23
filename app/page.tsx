@@ -245,11 +245,13 @@ export default function Home() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={resto ? "/table-image.png" : "/party-image.png"} alt="" style={S.cardPhoto} />
         <div style={{ position: "absolute", inset: 0, zIndex: 1,
-          background: `linear-gradient(90deg, rgb(${md.kaartRgb}) 0%, rgb(${md.kaartRgb}) 42%, rgba(${md.kaartRgb},0.85) 56%, rgba(${md.kaartRgb},0.35) 76%, rgba(${md.kaartRgb},0) 100%)` }} />
+          background: `linear-gradient(90deg, rgb(${md.kaartRgb}) 0%, rgb(${md.kaartRgb}) 28%, rgba(${md.kaartRgb},0.8) 42%, rgba(${md.kaartRgb},0.3) 64%, rgba(${md.kaartRgb},0) 88%)` }} />
         <div style={{ position: "relative", zIndex: 2, flex: 1, padding: "16px 16px 16px" }}>
-          <RundoLogo size={46} resto={resto} opDonker={false} />
-          {/* Ondertitel op twee regels: de actie vet, het vervolg lichter eronder. */}
-          <div style={{ ...S.logoSub, marginTop: 6 }}>
+          <span style={{ display: "inline-block", filter: `drop-shadow(0 0 8px rgb(${md.kaartRgb})) drop-shadow(0 0 3px rgb(${md.kaartRgb}))` }}><RundoLogo size={46} resto={resto} opDonker={false} /></span>
+          {/* Ondertitel op twee regels: de actie vet, het vervolg lichter eronder. Een
+              zachte gloed in de kaartkleur houdt logo en tekst leesbaar waar ze over de
+              foto lopen. */}
+          <div style={{ ...S.logoSub, marginTop: 6, textShadow: `0 0 10px rgb(${md.kaartRgb}), 0 0 18px rgb(${md.kaartRgb}), 0 0 4px rgb(${md.kaartRgb})` }}>
             <span style={{ display: "block", color: K.tekst, fontWeight: 800 }}>{regel1}</span>
             <span style={{ display: "block" }}>{regel2}</span>
           </div>
@@ -430,7 +432,7 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: 20, overflow: "hidden",
   },
   cardPhoto: {
-    position: "absolute", top: 0, right: 0, bottom: 0, width: "60%", height: "100%", objectFit: "cover",
+    position: "absolute", top: 0, right: 0, bottom: 0, width: "72%", height: "100%", objectFit: "cover",
     display: "block", zIndex: 0,
   },
   logoSub: {
