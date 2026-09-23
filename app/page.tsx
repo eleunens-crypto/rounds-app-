@@ -245,7 +245,7 @@ export default function Home() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={resto ? "/table-image.png" : "/party-image.png"} alt="" style={S.cardPhoto} />
         <div style={{ position: "absolute", inset: 0, zIndex: 1,
-          background: `linear-gradient(90deg, rgb(${md.kaartRgb}) 0%, rgb(${md.kaartRgb}) 28%, rgba(${md.kaartRgb},0.8) 42%, rgba(${md.kaartRgb},0.3) 64%, rgba(${md.kaartRgb},0) 88%)` }} />
+          background: `linear-gradient(90deg, rgba(${md.kaartRgb},0.9) 0%, rgba(${md.kaartRgb},0.88) 30%, rgba(${md.kaartRgb},0.72) 46%, rgba(${md.kaartRgb},0.3) 66%, rgba(${md.kaartRgb},0) 90%)` }} />
         <div style={{ position: "relative", zIndex: 2, flex: 1, padding: "16px 16px 16px" }}>
           <span style={{ display: "inline-block", filter: `drop-shadow(0 0 8px rgb(${md.kaartRgb})) drop-shadow(0 0 3px rgb(${md.kaartRgb}))` }}><RundoLogo size={46} resto={resto} opDonker={false} /></span>
           {/* Ondertitel op twee regels: de actie vet, het vervolg lichter eronder. Een
@@ -432,7 +432,7 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: 20, overflow: "hidden",
   },
   cardPhoto: {
-    position: "absolute", top: 0, right: 0, bottom: 0, width: "72%", height: "100%", objectFit: "cover",
+    position: "absolute", top: 0, right: 0, bottom: 0, width: "100%", height: "100%", objectFit: "cover",
     display: "block", zIndex: 0,
   },
   logoSub: {
