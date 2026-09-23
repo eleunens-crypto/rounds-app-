@@ -1085,17 +1085,25 @@ const STRINGS = {
     whatNowHead: "Nog iets samen met de groep?",
     ideaBtnTitle: "Iemand een idee?",
     ideaBtnSub: "Wij wel!",
-    ideaListTitle: "Leuke groepsideetjes",
-    ideaListSub: "Voor de volgende keer met deze ploeg.",
-    ideaList: [
-      "\ud83c\udfb3 Bowlen \u2014 de verliezer trakteert de volgende keer",
-      "\ud83d\udd10 Escape room \u2014 kijken wie er echt kan samenwerken",
-      "\ud83c\udf73 Kook samen \u2014 ieder brengt \u00e9\u00e9n gang mee",
-      "\ud83c\udfaf Darts of pool \u2014 en een tornooitje ernaast",
-      "\ud83e\udd7e Wandeling met een caf\u00e9 halverwege",
-      "\ud83c\udfad Quiz of pubquiz \u2014 met dezelfde tafelnamen",
-    ],
     // Kop van de tekst die je deelt, plus de regel per persoon en de sluitregel.
+    ideaListTitle: "Leuke groepsideetjes",
+    ideaListFor: (naam: string, n: number) => `Voor ${naam} \u00b7 ${n} ${n === 1 ? "persoon" : "personen"}`,
+    dealsNearTitle: "Groepsdeals in de buurt",
+    soonWord: "binnenkort",
+    buildingTitle: "Deze pagina is in opbouw",
+    buildingBody: "Binnenkort vind je hier groepsdeals en leuke groepsuitjes bij jou in de buurt.",
+    // Zes vaste ideeën met een knipoog. De titel zegt wat het is, de zin eronder waarom
+    // je het mét een groep doet — dat laatste is wat iemand overhaalt.
+    ideaItems: [
+      { titel: "Bowlen met de groep", zin: "Als eerste een strike gooien? Of eerst strike liggen met de groep?" },
+      { titel: "Karting met de groep", zin: "Vriendschappelijke groepsrace\u2026 tot de start! Vol onverwachte bochten." },
+      { titel: "Escaperoom", zin: "Een uur opgesloten met je vrienden. Daarna weet je het zeker!" },
+      { titel: "Leuke groepsquiz", zin: "Altijd wist iemand het wel, alleen te laat." },
+      { titel: "Padel", zin: "Een kooi vol gezelligheid, waarbij het glas je beste vriend \u00e9n je grootste vijand is." },
+      { titel: "Pool", zin: "Speel zo snel mogelijk de tafel leeg. Je hebt geen keus!" },
+    ],
+    toRundoTitle: "Groepsdeals op Rundo",
+    toRundoSub: "Bekijk hier later onze activiteiten en groepsdeals",
     settleGuestTitle: "De rekening is verrekend",
     settleGuestBody: "De beheerder heeft alles afgerond. Je bedrag hieronder blijft staan zoals het is.",
     settleSavedToast: "Afgesloten en bewaard",
@@ -1799,16 +1807,22 @@ const STRINGS = {
     whatNowHead: "Encore un truc avec le groupe ?",
     ideaBtnTitle: "Une idée, quelqu'un ?",
     ideaBtnSub: "Nous oui !",
-    ideaListTitle: "Des idées à faire en groupe",
-    ideaListSub: "Pour la prochaine fois avec cette équipe.",
-    ideaList: [
-      "🎳 Bowling — le perdant paie la prochaine fois",
-      "🔐 Escape game — on verra qui coopère vraiment",
-      "🍳 Cuisinez ensemble — chacun amène un plat",
-      "🎯 Fléchettes ou billard — avec un petit tournoi",
-      "🥾 Balade avec un café à mi-chemin",
-      "🎭 Quiz — avec les mêmes équipes qu'à table",
+    ideaListTitle: "Des id\u00e9es \u00e0 faire en groupe",
+    ideaListFor: (naam: string, n: number) => `Pour ${naam} \u00b7 ${n} ${n === 1 ? "personne" : "personnes"}`,
+    dealsNearTitle: "Bons plans pour groupes dans le coin",
+    soonWord: "bient\u00f4t",
+    buildingTitle: "Cette page est en construction",
+    buildingBody: "Bient\u00f4t, tu trouveras ici des bons plans et des sorties en groupe pr\u00e8s de chez toi.",
+    ideaItems: [
+      { titel: "Bowling en groupe", zin: "Premier \u00e0 faire un strike\u2026 ou premier \u00e0 tomber dans la rigole\u00a0?" },
+      { titel: "Karting en groupe", zin: "Course entre amis\u2026 jusqu\u2019au d\u00e9part\u00a0! Pleine de virages inattendus." },
+      { titel: "Escape game", zin: "Une heure enferm\u00e9s entre amis. Apr\u00e8s \u00e7a, tu sais tout." },
+      { titel: "Quiz en groupe", zin: "Quelqu\u2019un savait la r\u00e9ponse. Juste un peu trop tard." },
+      { titel: "Padel", zin: "Une cage pleine d\u2019ambiance, o\u00f9 la vitre est ton meilleur ami et ton pire ennemi." },
+      { titel: "Billard", zin: "Vider la table le plus vite possible. Tu n\u2019as pas le choix\u00a0!" },
     ],
+    toRundoTitle: "Bons plans groupes sur Rundo",
+    toRundoSub: "Retrouve ici plus tard nos activit\u00e9s et bons plans",
     settleGuestTitle: "L\u2019addition est réglée",
     settleGuestBody: "L\u2019hôte a tout clôturé. Ton montant ci-dessous reste tel quel.",
     settleSavedToast: "Clôturée et gardée",
@@ -6874,18 +6888,72 @@ export default function RundoTable() {
           groepje later terug. De verwijzing naar Rundo staat hier en niet meer in het
           afsluitvenster — daar was je nog met de verdeling bezig. */}
       {/* ─── Venster: ideeën om met de groep te doen ─── */}
+      {/* De ideeënpagina. Ze is nog leeg van inhoud — er staan geen links achter — dus
+          zegt ze dat zelf, groot en bovenaan, in plaats van te doen alsof. De groepsdeals
+          hebben hun kader al: iedereen ziet wat er komt, niemand kan erop tikken en
+          teleurgesteld zijn. Sluiten doe je met het kruisje; onderaan staat de weg naar
+          het keuzescherm van Rundo, waar die deals later ook landen. */}
       {ideeLijst && (
         <div style={{ ...S.overlay, zIndex: 3500 }}>
-          <div style={{ ...S.modal, width: "min(360px, 92vw)", maxHeight: "86vh", overflowY: "auto" }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#123a42", marginBottom: 3 }}>{L.ideaListTitle}</div>
-            <div style={{ fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.4, marginBottom: 13 }}>{L.ideaListSub}</div>
-            {L.ideaList.map((idee, i) => (
-              <div key={i} style={{ fontSize: 16, color: "#2b4f56", lineHeight: 1.45, padding: "10px 12px", borderRadius: 11, background: i % 2 === 0 ? "rgba(20,153,176,0.06)" : "transparent", marginBottom: 4 }}>{idee}</div>
-            ))}
-            <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
-              <button onClick={() => setIdeeLijst(false)}
-                style={{ ...S.btn, ...S.btnPrimary, minWidth: "55%", padding: "12px 26px", fontSize: 16.5, fontWeight: 800 }}>{L.close}</button>
+          <div style={{ ...S.modal, width: "min(380px, 92vw)", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 13 }}>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 21, fontWeight: 800, color: "#123a42" }}>{L.ideaListTitle}</span>
+                {group && <span style={{ display: "block", fontSize: 15, color: "#8aa3a6", lineHeight: 1.4, marginTop: 2 }}>{L.ideaListFor(group.name || L.groupWord, totalPersons)}</span>}
+              </span>
+              <button onClick={() => setIdeeLijst(false)} aria-label={L.closeWord}
+                style={{ flexShrink: 0, cursor: "pointer", border: "none", fontFamily: "inherit", background: "rgba(18,58,66,0.06)", color: "#4a6e73", borderRadius: "50%", width: 34, height: 34, fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✕</button>
             </div>
+
+            {/* Gestreepte rand en twee vage regels: dit is een plek, nog geen inhoud. */}
+            <div style={{ position: "relative", border: "1.5px dashed rgba(18,58,66,0.22)", borderRadius: 16, padding: "14px 13px", marginBottom: 14, background: "rgba(18,58,66,0.025)" }}>
+              <span style={{ position: "absolute", top: 13, right: 12, fontSize: 11.5, fontWeight: 800, color: "#8a6a1a", background: "rgba(240,193,75,0.28)", borderRadius: 7, padding: "3px 8px" }}>{L.soonWord}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 11 }}>
+                <span style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 9, background: "rgba(18,58,66,0.07)", color: "#4a6e73", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21.2s7-5.6 7-11.2a7 7 0 1 0-14 0c0 5.6 7 11.2 7 11.2Z" /><circle cx="12" cy="10" r="2.6" /></svg>
+                </span>
+                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#2b4f56" }}>{L.dealsNearTitle}</span>
+              </div>
+              {[0.5, 0.32].map((o, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: i === 0 ? 9 : 0, opacity: o }}>
+                  <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 12, background: "rgba(18,58,66,0.09)" }} />
+                  <span style={{ flex: 1 }}>
+                    <span style={{ display: "block", height: 11, width: i === 0 ? "64%" : "50%", borderRadius: 5, background: "rgba(18,58,66,0.13)", marginBottom: 7 }} />
+                    <span style={{ display: "block", height: 9, width: i === 0 ? "42%" : "34%", borderRadius: 5, background: "rgba(18,58,66,0.08)" }} />
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: "rgba(240,193,75,0.14)", border: "2px solid rgba(240,193,75,0.6)", borderRadius: 16, padding: "15px 15px", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <span style={{ flexShrink: 0, fontSize: 22 }}>🚧</span>
+                <span style={{ fontSize: 19, fontWeight: 800, color: "#7a5a15", lineHeight: 1.25 }}>{L.buildingTitle}</span>
+              </div>
+              <div style={{ fontSize: 16, color: "#7a5a15", lineHeight: 1.5 }}>{L.buildingBody}</div>
+            </div>
+
+            {L.ideaItems.map((idee, i) => (
+              <div key={i} style={{ position: "relative", display: "flex", gap: 12, alignItems: "flex-start", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 15, padding: "14px 13px", marginBottom: 9, background: "#fff" }}>
+                <span style={{ position: "absolute", top: 12, right: 12, fontSize: 11.5, fontWeight: 800, color: "#8a6a1a", background: "rgba(240,193,75,0.28)", borderRadius: 7, padding: "3px 8px" }}>{L.soonWord}</span>
+                <span style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 13, background: "rgba(20,153,176,0.1)", color: "#0f7488", display: "flex", alignItems: "center", justifyContent: "center" }}>{ACTIVITEIT_ICONEN[i]}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#123a42", lineHeight: 1.25, paddingRight: 74 }}>{idee.titel}</span>
+                  <span style={{ display: "block", fontSize: 14.5, color: "#7d949a", lineHeight: 1.45, marginTop: 3 }}>{idee.zin}</span>
+                </span>
+              </div>
+            ))}
+
+            {/* De weg naar het keuzescherm van Rundo — daar komen de groepsdeals later ook. */}
+            <a href={KIEZER_URL} style={{ display: "flex", alignItems: "center", gap: 11, textDecoration: "none", marginTop: 15,
+              border: "1.5px solid rgba(240,193,75,0.75)", background: "rgba(240,193,75,0.09)", borderRadius: 13, padding: "12px 13px" }}>
+              <RundoTegel size={38} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 15.5, fontWeight: 800, color: "#123a42" }}>{L.toRundoTitle}</span>
+                <span style={{ display: "block", fontSize: 13, color: "#8aa3a6", lineHeight: 1.35, marginTop: 1 }}>{L.toRundoSub}</span>
+              </span>
+              <span style={{ flexShrink: 0, fontSize: 16, color: "#b3892a" }}>→</span>
+            </a>
           </div>
         </div>
       )}
@@ -9372,6 +9440,23 @@ const IDEE_TEKENINGEN = [
   // twee glazen
   <IdeeLijn><path d="M3.4 5.6h6.2l-1 6a2.2 2.2 0 0 1-4.2 0Z" /><path d="M6.5 13.8v5.4" /><path d="M4.4 19.2h4.2" /><path d="M14.4 5.6h6.2l-1 6a2.2 2.2 0 0 1-4.2 0Z" /><path d="M17.5 13.8v5.4" /><path d="M15.4 19.2h4.2" /></IdeeLijn>,
 ]
+// Zes getekende icoontjes, één per activiteit. Emoji zien er op elk toestel anders uit
+// en vallen uit de toon van de rest van de app; deze volgen dezelfde lijnstijl.
+const ACTIVITEIT_ICONEN = [
+  // kegel
+  <svg key="a" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.6c1.8 0 3 1.7 3 3.6 0 2.1-1.1 3.4-1.1 5.5 0 2.8 1.7 4 1.7 7.6 0 2.1-1.6 3.2-3.6 3.2s-3.6-1.1-3.6-3.2c0-3.6 1.7-4.8 1.7-7.6 0-2.1-1.1-3.4-1.1-5.5 0-1.9 1.2-3.6 3-3.6Z" /><path d="M9.8 9h4.4" /></svg>,
+  // stuur
+  <svg key="b" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.6" /><circle cx="12" cy="12" r="3.1" /><path d="M4.4 9.4 9.2 11" /><path d="M19.6 9.4 14.8 11" /><path d="M12 20.6v-5.5" /></svg>,
+  // slot
+  <svg key="c" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="4.4" y="10.4" width="15.2" height="10.4" rx="2.4" /><path d="M8.2 10.4V7.4a3.8 3.8 0 0 1 7.6 0v3" /><circle cx="12" cy="15.6" r="1.15" /></svg>,
+  // vraagteken in een kader
+  <svg key="d" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3.4" y="3.4" width="17.2" height="17.2" rx="4" /><path d="M9.3 9.2a2.8 2.8 0 1 1 3.6 2.7c-.7.2-1.1.9-1.1 1.6v.6" /><circle cx="11.8" cy="17.6" r="1" /></svg>,
+  // racket
+  <svg key="e" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="8.8" rx="6.2" ry="6.6" /><path d="M12 15.4v5.4" /><path d="M9.6 20.8h4.8" /><path d="M9.6 7.2h4.8M12 5.4v6.8" /></svg>,
+  // keu met bal
+  <svg key="f" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.4 3.6 9.8 14.2" /><path d="m7.4 16.6-3.8 3.8" /><circle cx="8.6" cy="15.4" r="1.7" /><circle cx="16.8" cy="17.4" r="3.2" /></svg>,
+]
+
 function IdeeIcoon({ kleur = "#0f7488" }: { kleur?: string }) {
   const [i, setI] = useState(0)
   useEffect(() => {
