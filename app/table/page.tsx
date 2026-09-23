@@ -646,10 +646,14 @@ const STRINGS = {
     noSearchHit: "Geen rekening gevonden.",
     wipeAll: "Alles wissen",
     wipeAllTitle: "Alles wissen?",
-    wipeAllBody: (weg: number, blijft: number) => blijft > 0
-      ? `Je verwijdert ${weg} ${weg === 1 ? "rekening" : "rekeningen"} definitief, met alle items en bedragen erin. Je ${blijft} bewaarde ${blijft === 1 ? "rekening blijft" : "rekeningen blijven"} staan.`
-      : `Je verwijdert ${weg} ${weg === 1 ? "rekening" : "rekeningen"} definitief, met alle items en bedragen erin.`,
     wipeAllYes: (n: number) => `Ja, wis ${n === 1 ? "die ene" : `die ${n}`}`,
+    confirmForgetGroup: "Deze rekening uit je lijst halen? Ze is van iemand anders, dus ze blijft bij hem staan — jij ziet ze alleen niet meer.",
+    forgetYes: "Uit mijn lijst halen",
+    wipeAllBody2: (eigen: number, andere: number) => {
+      const a = eigen > 0 ? `Je verwijdert ${eigen} eigen ${eigen === 1 ? "rekening" : "rekeningen"} definitief, met alle items en bedragen erin.` : ""
+      const b = andere > 0 ? `${andere} ${andere === 1 ? "rekening van iemand anders verdwijnt" : "rekeningen van iemand anders verdwijnen"} uit je lijst, maar ${andere === 1 ? "blijft" : "blijven"} bij die persoon staan.` : ""
+      return [a, b].filter(Boolean).join(" ")
+    },
     wipeSomeFailed: (n: number) => `${n} ${n === 1 ? "rekening kon" : "rekeningen konden"} niet verwijderd worden. Probeer het opnieuw.`,
     tabBon: "Bon",
     tabGuests: "Gasten & QR",
@@ -1364,10 +1368,14 @@ const STRINGS = {
     noSearchHit: "Aucune addition trouvée.",
     wipeAll: "Tout effacer",
     wipeAllTitle: "Tout effacer ?",
-    wipeAllBody: (weg: number, blijft: number) => blijft > 0
-      ? `Tu supprimes définitivement ${weg} addition${weg === 1 ? "" : "s"}, avec tous les articles et montants. Tes ${blijft} addition${blijft === 1 ? "" : "s"} enregistrée${blijft === 1 ? "" : "s"} reste${blijft === 1 ? "" : "nt"}.`
-      : `Tu supprimes définitivement ${weg} addition${weg === 1 ? "" : "s"}, avec tous les articles et montants.`,
     wipeAllYes: (n: number) => `Oui, efface ${n === 1 ? "celle-là" : `ces ${n}`}`,
+    confirmForgetGroup: "Retirer cette addition de ta liste\u00a0? Elle est \u00e0 quelqu\u2019un d\u2019autre, donc elle reste chez lui — toi, tu ne la vois plus.",
+    forgetYes: "Retirer de ma liste",
+    wipeAllBody2: (eigen: number, andere: number) => {
+      const a = eigen > 0 ? `Tu supprimes d\u00e9finitivement ${eigen} ${eigen === 1 ? "addition" : "additions"} \u00e0 toi, avec tous les articles et montants.` : ""
+      const b = andere > 0 ? `${andere} ${andere === 1 ? "addition de quelqu\u2019un d\u2019autre dispara\u00eet" : "additions de quelqu\u2019un d\u2019autre disparaissent"} de ta liste, mais ${andere === 1 ? "reste" : "restent"} chez cette personne.` : ""
+      return [a, b].filter(Boolean).join(" ")
+    },
     wipeSomeFailed: (n: number) => `${n} addition${n === 1 ? "" : "s"} n’${n === 1 ? "a" : "ont"} pas pu être supprimée${n === 1 ? "" : "s"}. Réessaie.`,
     tabBon: "Addition",
     tabGuests: "Invités & QR",
@@ -2033,6 +2041,23 @@ const PARTY_URL = "/party"
 // "Probeer het eens" gaat naar de kiespagina en niet rechtstreeks naar /party: daar zie
 // je Rundo Resto en Rundo naast elkaar staan, en kies je zelf waar je naartoe wil.
 const KIEZER_URL = "/"
+// Het merk als vierkant tegeltje: dezelfde boog, pijl en R als hierboven, maar op het
+// donkere vlak van het logo zelf. Het woordmerk moest in de goudrij in 24 pixels hoogte
+// passen — dan lopen de letters dicht en verdwijnt de boog bijna, en donkerblauw op
+// lichtgoud geeft weinig contrast. Eén letter op een donker vlak houdt klein wél stand.
+function RundoTegel({ size = 38 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="8 9 89 89" role="img" aria-label="Rundo" style={{ display: "block", flexShrink: 0 }}>
+      <rect x="8" y="9" width="89" height="89" rx="21" fill={DONKER} />
+      <g transform="translate(52.75 53.87)">
+        <path d={BOOG} fill="none" stroke={GOUD} strokeWidth="5.5" strokeLinecap="round" />
+        <polygon points={PIJL} fill={GOUD} />
+      </g>
+      <path d={LETTER_R} fill="#FFFFFF" />
+    </svg>
+  )
+}
+
 function RundoLogo({
   size = 40,
   opDonker = true,
@@ -2603,8 +2628,12 @@ export default function RundoTable() {
   const wisAlleGroepen = async (lijst: SavedGroup[]) => {
     let mislukt = 0
     for (const g of lijst) {
-      const { error } = await wisGroepVolledig(g.id)
-      if (error) { mislukt++; continue }
+      // Enkel je eigen tafels gaan echt weg; die van een ander verdwijnen uit je lijst.
+      // Vroeger stonden de gast-rijen na "alles wissen" gewoon nog in beeld.
+      if (g.role === "admin") {
+        const { error } = await wisGroepVolledig(g.id)
+        if (error) { mislukt++; continue }
+      }
       if (getLastGroup() === g.id) rememberLastGroup(null)
       removeMyGroup(g.id)
     }
@@ -2613,10 +2642,18 @@ export default function RundoTable() {
   }
 
   const forgetSavedGroup = (id: string) => {
-    askConfirm(L.confirmDeleteGroup, L.deleteTitle, async () => {
-      // De bonfoto's gaan mee: die bleven vroeger achter in de opslag, onvindbaar en voorgoed.
-      const { error } = await wisGroepVolledig(id)
-      if (error) { setStartError(L.errDeleteFailed + error.message); return }
+    // Een rekening van iemand anders (jij was daar gast) kan je niet van de server
+    // wissen — dat is zijn tafel, en de databank weigert het terecht. Vroeger liep dat
+    // op een foutmelding uit en bleef de rij gewoon staan. Zo'n rij haal je uit je eigen
+    // lijst, meer niet, en de tekst zegt dat nu ook.
+    const mijn = myGroups.find((g) => g.id === id)
+    const eigen = mijn?.role === "admin"
+    askConfirm(eigen ? L.confirmDeleteGroup : L.confirmForgetGroup, eigen ? L.deleteTitle : L.forgetYes, async () => {
+      if (eigen) {
+        // De bonfoto's gaan mee: die bleven vroeger achter in de opslag, onvindbaar en voorgoed.
+        const { error } = await wisGroepVolledig(id)
+        if (error) { setStartError(L.errDeleteFailed + error.message); return }
+      }
       if (getLastGroup() === id) rememberLastGroup(null)
       removeMyGroup(id); void laadMijnGroepen()
     }, { danger: true })
@@ -4319,9 +4356,7 @@ export default function RundoTable() {
         <button onClick={() => setPartyInfo(true)}
           style={{ width: "100%", boxSizing: "border-box", marginTop: 8, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
             border: "1.5px solid rgba(240,193,75,0.75)", background: "rgba(240,193,75,0.09)", borderRadius: 13, padding: "12px 13px" }}>
-          <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(240,179,1,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <RundoLogo size={24} />
-          </span>
+          <RundoTegel size={38} />
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: "#123a42" }}>{L.cafeAfterQ}</span>
             <span style={{ display: "block", fontSize: 13, color: "#8aa3a6", lineHeight: 1.35, marginTop: 1 }}>{L.seeWhatItDoes}</span>
@@ -4386,6 +4421,41 @@ export default function RundoTable() {
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER: start
   // ═══════════════════════════════════════════════════════════════════════════
+  // Deze twee vensters — de melding en de ja/nee-vraag — stonden alleen in het
+  // hoofdscherm. Maar de opgeslagen groepen staan op het startscherm, en dat scherm keert
+  // eerder terug: `askConfirm` zette de vraag dus wel klaar, maar er was niets om ze te
+  // tonen. Het wissen van een groep leek niets te doen, en de vraag dook pas op zodra je
+  // later een groep opende. Nu staan ze in één functie die élk scherm toont.
+  const renderVensters = () => (
+    <>
+      {/* De toast hing aan hetzelfde hoofdscherm: een mislukte verwijdering op het
+          startscherm meldde zich dus nergens. */}
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+        {centerNote && (
+          <div style={{ ...S.overlay, zIndex: 3200 }}>
+            <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
+              {centerNote.title && <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 20, fontWeight: 800, color: "#123a42" }}>{centerNote.title}</h3>}
+              <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{centerNote.body}</p>
+              {centerNote.actionLabel && centerNote.onAction && (
+                <button onClick={() => { const fn = centerNote.onAction!; setCenterNote(null); fn() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontWeight: 800, fontSize: 18, marginBottom: 8 }}>{centerNote.actionLabel}</button>
+              )}
+              <button onClick={() => setCenterNote(null)} style={centerNote.actionLabel ? { width: "100%", padding: "10px 0", background: "none", border: "none", fontSize: 15.5, fontWeight: 700, color: "#8aa3a6", cursor: "pointer" } : { ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18 }}>{centerNote.dismissLabel ?? (centerNote.actionLabel ? L.addAnother : "OK")}</button>
+            </div>
+          </div>
+        )}
+        {confirmDlg && (
+          <div style={{ ...S.overlay, zIndex: 3200 }}>
+            <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
+              {confirmDlg.title && <h3 style={{ marginTop: 0, marginBottom: 9, fontSize: 20, fontWeight: 800, color: confirmDlg.danger ? "#c0392b" : "#123a42" }}>{confirmDlg.title}</h3>}
+              <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body}</p>
+              <button onClick={() => { const fn = confirmDlg.onYes; setConfirmDlg(null); fn() }} style={{ ...S.btn, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18, border: "none", color: "#fff", background: confirmDlg.danger ? "linear-gradient(135deg,#e74c3c,#c0392b)" : "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{confirmDlg.yes}</button>
+              <button onClick={() => setConfirmDlg(null)} style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 17.5, fontWeight: 700, color: "#4a6e73", background: "transparent", border: "none" }}>{L.cancel}</button>
+            </div>
+          </div>
+        )}
+    </>
+  )
+
   if (!group && !herkomstGelezen && !viaLink) {
     return <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)" }} />
   }
@@ -4393,6 +4463,7 @@ export default function RundoTable() {
   if (!group && welkom && !viaLink) {
     return (
       <div style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#131826 0%,#0f1420 100%)", padding: "0 0 18px", boxSizing: "border-box" }}>
+        {renderVensters()}
         <style>{`@keyframes rundoStartWenk{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
           @keyframes rundoStartPijl{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
           @keyframes rundoStartWoord{0%{text-shadow:0 0 0 rgba(255,255,255,0)}7%{text-shadow:0 0 14px rgba(255,255,255,0.9),0 0 26px rgba(255,240,190,0.7)}24%{text-shadow:0 0 0 rgba(255,255,255,0)}100%{text-shadow:0 0 0 rgba(255,255,255,0)}}
@@ -4454,6 +4525,7 @@ export default function RundoTable() {
   if (!group) {
     return (
       <div style={S.page}>
+        {renderVensters()}
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
           {/* De weg terug naar het keuzescherm hoort niet als eerste regel te schreeuwen:
               hij staat voortaan bescheiden onder de opgeslagen groepen. */}
@@ -4501,7 +4573,11 @@ export default function RundoTable() {
                 // geen keuze meer — alles blijft even lang staan, dus een tweedeling zou
                 // een verschil suggereren dat er niet is.
                 const zichtbaar = myGroups.filter(past)
-                const wisbaar = myGroups.filter((g) => g.role === "admin")
+                // "Alles wissen" slaat op de hele lijst: je eigen rekeningen verdwijnen
+                // echt, die van een ander verdwijnen uit je lijst. Anders staat er na het
+                // wissen nog van alles in beeld en lijkt de knop niets te doen.
+                const wisbaar = myGroups
+                const eigenAantal = myGroups.filter((g) => g.role === "admin").length
                 const dagenOver = (g: SavedGroup) => {
                   const anker = (g.finalized && g.finalized_at) || g.created_at || g.savedAt
                   const grens = g.finalized ? BEWAAR_AFGESLOTEN : BEWAAR_OPEN
@@ -4538,7 +4614,7 @@ export default function RundoTable() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, borderTop: "1px solid rgba(18,58,66,0.08)", marginTop: 12, paddingTop: 11 }}>
                     <span style={{ fontSize: 14, color: "#8aa3a6", lineHeight: 1.45, minWidth: 0 }}>{L.retentionNote}</span>
                     {wisbaar.length > 0 && (
-                      <button onClick={() => askConfirm(L.wipeAllBody(wisbaar.length, 0), L.wipeAllYes(wisbaar.length), () => { void wisAlleGroepen(wisbaar) }, { title: L.wipeAllTitle, danger: true })}
+                      <button onClick={() => askConfirm(L.wipeAllBody2(eigenAantal, wisbaar.length - eigenAantal), L.wipeAllYes(wisbaar.length), () => { void wisAlleGroepen(wisbaar) }, { title: L.wipeAllTitle, danger: true })}
                         style={{ flexShrink: 0, border: "1px solid rgba(224,107,94,0.4)", color: "#c0392b", background: "#fff", borderRadius: 10, padding: "7px 11px", fontSize: 13.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap" }}>{L.wipeAll}</button>
                     )}
                   </div>
@@ -4580,6 +4656,7 @@ export default function RundoTable() {
   if (plaatsToegekend != null && group) {
     return (
       <div style={S.page}>
+        {renderVensters()}
         <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={totalPersons} />
         <div style={{ maxWidth: 440, margin: "0 auto" }}>
           <div style={{ ...S.card, textAlign: "center" }}>
@@ -4601,6 +4678,7 @@ export default function RundoTable() {
   if (mijnOpenVraag && group) {
     return (
       <div style={S.page}>
+        {renderVensters()}
         <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={totalPersons} />
         <div style={{ maxWidth: 440, margin: "0 auto" }}>
           <div style={{ ...S.card, textAlign: "center" }}>
@@ -4644,6 +4722,7 @@ export default function RundoTable() {
   if (needIdentity && !isAdmin) {
     return (
       <div style={S.page}>
+        {renderVensters()}
         <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
         <div style={{ maxWidth: 440, margin: "0 auto" }}>
           {claimSpot === null && (() => {
@@ -4948,7 +5027,6 @@ export default function RundoTable() {
         </div>
       )}
 
-      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {error && (
         <div style={S.errorBanner}>⚠️ {error}
           <button onClick={() => setError(null)} style={{ marginLeft: 12, background: "none", border: "none", cursor: "pointer", color: "#c0392b", fontWeight: 700 }}>✕</button>
@@ -6190,7 +6268,10 @@ export default function RundoTable() {
               onbereikbaar was. Dat overzicht staat nu gewoon op de pagina, en de melding
               plus het heropenen zitten in de balk bovenaan die meeloopt. Alles wat hier
               stond, staat dus al ergens — en dubbel is verwarrend. */}
-          <div style={{ textAlign: "center", marginTop: 10 }}>
+          {/* Deze knop stond met tien pixels onder de kaart erboven en nul onder zich: hij
+              plakte dus tegen "Nog iets samen met de groep?" aan. Even veel lucht aan
+              beide kanten — dan hoort hij zichtbaar bij geen van de twee. */}
+          <div style={{ textAlign: "center", margin: "18px 0" }}>
             <button onClick={() => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }) }} style={{ ...S.btn, fontSize: 16, fontWeight: 700, padding: "8px 16px" }}>{L.backToTop}</button>
           </div>
         </div>
@@ -6585,18 +6666,6 @@ export default function RundoTable() {
       })()}
 
       {/* Centrale in-app melding (vervangt browser-alerts, toont gast-opmerkingen). */}
-      {centerNote && (
-        <div style={{ ...S.overlay, zIndex: 3200 }}>
-          <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-            {centerNote.title && <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 20, fontWeight: 800, color: "#123a42" }}>{centerNote.title}</h3>}
-            <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{centerNote.body}</p>
-            {centerNote.actionLabel && centerNote.onAction && (
-              <button onClick={() => { const fn = centerNote.onAction!; setCenterNote(null); fn() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "14px 0", fontWeight: 800, fontSize: 18, marginBottom: 8 }}>{centerNote.actionLabel}</button>
-            )}
-            <button onClick={() => setCenterNote(null)} style={centerNote.actionLabel ? { width: "100%", padding: "10px 0", background: "none", border: "none", fontSize: 15.5, fontWeight: 700, color: "#8aa3a6", cursor: "pointer" } : { ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18 }}>{centerNote.dismissLabel ?? (centerNote.actionLabel ? L.addAnother : "OK")}</button>
-          </div>
-        </div>
-      )}
 
       {/* Popup om zelf iemand toe te voegen voor wie jij aanduidt — koppel, gezin of
           alleenstaande. Kan je meerdere keren gebruiken (elk voegt een aparte plaats toe). */}
@@ -6798,16 +6867,7 @@ export default function RundoTable() {
       })()}
 
       {/* In-app ja/nee-bevestiging. */}
-      {confirmDlg && (
-        <div style={{ ...S.overlay, zIndex: 3200 }}>
-          <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-            {confirmDlg.title && <h3 style={{ marginTop: 0, marginBottom: 9, fontSize: 20, fontWeight: 800, color: confirmDlg.danger ? "#c0392b" : "#123a42" }}>{confirmDlg.title}</h3>}
-            <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body}</p>
-            <button onClick={() => { const fn = confirmDlg.onYes; setConfirmDlg(null); fn() }} style={{ ...S.btn, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18, border: "none", color: "#fff", background: confirmDlg.danger ? "linear-gradient(135deg,#e74c3c,#c0392b)" : "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{confirmDlg.yes}</button>
-            <button onClick={() => setConfirmDlg(null)} style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 17.5, fontWeight: 700, color: "#4a6e73", background: "transparent", border: "none" }}>{L.cancel}</button>
-          </div>
-        </div>
-      )}
+      {renderVensters()}
 
       {/* ─── Pop-up: rekening afgesloten (voor de beheerder), met overzicht per persoon ─── */}
       {/* De gast hoort het ook: de avond is rond, dit is het bedrag, en zo vind je het
