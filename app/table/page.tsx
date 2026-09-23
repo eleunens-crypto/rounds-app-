@@ -4549,18 +4549,21 @@ export default function RundoTable() {
         <div style={{ maxWidth: 420, margin: "40px auto" }}>
           {/* De weg terug naar het keuzescherm hoort niet als eerste regel te schreeuwen:
               hij staat voortaan bescheiden onder de opgeslagen groepen. */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 14 }}>
-            <div style={{ transform: "scale(1.25)", transformOrigin: "right center" }}><LanguageToggle compact /></div>
-          </div>
           {/* Het logo is gemaakt voor een donkere ondergrond: "Rundo" is daar wit en het
               turkoois van "Resto" licht ertegen op. Op de lichte pagina werd "Rundo"
               inktblauw en stonden er twee donkere kleuren naast elkaar te concurreren.
               Vandaar dit blok — even breed als de kaart eronder, zodat alles op de pagina
-              op dezelfde twee randen uitlijnt, en het logo gecentreerd want dit vlak is er
-              alleen voor het merk. */}
-          <div style={{ background: "#123a42", borderRadius: 20, padding: "17px 18px", marginBottom: 9,
-            boxShadow: "0 6px 18px -8px rgba(18,58,66,0.5)", display: "flex", justifyContent: "center", alignItems: "center" }}>
-            <RundoLogo size={58} resto />
+              op dezelfde twee randen uitlijnt.
+
+              De taalknop zweefde er los bóven, op het lichte vlak, met een lege regel
+              tussen. Nu staat ze in de balk zelf, rechts naast het merk — dezelfde plek
+              als in Rundo. Links houden we evenveel ruimte vrij, zodat het logo optisch
+              in het midden blijft staan in plaats van naar links te schuiven. */}
+          <div style={{ background: "#123a42", borderRadius: 20, padding: "15px 14px", marginBottom: 9,
+            boxShadow: "0 6px 18px -8px rgba(18,58,66,0.5)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <span style={{ width: 62, flexShrink: 0 }} aria-hidden />
+            <RundoLogo size={50} resto />
+            <span style={{ width: 62, flexShrink: 0, display: "flex", justifyContent: "flex-end" }}><LanguageToggle compact /></span>
           </div>
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 7, margin: "0 0 24px" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
