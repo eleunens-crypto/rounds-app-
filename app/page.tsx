@@ -28,6 +28,7 @@ const T = {
     ] as Stap[],
     restoTab: "Uit eten",
     partyTab: "Op café",
+    dealsKorting: "korting",
     dealsLabel: "Groepsdeals",
     dealsSub: "Samen op stap = samen korting bij deelnemende zaken",
     dealsNew: "nieuw",
@@ -67,6 +68,7 @@ const T = {
     ] as Stap[],
     restoTab: "Au resto",
     partyTab: "Au bar",
+    dealsKorting: "remise",
     dealsLabel: "Deals groupe",
     dealsSub: "Sortir ensemble = réduction ensemble chez les partenaires",
     dealsNew: "nouveau",
@@ -246,28 +248,39 @@ export default function Home() {
   // Eén vormtaal voor het hele scherm: witte kaarten op een warme lichte achtergrond,
   // marineblauwe tekst en iconen. Elke modus heeft één eigen tint (turquoise voor
   // Resto, goud voor Rundo) die terugkomt in de kaart, de nummers en de startknop.
+  // Stappenblokjes, in drie stijlen (kies met BLOK_STIJL onderaan):
+  //   "glas"      – half doorzichtig wit met vervaging: de foto schemert erdoor
+  //   "open"      – geen kader, enkel icoon + woord met een zachte witte gloed
+  //   "fotoBoven" – foto vervaagt ook naar onder, stappen staan kaderloos op de kaart
   const blokken = (m: Mode, stappen: Stap[]) => (
-    <div style={{ display: "grid", gridTemplateColumns: `repeat(${stappen.length}, 1fr)`, gap: 6, marginTop: 14 }}>
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${stappen.length}, 1fr)`, gap: BLOK_STIJL === "fotoBoven" ? 0 : 6, marginTop: 14 }}>
       {stappen.map((s, i) => (
-        <div key={i} style={{ position: "relative", background: K.vlak, borderRadius: 14, padding: "12px 4px 10px",
-          textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
-          <span style={{ position: "absolute", top: 5, left: 8, fontSize: 10, fontWeight: 800, color: MODUS[m].diep }}>{i + 1}</span>
-          <span style={S.icoonVak}><Icoon naam={s.icoon} size={21} /></span>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: K.tekst, lineHeight: 1.15 }}>{s.label}</span>
+        <div key={i} style={{ position: "relative", borderRadius: 14, padding: "12px 4px 10px",
+          textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 7,
+          ...(BLOK_STIJL === "glas" ? { background: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.8)",
+                backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)" } : {}),
+          ...(BLOK_STIJL === "fotoBoven" && i > 0 ? { borderLeft: `1px solid ${MODUS[m].kleur}55`, borderRadius: 0 } : {}) }}>
+          <span style={{ position: "absolute", top: 5, left: 8, fontSize: 10, fontWeight: 800, color: MODUS[m].diep,
+            textShadow: BLOK_STIJL === "open" ? GLOED : undefined }}>{i + 1}</span>
+          <span style={{ ...S.icoonVak, boxShadow: BLOK_STIJL === "glas" ? undefined : "0 4px 12px -6px rgba(14,26,46,0.35)" }}><Icoon naam={s.icoon} size={21} /></span>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: K.tekst, lineHeight: 1.15,
+            textShadow: BLOK_STIJL === "open" ? GLOED : undefined }}>{s.label}</span>
         </div>
       ))}
     </div>
   )
 
-  // Lichte startknop in de tint van de modus: zacht vlak, dunne rand, pijltje.
-  // Pas bij het indrukken vult hij zich volledig.
+  // Startbalk over de hele onderkant van de kaart, in de kleur van de modus
+  // (Resto donker turquoise met witte letters, Rundo goud met marineblauw).
+  // Dit is het énige wat doorklikt: de rest van de kaart reageert niet op een tik.
   const startKnop = (m: Mode) => (
-    <button onClick={(e) => { e.stopPropagation(); starten(m) }} className={`rundo-start rundo-start-${m}`}
-      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", marginTop: 14,
-        padding: "12px 18px", borderRadius: 14, border: `1.5px solid ${MODUS[m].kleur}`,
-        fontSize: 16, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", letterSpacing: 0.2,
-        background: MODUS[m].zacht, color: MODUS[m].diep, transition: "background .15s ease, color .15s ease" }}>
-      {t.start} <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>→</span>
+    <button type="button" onClick={() => starten(m)} className={`rundo-start rundo-start-${m}`}
+      style={{ position: "relative", zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+        width: "100%", height: 62, padding: "0 18px", border: "none", borderRadius: 0,
+        fontSize: 19, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", letterSpacing: 0.2,
+        background: MODUS[m].knop, color: MODUS[m].knopTekst, transition: "filter .15s ease, transform .1s ease" }}>
+      {t.start}
+      <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
     </button>
   )
 
@@ -282,7 +295,7 @@ export default function Home() {
     const vlak = KAART_STIJL === "tint" ? md.kaart : "#FFFFFF"
     const rgb = KAART_STIJL === "tint" ? md.kaartRgb : "255,255,255"
     const kaart = (
-      <div onClick={() => starten(m)} className="rundo-card" style={{ ...S.kaart, background: vlak,
+      <div className="rundo-card" style={{ ...S.kaart, background: vlak,
         border: KAART_STIJL === "lint" ? `1px solid ${K.lijn}` : `1.5px solid ${md.kleur}99`,
         borderTopLeftRadius: KAART_STIJL === "tab" ? 6 : 22,
         boxShadow: `0 14px 30px -18px ${md.schaduw}` }}>
@@ -290,15 +303,17 @@ export default function Home() {
         <img src={resto ? "/table-image.png" : "/party-image.png"} alt="" style={S.cardPhoto} />
         <div style={{ position: "absolute", inset: 0, zIndex: 1,
           background: `linear-gradient(90deg, rgb(${rgb}) 0%, rgb(${rgb}) 40%, rgba(${rgb},0.88) 55%, rgba(${rgb},0.45) 72%, rgba(${rgb},0.05) 100%)` }} />
+        {BLOK_STIJL === "fotoBoven" && <div style={{ position: "absolute", inset: 0, zIndex: 1,
+          background: `linear-gradient(180deg, rgba(${rgb},0) 0%, rgba(${rgb},0) 34%, rgba(${rgb},0.9) 52%, rgb(${rgb}) 62%)` }} />}
         {KAART_STIJL === "lint" && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, zIndex: 3, background: md.kleur }} />}
-        <div style={{ position: "relative", zIndex: 2, padding: KAART_STIJL === "lint" ? "22px 16px 16px" : "18px 16px 16px" }}>
+        <div style={{ position: "relative", zIndex: 2, padding: KAART_STIJL === "lint" ? "22px 16px 18px" : "18px 16px 18px" }}>
           <div style={{ maxWidth: "76%" }}>
             <span style={{ display: "block", marginBottom: 6 }}><RundoLogo size={40} resto={resto} opDonker={false} /></span>
             <div style={S.logoSub}>{resto ? t.tableSub : t.partySub}</div>
           </div>
           {blokken(m, resto ? t.tableFlow : t.partyFlow)}
-          {startKnop(m)}
         </div>
+        {startKnop(m)}
       </div>
     )
     if (KAART_STIJL !== "tab") return kaart
@@ -379,12 +394,12 @@ export default function Home() {
             <span style={{ display: "flex", gap: 5, marginTop: 8 }}>{chip(t.dealsNew, true)}{chip(t.dealsSoon, false)}</span>
             <div style={{ marginTop: 9, fontSize: 13, fontWeight: 600, color: K.zacht, lineHeight: 1.3 }}>{t.dealsSub}</div>
           </div>
-          <div style={{ position: "relative", width: 72, flexShrink: 0, borderLeft: `1.5px dashed ${K.goud}`,
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, color: K.goudDiep }}>
+          <div style={{ position: "relative", width: 84, flexShrink: 0, borderLeft: `1.5px dashed ${K.goud}`,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, color: K.goud }}>
             <span style={{ position: "absolute", left: -10, top: -10, width: 18, height: 18, borderRadius: "50%", background: K.achtergrond, borderBottom: `1.5px dashed ${K.goud}` }} />
             <span style={{ position: "absolute", left: -10, bottom: -10, width: 18, height: 18, borderRadius: "50%", background: K.achtergrond, borderTop: `1.5px dashed ${K.goud}` }} />
-            <span style={{ fontSize: 34, fontWeight: 900, lineHeight: 1, color: K.goud }}>%</span>
-            <Icoon naam="groep" size={20} />
+            <Icoon naam="groep" size={38} dikte={1.6} />
+            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: K.goudDiep }}>{t.dealsKorting}</span>
           </div>
         </div>
 
@@ -434,14 +449,9 @@ export default function Home() {
       <style>{`
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; background: ${K.achtergrond}; }
-        .rundo-card { transition: transform .15s ease, box-shadow .15s ease; }
-        .rundo-card:active { transform: scale(0.99); }
-        .rundo-start-table:active { background: ${MODUS.table.kleur} !important; color: #FFFFFF !important; }
-        .rundo-start-party:active { background: ${MODUS.party.kleur} !important; color: ${K.tekst} !important; }
-        @media (hover: hover) {
-          .rundo-card:hover { transform: translateY(-2px); box-shadow: 0 14px 34px -16px rgba(14,26,46,0.28) !important; }
-          .rundo-start:hover { filter: brightness(0.97); }
-        }
+        .rundo-start:active { filter: brightness(0.92); transform: scale(0.99); }
+        .rundo-start:focus-visible { outline: 3px solid ${K.tekst}; outline-offset: -3px; }
+        @media (hover: hover) { .rundo-start:hover { filter: brightness(1.06); } }
       `}</style>
     </div>
   )
@@ -449,6 +459,10 @@ export default function Home() {
 
 // Hoe de twee modi zich onderscheiden: "lint", "tint" of "tab" (zie modusKaart).
 const KAART_STIJL: "lint" | "tint" | "tab" = "tint"
+// Stijl van de stappenblokjes: "glas", "open" of "fotoBoven" (zie blokken).
+const BLOK_STIJL: "glas" | "open" | "fotoBoven" = "glas"
+// Witte gloed achter tekst die over de foto kan lopen (stijl "open").
+const GLOED = "0 0 3px #fff, 0 0 8px #fff, 0 0 14px rgba(255,255,255,0.9)"
 
 // Het hele palet van dit scherm. Meer kleuren zijn er niet.
 const K = {
@@ -464,8 +478,8 @@ const K = {
 
 // Eén tint per modus: turquoise uit het Resto-logo, goud uit het Rundo-logo.
 const MODUS = {
-  table: { kleur: "#3FBFB3", diep: "#12796F", zacht: "#E7F6F4", kaart: "#F3FBFA", kaartRgb: "243,251,250", schaduw: "rgba(18,121,111,0.35)" },
-  party: { kleur: "#F5B301", diep: "#A87800", zacht: "#FFF4D6", kaart: "#FFFAEC", kaartRgb: "255,250,236", schaduw: "rgba(168,120,0,0.35)" },
+  table: { knop: "#12796F", knopTekst: "#FFFFFF", kleur: "#3FBFB3", diep: "#12796F", zacht: "#E7F6F4", kaart: "#F3FBFA", kaartRgb: "243,251,250", schaduw: "rgba(18,121,111,0.35)" },
+  party: { knop: "#F5B301", knopTekst: "#0E1A2E", kleur: "#F5B301", diep: "#A87800", zacht: "#FFF4D6", kaart: "#FFFAEC", kaartRgb: "255,250,236", schaduw: "rgba(168,120,0,0.35)" },
 }
 
 const S: Record<string, React.CSSProperties> = {
@@ -479,7 +493,7 @@ const S: Record<string, React.CSSProperties> = {
     MozOsxFontSmoothing: "grayscale",
   },
   kaart: {
-    position: "relative", borderRadius: 22, marginBottom: 12, cursor: "pointer", overflow: "hidden",
+    position: "relative", borderRadius: 22, marginBottom: 12, overflow: "hidden",
     background: "#FFFFFF", border: `1px solid ${K.lijn}`, boxShadow: "0 10px 28px -18px rgba(14,26,46,0.22)",
   },
   cardPhoto: {
