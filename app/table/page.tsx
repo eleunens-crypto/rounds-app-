@@ -1088,21 +1088,25 @@ const STRINGS = {
     // Kop van de tekst die je deelt, plus de regel per persoon en de sluitregel.
     ideaListTitle: "Leuke groepsideetjes",
     ideaListFor: (naam: string, n: number) => `Voor ${naam} \u00b7 ${n} ${n === 1 ? "persoon" : "personen"}`,
-    dealsNearTitle: "Groepsdeals in de buurt",
     soonWord: "binnenkort",
     buildingTitle: "Deze pagina is in opbouw",
     buildingBody: "Binnenkort vind je hier groepsdeals en leuke groepsuitjes bij jou in de buurt.",
-    // Zes vaste ideeën met een knipoog. De titel zegt wat het is, de zin eronder waarom
-    // je het mét een groep doet — dat laatste is wat iemand overhaalt.
+    // Zes voorbeelden van hoe een groepsdeal er straks uitziet. Ze zijn nog niet actief,
+    // dus staat het er drie keer: in de strook bovenaan, in de kop erboven en op elk
+    // kaartje. De grapjes die hier eerst stonden zijn weg — zolang dit voorbeelden zijn,
+    // is de deal zelf wat je wil laten zien.
+    dealExamplesTitle: "Voorbeelden van groepsdeals",
+    dealExamplesSub: "Zo zullen ze eruitzien. Nog niet actief.",
+    fromPersons: "vanaf 5 pers.",
     ideaItems: [
-      { titel: "Bowlen met de groep", zin: "Als eerste een strike gooien? Of eerst strike liggen met de groep?" },
-      { titel: "Karting met de groep", zin: "Vriendschappelijke groepsrace\u2026 tot de start! Vol onverwachte bochten." },
-      { titel: "Escaperoom", zin: "Een uur opgesloten met je vrienden. Daarna weet je het zeker!" },
-      { titel: "Leuke groepsquiz", zin: "Altijd wist iemand het wel, alleen te laat." },
-      { titel: "Padel", zin: "Een kooi vol gezelligheid, waarbij het glas je beste vriend \u00e9n je grootste vijand is." },
-      { titel: "Pool", zin: "Speel zo snel mogelijk de tafel leeg. Je hebt geen keus!" },
+      { titel: "Bowling", deal: "Derde baanuur gratis, schoenen inbegrepen" },
+      { titel: "Karten", deal: "Twee races voor de prijs van \u00e9\u00e9n, op weekdagen" },
+      { titel: "Escaperoom", deal: "\u20ac5 per persoon minder bij twee kamers samen" },
+      { titel: "Groepsquiz", deal: "Gratis hapjesplank bij je tafel" },
+      { titel: "Padel", deal: "Tweede uur aan halve prijs, rackets inbegrepen" },
+      { titel: "Pool", deal: "Eerste uur tafel gratis bij een rondje voor de groep" },
     ],
-    toRundoTitle: "Groepsdeals op Rundo",
+    toRundoTitle: "Rundo Groepsdeals",
     toRundoSub: "Bekijk hier later onze activiteiten en groepsdeals",
     settleGuestTitle: "De rekening is verrekend",
     settleGuestBody: "De beheerder heeft alles afgerond. Je bedrag hieronder blijft staan zoals het is.",
@@ -1809,19 +1813,21 @@ const STRINGS = {
     ideaBtnSub: "Nous oui !",
     ideaListTitle: "Des id\u00e9es \u00e0 faire en groupe",
     ideaListFor: (naam: string, n: number) => `Pour ${naam} \u00b7 ${n} ${n === 1 ? "personne" : "personnes"}`,
-    dealsNearTitle: "Bons plans pour groupes dans le coin",
     soonWord: "bient\u00f4t",
     buildingTitle: "Cette page est en construction",
     buildingBody: "Bient\u00f4t, tu trouveras ici des bons plans et des sorties en groupe pr\u00e8s de chez toi.",
+    dealExamplesTitle: "Exemples de bons plans groupes",
+    dealExamplesSub: "Voil\u00e0 \u00e0 quoi ils ressembleront. Pas encore actifs.",
+    fromPersons: "d\u00e8s 5 pers.",
     ideaItems: [
-      { titel: "Bowling en groupe", zin: "Premier \u00e0 faire un strike\u2026 ou premier \u00e0 tomber dans la rigole\u00a0?" },
-      { titel: "Karting en groupe", zin: "Course entre amis\u2026 jusqu\u2019au d\u00e9part\u00a0! Pleine de virages inattendus." },
-      { titel: "Escape game", zin: "Une heure enferm\u00e9s entre amis. Apr\u00e8s \u00e7a, tu sais tout." },
-      { titel: "Quiz en groupe", zin: "Quelqu\u2019un savait la r\u00e9ponse. Juste un peu trop tard." },
-      { titel: "Padel", zin: "Une cage pleine d\u2019ambiance, o\u00f9 la vitre est ton meilleur ami et ton pire ennemi." },
-      { titel: "Billard", zin: "Vider la table le plus vite possible. Tu n\u2019as pas le choix\u00a0!" },
+      { titel: "Bowling", deal: "Troisi\u00e8me heure de piste offerte, chaussures comprises" },
+      { titel: "Karting", deal: "Deux courses pour le prix d\u2019une, en semaine" },
+      { titel: "Escape game", deal: "5\u00a0\u20ac de moins par personne pour deux salles" },
+      { titel: "Quiz en groupe", deal: "Planche ap\u00e9ro offerte \u00e0 votre table" },
+      { titel: "Padel", deal: "Deuxi\u00e8me heure \u00e0 moiti\u00e9 prix, raquettes comprises" },
+      { titel: "Billard", deal: "Premi\u00e8re heure de table offerte avec une tourn\u00e9e" },
     ],
-    toRundoTitle: "Bons plans groupes sur Rundo",
+    toRundoTitle: "Rundo Groepsdeals",
     toRundoSub: "Retrouve ici plus tard nos activit\u00e9s et bons plans",
     settleGuestTitle: "L\u2019addition est réglée",
     settleGuestBody: "L\u2019hôte a tout clôturé. Ton montant ci-dessous reste tel quel.",
@@ -6905,26 +6911,6 @@ export default function RundoTable() {
                 style={{ flexShrink: 0, cursor: "pointer", border: "none", fontFamily: "inherit", background: "rgba(18,58,66,0.06)", color: "#4a6e73", borderRadius: "50%", width: 34, height: 34, fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>✕</button>
             </div>
 
-            {/* Gestreepte rand en twee vage regels: dit is een plek, nog geen inhoud. */}
-            <div style={{ position: "relative", border: "1.5px dashed rgba(18,58,66,0.22)", borderRadius: 16, padding: "14px 13px", marginBottom: 14, background: "rgba(18,58,66,0.025)" }}>
-              <span style={{ position: "absolute", top: 13, right: 12, fontSize: 11.5, fontWeight: 800, color: "#8a6a1a", background: "rgba(240,193,75,0.28)", borderRadius: 7, padding: "3px 8px" }}>{L.soonWord}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 11 }}>
-                <span style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 9, background: "rgba(18,58,66,0.07)", color: "#4a6e73", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21.2s7-5.6 7-11.2a7 7 0 1 0-14 0c0 5.6 7 11.2 7 11.2Z" /><circle cx="12" cy="10" r="2.6" /></svg>
-                </span>
-                <span style={{ fontSize: 16.5, fontWeight: 800, color: "#2b4f56" }}>{L.dealsNearTitle}</span>
-              </div>
-              {[0.5, 0.32].map((o, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: i === 0 ? 9 : 0, opacity: o }}>
-                  <span style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 12, background: "rgba(18,58,66,0.09)" }} />
-                  <span style={{ flex: 1 }}>
-                    <span style={{ display: "block", height: 11, width: i === 0 ? "64%" : "50%", borderRadius: 5, background: "rgba(18,58,66,0.13)", marginBottom: 7 }} />
-                    <span style={{ display: "block", height: 9, width: i === 0 ? "42%" : "34%", borderRadius: 5, background: "rgba(18,58,66,0.08)" }} />
-                  </span>
-                </div>
-              ))}
-            </div>
-
             <div style={{ background: "rgba(240,193,75,0.14)", border: "2px solid rgba(240,193,75,0.6)", borderRadius: 16, padding: "15px 15px", marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                 <span style={{ flexShrink: 0, fontSize: 22 }}>🚧</span>
@@ -6933,13 +6919,25 @@ export default function RundoTable() {
               <div style={{ fontSize: 16, color: "#7a5a15", lineHeight: 1.5 }}>{L.buildingBody}</div>
             </div>
 
+            {/* De kop zegt het nog eens met zoveel woorden: dit zijn voorbeelden. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 18, marginBottom: 5 }}>
+              <span style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 9, background: "rgba(18,58,66,0.07)", color: "#4a6e73", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21.2s7-5.6 7-11.2a7 7 0 1 0-14 0c0 5.6 7 11.2 7 11.2Z" /><circle cx="12" cy="10" r="2.6" /></svg>
+              </span>
+              <span style={{ fontSize: 16.5, fontWeight: 800, color: "#2b4f56" }}>{L.dealExamplesTitle}</span>
+            </div>
+            <div style={{ fontSize: 14.5, color: "#8aa3a6", lineHeight: 1.45, margin: "0 0 12px 37px" }}>{L.dealExamplesSub}</div>
+
             {L.ideaItems.map((idee, i) => (
-              <div key={i} style={{ position: "relative", display: "flex", gap: 12, alignItems: "flex-start", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 15, padding: "14px 13px", marginBottom: 9, background: "#fff" }}>
+              <div key={i} style={{ position: "relative", display: "flex", gap: 12, alignItems: "center", border: "1px solid rgba(18,58,66,0.12)", borderRadius: 15, padding: 13, marginBottom: 9, background: "#fff" }}>
                 <span style={{ position: "absolute", top: 12, right: 12, fontSize: 11.5, fontWeight: 800, color: "#8a6a1a", background: "rgba(240,193,75,0.28)", borderRadius: 7, padding: "3px 8px" }}>{L.soonWord}</span>
                 <span style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 13, background: "rgba(20,153,176,0.1)", color: "#0f7488", display: "flex", alignItems: "center", justifyContent: "center" }}>{ACTIVITEIT_ICONEN[i]}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#123a42", lineHeight: 1.25, paddingRight: 74 }}>{idee.titel}</span>
-                  <span style={{ display: "block", fontSize: 14.5, color: "#7d949a", lineHeight: 1.45, marginTop: 3 }}>{idee.zin}</span>
+                  <span style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap", marginTop: 5 }}>
+                    <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: "#15703f", background: "rgba(39,174,96,0.13)", borderRadius: 7, padding: "3px 8px" }}>{L.fromPersons}</span>
+                    <span style={{ fontSize: 14.5, fontWeight: 700, color: "#15703f", lineHeight: 1.35 }}>{idee.deal}</span>
+                  </span>
                 </span>
               </div>
             ))}
