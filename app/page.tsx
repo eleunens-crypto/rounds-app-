@@ -246,7 +246,7 @@ export default function Home() {
         <img src={resto ? "/table-image.png" : "/party-image.png"} alt="" style={S.cardPhoto} />
         <div style={{ position: "absolute", inset: 0, zIndex: 1,
           background: `linear-gradient(90deg, rgb(${md.kaartRgb}) 0%, rgb(${md.kaartRgb}) 42%, rgba(${md.kaartRgb},0.85) 56%, rgba(${md.kaartRgb},0.35) 76%, rgba(${md.kaartRgb},0) 100%)` }} />
-        <div style={{ position: "relative", zIndex: 2, flex: 1, padding: "18px 16px 20px" }}>
+        <div style={{ position: "relative", zIndex: 2, flex: 1, padding: "16px 16px 16px" }}>
           <RundoLogo size={46} resto={resto} opDonker={false} />
           {/* Ondertitel op twee regels: de actie vet, het vervolg lichter eronder. */}
           <div style={{ ...S.logoSub, marginTop: 6 }}>
@@ -260,7 +260,7 @@ export default function Home() {
   }
 
   const chip = (tekst: string, vol: boolean) => (
-    <span style={{ fontSize: 9.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", borderRadius: 999, padding: "3px 8px",
+    <span style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", borderRadius: 999, padding: "3px 9px",
       whiteSpace: "nowrap", background: vol ? DEALS.kleur : "transparent", color: vol ? "#FFFFFF" : K.zacht,
       border: `1px solid ${vol ? DEALS.kleur : K.lijn}` }}>{tekst}</span>
   )
@@ -321,17 +321,17 @@ export default function Home() {
               Niet klikbaar en zonder knop: het werkt nog niet. */}
           <div aria-disabled="true" style={{ position: "relative", display: "flex", flexShrink: 0, borderRadius: 16, marginTop: 12,
             background: "#FFFFFF", border: `1.5px dashed ${DEALS.kleur}` }}>
-            <div style={{ flex: 1, minWidth: 0, padding: "11px 12px 11px 14px" }}>
-              <RundoDealsLogo size={24} label={t.dealsLabel} kleur={DEALS.kleur} opDonker={false} />
-              <span style={{ display: "flex", gap: 5, marginTop: 6 }}>{chip(t.dealsNew, true)}{chip(t.dealsSoon, false)}</span>
-              <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600, color: K.zacht, lineHeight: 1.3 }}>{t.dealsSub}</div>
+            <div style={{ flex: 1, minWidth: 0, padding: "14px 12px 14px 16px" }}>
+              <RundoDealsLogo size={32} label={t.dealsLabel} kleur={DEALS.kleur} opDonker={false} />
+              <span style={{ display: "flex", gap: 6, marginTop: 8 }}>{chip(t.dealsNew, true)}{chip(t.dealsSoon, false)}</span>
+              <div style={{ marginTop: 8, fontSize: 15, fontWeight: 600, color: K.zacht, lineHeight: 1.3 }}>{t.dealsSub}</div>
             </div>
-            <div style={{ position: "relative", width: 78, flexShrink: 0, borderLeft: `1.5px dashed ${DEALS.kleur}`, borderRadius: "0 15px 15px 0",
+            <div style={{ position: "relative", width: 88, flexShrink: 0, borderLeft: `1.5px dashed ${DEALS.kleur}`, borderRadius: "0 15px 15px 0",
               background: DEALS.zacht, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, color: DEALS.kleur }}>
               <span style={{ position: "absolute", left: -9, top: -9, width: 16, height: 16, borderRadius: "50%", background: K.achtergrond, borderBottom: `1.5px dashed ${DEALS.kleur}` }} />
               <span style={{ position: "absolute", left: -9, bottom: -9, width: 16, height: 16, borderRadius: "50%", background: K.achtergrond, borderTop: `1.5px dashed ${DEALS.kleur}` }} />
-              <Icoon naam="groep" size={32} dikte={1.7} />
-              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: DEALS.diep }}>{t.dealsKorting}</span>
+              <Icoon naam="groep" size={40} dikte={1.6} />
+              <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: DEALS.diep }}>{t.dealsKorting}</span>
             </div>
           </div>
 
@@ -423,7 +423,7 @@ const S: Record<string, React.CSSProperties> = {
     MozOsxFontSmoothing: "grayscale",
   },
   kaart: {
-    position: "relative", flex: 1, minHeight: 190, display: "flex", flexDirection: "column",
+    position: "relative", flex: 1, minHeight: 170, display: "flex", flexDirection: "column",
     borderRadius: 20, overflow: "hidden",
   },
   cardPhoto: {
