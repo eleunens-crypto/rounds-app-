@@ -423,13 +423,21 @@ function cooldownMs(retryAfter?: number | null): number {
   return Math.round((base + Math.random() * 5) * 1000)
 }
 
-// Alleen een échte limiet (429) verdient een wachttijd. Een server die er even uit ligt of
-// een oproep die over de tijd ging (500, 503, 504) is een hapering: dan lukt het meestal
-// meteen bij de volgende poging, en is aftellen puur tijdverlies.
+// Alleen een échte limiet (429) verdient de lange wachttijd hierboven. Een server die er
+// even uit ligt of een oproep die over de tijd ging (500, 503, 504) is een hapering.
 // Ook wanneer de server zelf een wachttijd meegeeft: die komt enkel uit een limietfout,
 // ook als ze onderweg een andere statuscode kreeg.
 function verdientWachttijd(status?: number, retryAfter?: number | null): boolean {
   return status === 429 || (retryAfter != null && retryAfter > 0)
+}
+
+// Maar ook zonder limiet hoort er een adempauze te zijn. Dezelfde foto binnen de seconde
+// nog eens door dezelfde dienst halen geeft hetzelfde antwoord: je zag drie foutmeldingen
+// in drie tellen en wist niet meer wat je nu eigenlijk aan het proberen was. Dus na de
+// eerste mislukking drie seconden, na de tweede acht — genoeg om de melding te lezen, kort
+// genoeg om niet te wachten op niets.
+function korteAdem(pogingen: number): number {
+  return (pogingen <= 1 ? 3 : 8) * 1000
 }
 
 async function scanReceipt(files: File | File[], onProgress?: (p: number) => void): Promise<{ items: ParsedItem[] | null; total: number | null; quotaDay?: boolean; retryAfter?: number | null; reason: "unavailable" | "empty" | null; status?: number; detail?: string }> {
@@ -529,7 +537,9 @@ async function scanReceiptOCR(file: File, onProgress?: (p: number) => void): Pro
   try {
     await worker.setParameters({ tessedit_pageseg_mode: "6" as never })
     const { data } = await worker.recognize(image)
-    console.log("─── RUWE OCR-TEKST ───\n" + (data.text || "(leeg)") + "\n──────────────────────")
+    // Alleen tijdens het ontwikkelen: dit dumpte de volledige bontekst in de console van
+    // elke bezoeker, en op een telefoon leest niemand die toch.
+    if (process.env.NODE_ENV !== "production") console.log("─── RUWE OCR-TEKST ───\n" + (data.text || "(leeg)") + "\n──────────────────────")
     return cleanReceiptToItems(data.text || "")
   } finally {
     await worker.terminate()
@@ -1017,8 +1027,6 @@ const STRINGS = {
     hideDetails: "Verberg details",
     totalTogether: "Totaal",
     nothingAssigned: "Niets aangeduid.",
-    confirmReleaseSpot: (nm: string) => `"${nm}" hier weghalen? De plaats komt weer vrij — het aantal personen blijft gelijk.`,
-    spotReleased: "Plaats is weer vrij.",
     allPerfect: "Bon en items kloppen perfect. Je kan verder naar Gasten & delen.",
     receiptConfirmedLabel: "Bon (bevestigd)",
     viaAdminTag: "(via admin)",
@@ -1054,7 +1062,6 @@ const STRINGS = {
     showDetailsBtn: "Toon details",
     closedBarTitle: "Rekening afgesloten",
     reopenWord: "Heropenen",
-    reopenLong: "🔓 Iets wijzigen? Heropenen",
     closedListTitle: "De verdeling, zoals afgesloten",
     lockedWord: "op slot",
     closedBarAll: "Afgesloten · alles verdeeld",
@@ -1164,8 +1171,6 @@ const STRINGS = {
     errItemAdd: "Item toevoegen mislukt",
     distributeColMsg: "Voeg eerst de kolom 'distribute' toe in Supabase (zie instructies).",
     errAdd: "Toevoegen mislukt: ",
-    taxRateColMsg2: "Let op: percentage-BTW werkt nog niet. Voeg in Supabase de kolom tax_rate toe aan table_items.",
-    errTaxAdd: "BTW toevoegen mislukt: ",
     errTotalSave: "Rekeningtotaal opslaan mislukt: ",
     taxRateColMsg: "Voeg in Supabase de kolom tax_rate toe aan table_items.",
     errSave: "Opslaan mislukt",
@@ -1279,7 +1284,6 @@ const STRINGS = {
     withdraw: "toch intrekken",
     assignFullTap: "Alles toegewezen — tik een naam om weg te halen",
     assignToWhom: "Aan wie toewijzen?",
-    seatsControlTitle: "Voor hoeveel personen telt deze naam (bij gedeelde items)",
     youJoinPrefix: "Je sluit aan bij",
     sharedByName: (naam: string) => `gedeeld door ${naam}`,
     restoTagline: "Scan de rekening en verdeel ze in groep",
@@ -1738,8 +1742,6 @@ const STRINGS = {
     hideDetails: "Masquer les détails",
     totalTogether: "Total",
     nothingAssigned: "Rien de coché.",
-    confirmReleaseSpot: (nm: string) => `Retirer « ${nm} » ici ? La place redevient libre — le nombre de personnes reste identique.`,
-    spotReleased: "La place est de nouveau libre.",
     allPerfect: "L'addition et les articles correspondent. Tu peux continuer.",
     receiptConfirmedLabel: "Ticket (confirm\u00e9)",
     viaAdminTag: "(via admin)",
@@ -1772,7 +1774,6 @@ const STRINGS = {
     showDetailsBtn: "Afficher les détails",
     closedBarTitle: "Addition clôturée",
     reopenWord: "Rouvrir",
-    reopenLong: "🔓 Quelque chose à changer ? Rouvrir",
     closedListTitle: "La répartition, telle que clôturée",
     lockedWord: "verrouillé",
     closedBarAll: "Clôturée · tout est réparti",
@@ -1879,8 +1880,6 @@ const STRINGS = {
     errItemAdd: "Échec de l'ajout de l'article",
     distributeColMsg: "Ajoute d'abord la colonne « distribute » dans Supabase (voir instructions).",
     errAdd: "Échec de l'ajout : ",
-    taxRateColMsg2: "Attention : la TVA en pourcentage ne fonctionne pas encore. Ajoute la colonne tax_rate à table_items dans Supabase.",
-    errTaxAdd: "Échec de l'ajout de la TVA : ",
     errTotalSave: "Échec de l'enregistrement du total : ",
     taxRateColMsg: "Ajoute la colonne tax_rate à table_items dans Supabase.",
     errSave: "Échec de l'enregistrement",
@@ -1990,7 +1989,6 @@ const STRINGS = {
     withdraw: "retirer finalement",
     assignFullTap: "Tout attribué — touchez un nom pour le retirer",
     assignToWhom: "À qui attribuer ?",
-    seatsControlTitle: "Pour combien de personnes compte ce nom (pour les articles partagés)",
     youJoinPrefix: "Tu rejoins",
     sharedByName: (naam: string) => `partagé par ${naam}`,
     restoTagline: "Scanne l'addition et partage-la en groupe",
@@ -2302,10 +2300,7 @@ export default function RundoTable() {
   const [scanPogingen, setScanPogingen] = useState(0)
   // Welke kiesvensters je met "Klaar" hebt dichtgedaan. Zonder deze verzameling bleef het
   // venster openstaan zodra er iemand geselecteerd was — en deed die knop dus niets.
-  const [jumpToAssign, setJumpToAssign] = useState(0)
   const [personsTouched, setPersonsTouched] = useState(false)
-  const [fillingSpots, setFillingSpots] = useState<string[]>([])  // vrije plaatsen die je nu een naam geeft
-  const [askSeats, setAskSeats] = useState(false)  // "voor hoeveel personen?" bij het toevoegen
   const [roundingOk, setRoundingOk] = useState(false)  // centenverschil bewust aanvaard
   const [naarLijstGetikt, setNaarLijstGetikt] = useState(false)
   const [openPil, setOpenPil] = useState<number | null>(null)  // welke uitleg openstaat  // stopt het wippende pijltje
@@ -2322,7 +2317,6 @@ export default function RundoTable() {
     geladenBonId.current = group.id
     if (group.receipt_total != null) { setReceiptConfirmed(true); setReceiptEditing(false) }
   }, [group])
-  const [showJoined, setShowJoined] = useState(false)
   // Bewaarde foto van de laatste scan, zodat je een mislukte AI-scan opnieuw kan proberen.
   const [retryFile, setRetryFile] = useState<File | null>(null)
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
@@ -3026,23 +3020,6 @@ export default function RundoTable() {
 
   // Een gast die JIJ toevoegde weer loslaten: de plaats wordt weer vrij, zodat het
   // aantal personen niet verandert. Iemand kan die plaats dan alsnog via de link claimen.
-  const releaseSpot = async (id: string) => {
-    if (!group) return
-    const p = participants.find((x) => x.id === id)
-    if (!p) return
-    askConfirm(L.confirmReleaseSpot(p.name), L.yes, async () => {
-      const seats = Math.max(1, p.seats ?? 1)
-      await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", id)
-      await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", id)
-      // De plaats zelf blijft bestaan, maar wordt weer naamloos en voor één persoon.
-      await supabase.from("table_participants").update({ name: L.guestWord, seats: 1, self_joined: false }).eq("id", id)
-      // Zat er een koppel op? Dan komen de extra personen als losse vrije plaatsen terug.
-      for (let i = 1; i < seats; i++) await addGuest(L.guestWord, false, 1)
-      setFillingSpots((cur) => cur.filter((x) => x !== id))
-      await loadAll(group.id)
-      setToast(L.spotReleased)
-    }, { danger: true })
-  }
 
   // Vrijgeven laat de plaats bestaan; verwijderen haalt ze weg. Dat tweede heeft de
   // beheerder nodig voor wie per ongeluk scande, dubbel binnenkwam of toch niet mee-eet:
@@ -3057,7 +3034,6 @@ export default function RundoTable() {
       await supabase.from("table_claims").delete().eq("group_id", group.id).eq("participant_id", id)
       await supabase.from("table_confirmations").delete().eq("group_id", group.id).eq("participant_id", id)
       await supabase.from("table_participants").delete().eq("id", id)
-      setFillingSpots((cur) => cur.filter((x) => x !== id))
       await loadAll(group.id)
       setToast(L.guestRemoved(p.name))
     }, { title: L.removeGuestTitle, danger: true })
@@ -3437,9 +3413,16 @@ export default function RundoTable() {
       const reason = res.reason ?? "empty"
       // Wachttijd van Google zelf, met wat willekeur erbij: zitten er vier gasten aan tafel
       // te tikken, dan proberen ze anders allemaal op dezelfde seconde opnieuw.
-      const wacht = reason === "unavailable" && !res.quotaDay && verdientWachttijd(res.status, res.retryAfter)
-      if (wacht) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
-      else if (!res.quotaDay) setScanPogingen((n) => n + 1)
+      // Elke mislukte poging telt mee, ook die met een wachttijd van de dienst zelf —
+      // anders bleef de teller op nul staan en kon je eindeloos blijven drukken.
+      if (!res.quotaDay) {
+        setScanPogingen((n) => {
+          const next = n + 1
+          const lang = reason === "unavailable" && verdientWachttijd(res.status, res.retryAfter) ? cooldownMs(res.retryAfter) : 0
+          setCooldownUntil(Date.now() + Math.max(lang, korteAdem(next)))
+          return next
+        })
+      }
       if (photos.length > 1) setMultiFails((n) => n + 1)
       setScanFail({ reason, status: res.status, detail: res.detail, quotaDay: res.quotaDay })
       return
@@ -3466,9 +3449,14 @@ export default function RundoTable() {
     setScanning(false)
     if (!res.items || res.items.length === 0) {
       const reason = res.reason ?? "empty"
-      const wacht = reason === "unavailable" && !res.quotaDay && verdientWachttijd(res.status, res.retryAfter)
-      if (wacht) setCooldownUntil(Date.now() + cooldownMs(res.retryAfter))
-      else if (!res.quotaDay) setScanPogingen((n) => n + 1)
+      if (!res.quotaDay) {
+        setScanPogingen((n) => {
+          const next = n + 1
+          const lang = reason === "unavailable" && verdientWachttijd(res.status, res.retryAfter) ? cooldownMs(res.retryAfter) : 0
+          setCooldownUntil(Date.now() + Math.max(lang, korteAdem(next)))
+          return next
+        })
+      }
       setScanFail({ reason, status: res.status, detail: res.detail, quotaDay: res.quotaDay })
       return
     }
@@ -3606,15 +3594,6 @@ export default function RundoTable() {
     setScanKlaar({ items: rows.length, totaal: !isNaN(billNum) && billNum > 0 ? billNum : null })
   }
 
-  const addManualItem = async () => {
-    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
-    if (!group) return
-    const { error } = await supabase.from("table_items")
-      .insert([{ group_id: group.id, name: "Nieuw item", unit_price: 0, quantity: 1, is_shared: false, category: null }])
-    if (error) { setError(L.errItemAdd); return }
-    await loadAll(group.id)
-  }
-
   const openNewItem = (target: "bill" | "scan") =>
     setNewItem({ name: "", unit_price: "", quantity: 1, is_shared: false, target })
 
@@ -3673,26 +3652,6 @@ export default function RundoTable() {
     }
     setTaxModal(null)
     setEditItem(null)
-    await loadAll(group.id)
-  }
-
-  const addTaxItem = async (rate?: number) => {
-    if (group?.finalized) { setToast(isAdmin ? L.reopenFirst : L.finalizedAskAdmin); return }
-    if (!group) return
-    const name = rate ? L.taxRateName(rate) : L.taxDefaultName
-    const row: Record<string, unknown> = { group_id: group.id, name, unit_price: 0, quantity: 1, is_shared: false, category: null, distribute: "all" }
-    if (rate) row.tax_rate = rate
-    let { error } = await supabase.from("table_items").insert([row])
-    if (error && /tax_rate/.test(error.message || "")) {
-      const retry = await supabase.from("table_items").insert([{ group_id: group.id, name, unit_price: 0, quantity: 1, is_shared: false, category: null, distribute: "all" }])
-      error = retry.error
-      if (!error) setError(L.taxRateColMsg2)
-    }
-    if (error) {
-      if (/distribute/.test(error.message || "")) setError(L.distributeColMsg)
-      else setError(L.errTaxAdd + error.message)
-      return
-    }
     await loadAll(group.id)
   }
 
@@ -4185,6 +4144,7 @@ export default function RundoTable() {
   // lange rekening, zoekend naar de knop waar de tekst je net naartoe stuurde.
   const sluitAllesPopup = () => {
     setAllesPopup(false)
+    setAllesGedeeldId(null)
     if (typeof document === "undefined") return
     window.setTimeout(() => {
       document.getElementById("afsluit-knop")?.scrollIntoView({ behavior: "smooth", block: "end" })
@@ -5929,26 +5889,23 @@ export default function RundoTable() {
           pagina — bij een lange rekening moest je er dus naartoe scrollen, en de melding
           stond ver van waar je keek. Eén balk betekent ook: nergens twee keer hetzelfde. */}
       {isAdmin && adminTab === "overview" && group.finalized && (
-        <div style={{ position: "sticky", top: 0, zIndex: 25, display: "flex", alignItems: "center", gap: 10,
-          margin: "0 0 12px", padding: "12px 13px", borderRadius: 14,
+        <div style={{ position: "sticky", top: 0, zIndex: 25, display: "flex", alignItems: "center", gap: 12,
+          margin: "0 0 12px", padding: "15px 15px", borderRadius: 16,
           background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff",
           boxShadow: "0 6px 18px -8px rgba(31,138,76,0.8)" }}>
-          <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>✓</span>
+          {/* Het wisselende lampje stond hier ook: om de anderhalve seconde een bowlingbal
+              in een balk die meldt dat de rekening dicht is. Nu het slot, wit getekend —
+              dat zegt wat er aan de hand is. De weg naar "Nog iets samen met de groep?"
+              loopt vanzelf: de afsluitknop staat sinds kort ín die sectie. */}
+          <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.25)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><SlotIcon size={20} /></span>
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 16, fontWeight: 800, lineHeight: 1.2 }}>{openUnits > 0 ? L.closedBarTitle : L.closedBarAll}</span>
-            <span style={{ display: "block", fontSize: 14.5, fontWeight: 700, opacity: 0.92, marginTop: 1 }}>{L.closedBarSub(`€${(billTotal + tipTotal).toFixed(2).replace(".", ",")}`, totalPersons)}</span>
+            <span style={{ display: "block", fontSize: 18, fontWeight: 800, lineHeight: 1.2 }}>{openUnits > 0 ? L.closedBarTitle : L.closedBarAll}</span>
+            <span style={{ display: "block", fontSize: 16, fontWeight: 700, opacity: 0.92, marginTop: 2 }}>{L.closedBarSub(`€${(billTotal + tipTotal).toFixed(2).replace(".", ",")}`, totalPersons)}</span>
           </span>
           {/* Oranje op groen: de enige knop in de balk, en meteen herkenbaar als de
               uitzondering. Een halfdoorzichtige knop leest als "uitgeschakeld". */}
-          {/* Het lampje brengt je naar "Nog iets samen met de groep?" onderaan. De balk
-              loopt mee terwijl je scrolt, dus die sectie is overal één tik weg zonder dat
-              ze zich opdringt. */}
-          <button onClick={() => naarEnNu()} aria-label={L.whatNowHead} title={L.whatNowHead}
-            style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 11, padding: "8px 10px", display: "flex", alignItems: "center" }}>
-            <IdeeIcoon kleur="#fff" />
-          </button>
           <button onClick={() => finalizeBill(false)}
-            style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f39c12,#e67e22)", border: "none", borderRadius: 11, padding: "10px 13px", color: "#fff", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap", boxShadow: "0 4px 12px -5px rgba(230,126,34,0.9)" }}>
+            style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f39c12,#e67e22)", border: "none", borderRadius: 12, padding: "12px 15px", color: "#fff", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap", boxShadow: "0 5px 14px -6px rgba(230,126,34,0.9)" }}>
             {L.reopenWord}
           </button>
         </div>
@@ -5987,7 +5944,7 @@ export default function RundoTable() {
             shareHeads={shareHeads} myShareHeads={myShareHeads} seatsOf={seatsOf} setSeats={setSeats}
             onRename={renameGuest}
             onEditMe={!isAdmin ? editMySpot : undefined}
-            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} magOntdelen={magOntdelen} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined}
+            setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} magOntdelen={magOntdelen} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} onDeleteItem={isAdmin ? deleteItem : undefined}
             onAllAssigned={(gedeeldId) => { if (allesToegewezenGezien.current) return; allesToegewezenGezien.current = true; setAllesGedeeldId(gedeeldId ?? null); setAllesPopup(true) }}
             klapSignaal={klapToewijzenSignaal}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
@@ -6239,46 +6196,6 @@ export default function RundoTable() {
         </div>
       )}
 
-      {/* Laatste stap, en enkel zichtbaar wanneer de rekening al afgesloten is: de melding
-          en het heropenen zitten sinds kort in de balk bovenaan, dus hier is plaats voor
-          de knop die het groepje wegzet. Is het al bewaard, dan is er niets meer te doen
-          en zegt deze plek dat gewoon. */}
-      {isAdmin && adminTab === "overview" && group.finalized && (
-        <div style={{ ...S.card, marginTop: 12, padding: 14 }}>
-          {/* Eerst de uitweg, dan de laatste stap: wie hier komt met twijfel moet niet
-              langs de knop die alles afrondt om bij "toch nog wijzigen" te raken. */}
-          {/* Zelfde oranje vlak als de heropenknop in de groene balk bovenaan: het is
-              dezelfde uitweg, dus hij mag er niet uitzien als een ander soort knop. */}
-          <button onClick={() => finalizeBill(false)}
-            style={{ width: "100%", marginBottom: 10, cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 16.5, fontWeight: 800, fontFamily: "inherit", color: "#fff", background: "linear-gradient(135deg,#f39c12,#e67e22)", boxShadow: "0 4px 14px -5px rgba(230,126,34,0.9)" }}>
-            {L.reopenLong}
-          </button>
-          {group.pinned ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "rgba(39,174,96,0.16)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>✓</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#1f8a4c" }}>{L.settleDoneTitle}</span>
-                <span style={{ display: "block", fontSize: 15, color: "#4a6e73", lineHeight: 1.4, marginTop: 2 }}>{L.settleDoneKeep}</span>
-              </span>
-            </div>
-          ) : (
-            // Stond hier even breed en even zwaar als het heropenen erboven, in een paars
-            // dat nergens anders in de app voorkomt — twee gelijkwaardige knoppen onder
-            // elkaar, terwijl dit de laatste stap is en dat het uitstapje. Nu smaller,
-            // rechts uitgelijnd en in leisteen, met de deur naar buiten ernaast.
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button onClick={() => setSettleVraag(true)}
-                style={{ minWidth: "62%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9,
-                  cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 18px", fontSize: 16, fontWeight: 800, fontFamily: "inherit", color: "#fff",
-                  background: "linear-gradient(135deg,#3d4f57,#54696f)", boxShadow: "0 5px 14px -6px rgba(61,79,87,0.8)" }}>
-                <UitgangIcon />
-                {L.settleSaveBtn}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Zwevende voet op de overzichttab: fooi en afsluiten blijven in beeld terwijl de
           rekening erboven doorscrolt. Beide zaten alleen onderaan de pagina, dus bij een
           lange rekening moest je eerst een heel eind naar beneden om ze te vinden. De
@@ -6319,6 +6236,33 @@ export default function RundoTable() {
       {group.finalized && (!isAdmin || adminTab === "overview") && (
         <div id="en-nu-sectie" style={{ ...S.card }}>
           {renderEnNu()}
+          {/* De laatste stap staat sinds kort hier, ónder de twee rijen. Hij stond in een
+              eigen kaart met daarboven nog eens "Iets wijzigen? Heropenen" — precies wat
+              de balk bovenaan al zegt, en die loopt mee terwijl je scrolt. Nu eindigt het
+              scherm waar het hoort: eerst wat jullie nog kunnen doen, dan afronden. */}
+          {isAdmin && (
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(18,58,66,0.1)" }}>
+              {group.pinned ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "rgba(39,174,96,0.16)", color: "#1f8a4c", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>✓</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#1f8a4c" }}>{L.settleDoneTitle}</span>
+                    <span style={{ display: "block", fontSize: 15, color: "#4a6e73", lineHeight: 1.4, marginTop: 2 }}>{L.settleDoneKeep}</span>
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button onClick={() => setSettleVraag(true)}
+                    style={{ minWidth: "62%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 9,
+                      cursor: "pointer", border: "none", borderRadius: 12, padding: "13px 18px", fontSize: 16, fontWeight: 800, fontFamily: "inherit", color: "#fff",
+                      background: "linear-gradient(135deg,#3d4f57,#54696f)", boxShadow: "0 5px 14px -6px rgba(61,79,87,0.8)" }}>
+                    <UitgangIcon />
+                    {L.settleSaveBtn}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -7185,7 +7129,12 @@ export default function RundoTable() {
                     </div>
                     {scanFail?.reason !== "unavailable" && (
                       <>
-                        <button onMouseDown={(e) => e.preventDefault()} onClick={scanPhotos} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>{photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}</button>
+                        {/* De foto staat erop, en dan? Deze knop is de volgende stap, maar hij
+                            zag er hetzelfde uit als daarvoor. Hij pulseert nu zolang er een
+                            foto klaarligt en er niets misging. */}
+                        <button onMouseDown={(e) => e.preventDefault()} onClick={scanPhotos}
+                          className={photos.length > 0 && !scanFail ? "rundo-scan-puls" : undefined}
+                          style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>{photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}</button>
                         <div style={{ fontSize: 16, color: "#7d999d", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.scanSubNote}</div>
                         {photos.length > 1 && <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 6 }}>{L.countsAsOne}</div>}
                       </>
@@ -7211,10 +7160,15 @@ export default function RundoTable() {
                 <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.tooSlowBody}</div>
                 {/* Opnieuw proberen lukt vaak al. Pas als dat blijft mislukken is een
                     nieuwe foto zinvol — daarom staat de camera achter een lijn, als tweede keuze. */}
-                <button onClick={() => { setScanFail(null); scanPhotos() }} disabled={cooldownLeft > 0}
-                  style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 800, fontSize: 17.5, padding: "12px 0", opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>
-                  {cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.tooSlowRetry}
-                </button>
+                {/* Deze knop telde niet mee met de pogingen: via dit paneel kon je eindeloos
+                    blijven drukken terwijl het gewone paneel na drie keer al stopte. Nu geldt
+                    dezelfde grens, en blijft na de laatste poging enkel de nieuwe foto over. */}
+                {scanPogingen < MAX_POGINGEN && (
+                  <button onClick={() => { setScanFail(null); scanPhotos() }} disabled={cooldownLeft > 0}
+                    style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 800, fontSize: 17.5, padding: "12px 0", opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>
+                    {cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.tooSlowRetry}
+                  </button>
+                )}
                 <div style={{ fontSize: 15.5, color: "#9a6a30", lineHeight: 1.45, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(243,156,18,0.35)", marginBottom: 8 }}>{L.tooSlowTip}</div>
                 <label style={{ ...S.btn, width: "100%", boxSizing: "border-box", display: "block", textAlign: "center", cursor: "pointer", fontWeight: 800, fontSize: 16.5, padding: "11px 0" }}>
                   {L.tooSlowOne}
@@ -8251,7 +8205,6 @@ function ClaimScreen(props: {
   onToggleShared: (it: BillItem) => void
   claimMembers: (itemId: string, pid: string) => number[]
   warnCount?: number
-  jumpToAssign?: number
   /** roept de ouder zodra de laatste eenheid is toegewezen */
   onAllAssigned?: (gedeeldItemId?: string) => void
   /** gaat omhoog wanneer de toewijslijst mag dichtklappen */
@@ -8273,7 +8226,7 @@ function ClaimScreen(props: {
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, verrekend, iDispute, iResolved, iComment, onToggleDispute, askConfirm, onNaarGasten } = props
+  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, onToggleShared, claimMembers, sharedStatus, warnCount, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, verrekend, iDispute, iResolved, iComment, onToggleDispute, askConfirm, onNaarGasten } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
@@ -8407,8 +8360,6 @@ function ClaimScreen(props: {
     const delen = (q.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
     return leden.map((i) => delen[i] || `${L.personWord} ${i + 1}`)
   }
-  // De knop "Wie nam wat" in het overzicht klapt deze lijst open (en scrollt ernaartoe).
-  useEffect(() => { if (jumpToAssign) setClaimCollapsed(false) }, [jumpToAssign])
   // Vrije plaatsen (nog niemand) horen niet in de toewijslijst: enkel wie een naam heeft.
   const isFreeName = (nm: string) => new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test((nm || "").trim())
   // Wie via de link binnenkwam achteraan: die duidt normaal zelf aan. Jij duidt vooral aan
@@ -9172,10 +9123,13 @@ function ClaimScreen(props: {
                 <div style={{ background: "rgba(234,250,241,0.97)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
                   border: "1.5px solid rgba(39,174,96,0.45)", borderRadius: 14, padding: 14, boxShadow: "0 -6px 18px -14px rgba(18,58,66,0.5)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                    <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", background: "rgba(39,174,96,0.2)", color: "#1f8a4c", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>✓</span>
+                    {/* Dit is het bericht waar de gast op zat te wachten; het stond er in de
+                        maat van een voetnoot. Nu leest de kop als een kop en staat de zin
+                        eronder die zegt wat het betekent. */}
+                    <span style={{ flexShrink: 0, width: 38, height: 38, borderRadius: "50%", background: "rgba(39,174,96,0.2)", color: "#1f8a4c", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 800 }}>✓</span>
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#1f8a4c" }}>{L.confirmedWord}</span>
-                      <span style={{ display: "block", fontSize: 14, color: "#3c6b51", lineHeight: 1.4, marginTop: 2 }}>{L.confirmedSub}</span>
+                      <span style={{ display: "block", fontSize: 20, fontWeight: 800, color: "#1f8a4c", lineHeight: 1.2 }}>{L.confirmedWord}</span>
+                      <span style={{ display: "block", fontSize: 16, color: "#3c6b51", lineHeight: 1.4, marginTop: 3 }}>{L.confirmedSub}</span>
                     </span>
                   </div>
                   {!finalized && (
@@ -9187,7 +9141,7 @@ function ClaimScreen(props: {
                 </div>
                 {!isAdmin && (
                   <button onClick={() => setShowConfirmInfo(true)}
-                    style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "center", fontSize: 15.5, fontWeight: 800, color: "#0f7d90", textDecoration: "underline", textUnderlineOffset: 3, marginTop: 9, padding: "4px 0", fontFamily: "inherit" }}>
+                    style={{ display: "block", width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "center", fontSize: 17, fontWeight: 800, color: "#0f7d90", textDecoration: "underline", textUnderlineOffset: 3, marginTop: 11, padding: "5px 0", fontFamily: "inherit" }}>
                     {L.whatNowLong}
                   </button>
                 )}
@@ -9196,7 +9150,10 @@ function ClaimScreen(props: {
               <button onClick={async () => {
                 const ok = await confirmMe()
                 if (ok !== false) setShowConfirmInfo(true)
-              }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none" }}>
+              }} className={allDone ? "rundo-scan-puls" : undefined}
+                style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 12, padding: "14px 0", fontSize: 18, fontWeight: 700, border: "none" }}>
+                {/* Alles op de rekening heeft een naam: dan is dit het enige wat jij nog moet
+                    doen, en mag de knop dat laten merken. */}
                 {L.confirmMyOrder}
               </button>
             )}
@@ -9449,41 +9406,7 @@ function ShareIcon({ on, size = 20, kleur = "#4a6e73" }: { on?: boolean; size?: 
   )
 }
 
-function SeatsControl({ n, onChange, max, size = 15, showLabel = false, compact = false }: { n: number; onChange: (next: number) => void; max?: number; size?: number; showLabel?: boolean; compact?: boolean }) {
-  const [lang] = useLang()
-  const L = STRINGS[lang]
-  const seats = Math.max(1, n)
-  const capIcons = compact ? 2 : 6
-  const icons = Math.min(seats, capIcons)
-  const atMax = max != null && seats >= max
-  const bw = compact ? 16 : 18
-  return (
-    <span onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: compact ? 3 : 5, background: "rgba(90,108,166,0.1)", borderRadius: 9, padding: compact ? "2px 4px" : "2px 5px 2px 8px", flexShrink: 0 }} title={L.seatsControlTitle}>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 1, fontSize: compact ? 12 : size, lineHeight: 1 }}>
-        {Array.from({ length: icons }).map((_, i) => <span key={i}>👤</span>)}
-        {seats > capIcons && <span style={{ fontSize: compact ? 9.5 : 11, fontWeight: 800, color: "#4a6e73", marginLeft: 1 }}>+{seats - capIcons}</span>}
-      </span>
-      {(showLabel || compact) && <span style={{ fontSize: compact ? 10.5 : 11.5, fontWeight: 700, color: "#4a6e73", whiteSpace: "nowrap" }}>{seats} p.</span>}
-      <button onClick={(e) => { e.stopPropagation(); onChange(Math.max(1, seats - 1)) }} disabled={seats <= 1} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: bw, height: bw, cursor: seats <= 1 ? "default" : "pointer", fontSize: compact ? 11 : 12, lineHeight: 1, opacity: seats <= 1 ? 0.4 : 1 }}>−</button>
-      <button onClick={(e) => { e.stopPropagation(); if (!atMax) onChange(seats + 1) }} disabled={atMax} style={{ border: "none", background: "rgba(0,0,0,0.06)", borderRadius: 6, width: bw, height: bw, cursor: atMax ? "default" : "pointer", fontSize: compact ? 11 : 12, lineHeight: 1, opacity: atMax ? 0.4 : 1 }}>+</button>
-    </span>
-  )
-}
 
-function Stat({ label, value, tone }: { label: string; value: string; tone: "navy" | "green" | "red" | "gold" }) {
-  const colors = {
-    navy: { bg: "rgba(18,58,66,0.05)", fg: "#123a42" },
-    green: { bg: "rgba(39,174,96,0.1)", fg: "#27ae60" },
-    red: { bg: "rgba(224,107,94,0.1)", fg: "#e0685c" },
-    gold: { bg: "rgba(233,196,95,0.16)", fg: "#a06b00" },
-  }[tone]
-  return (
-    <div style={{ flex: 1, textAlign: "center", background: colors.bg, borderRadius: 12, padding: "10px 4px" }}>
-      <div style={{ fontSize: 15, color: "#888", fontWeight: 700 }}>{label}</div>
-      <div style={{ fontSize: 21, fontWeight: 800, color: colors.fg }}>{value}</div>
-    </div>
-  )
-}
 
 const S: Record<string, React.CSSProperties> = {
   page: { padding: 14, fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", background: "linear-gradient(180deg,#e4f5f8 0%,#cfecf3 55%,#bfe4ee 100%)", minHeight: "100dvh", color: "#1d2433", maxWidth: 720, margin: "0 auto", WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" },
