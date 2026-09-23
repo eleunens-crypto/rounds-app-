@@ -1046,6 +1046,10 @@ const STRINGS = {
     allAssignedBody: "Elk item op de rekening heeft een naam. Kijk alles nog even na.",
     allAssignedNotFinal: "Afsluiten is niet definitief \u2014 heropenen kan altijd met \u00e9\u00e9n tik.",
     allAssignedOk: "OK",
+    allAssignedSharedBody: "Het laatste was een gedeeld item. Staat iedereen erbij die ervan nam?",
+    allAssignedSharedYes: "Ja, dat klopt",
+    addSharerBtn: "Nog iemand toevoegen",
+    sharedMissingN: (n: number) => n === 1 ? "Er ontbreekt er nog \u00e9\u00e9n." : `Er ontbreken er nog ${n}.`,
     stickyCheckFirst: "Nog iets na te kijken",
     showDetailsBtn: "Toon details",
     closedBarTitle: "Rekening afgesloten",
@@ -1084,7 +1088,6 @@ const STRINGS = {
     settleGuestTitle: "De rekening is verrekend",
     settleGuestBody: "De beheerder heeft alles afgerond. Je bedrag hieronder blijft staan zoals het is.",
     settleSavedToast: "Afgesloten en bewaard",
-    settleOk: "Duidelijk",
     statusBusy: "● bezig",
     statusNothing: "nog niets",
     todoTitle: "⚠️ Nog te regelen — wijs snel toe",
@@ -1205,6 +1208,7 @@ const STRINGS = {
     iShareYes: "✓ Ik nam hiervan",
     iShareNo: "Ik nam hiervan",
     pickWhoTook: "Tik wie ervan nam — meerdere mag.",
+    whoSharedHead: "Wie nam hiervan?",
     sharesInstead: (a: number, b: number) => `Jullie betalen ${a} ${a === 1 ? "aandeel" : "aandelen"} in plaats van ${b}.`,
     makeSharedTitle: "Dit item delen?",
     multiQtyShareHint: (q: number, tot: number) => `Let op: dit zijn ${q} stuks. Als gedeeld item wordt de volle €${tot.toFixed(2).replace(".", ",")} verdeeld over wie meedeelt — het aantal telt dan niet meer apart mee. Wil je liever per stuk toewijzen? Zet het dan niet op gedeeld.`,
@@ -1760,6 +1764,10 @@ const STRINGS = {
     allAssignedBody: "Chaque article de l'addition a un nom. Vérifie encore le tout.",
     allAssignedNotFinal: "Clôturer n'est pas définitif — tu peux toujours rouvrir en un clic.",
     allAssignedOk: "OK",
+    allAssignedSharedBody: "Le dernier \u00e9tait un article partag\u00e9. Tous ceux qui en ont pris sont-ils l\u00e0\u00a0?",
+    allAssignedSharedYes: "Oui, c'est juste",
+    addSharerBtn: "Ajouter quelqu'un",
+    sharedMissingN: (n: number) => n === 1 ? "Il en manque encore un." : `Il en manque encore ${n}.`,
     stickyCheckFirst: "Encore quelque chose à vérifier",
     showDetailsBtn: "Afficher les détails",
     closedBarTitle: "Addition clôturée",
@@ -1795,7 +1803,6 @@ const STRINGS = {
     settleGuestTitle: "L\u2019addition est réglée",
     settleGuestBody: "L\u2019hôte a tout clôturé. Ton montant ci-dessous reste tel quel.",
     settleSavedToast: "Clôturée et gardée",
-    settleOk: "Compris",
     statusBusy: "● en cours",
     statusNothing: "rien encore",
     todoTitle: "⚠️ Encore à régler — attribue vite",
@@ -1916,6 +1923,7 @@ const STRINGS = {
     iShareYes: "✓ J'en ai pris",
     iShareNo: "J'en ai pris",
     pickWhoTook: "Touche qui en a pris — plusieurs, c'est possible.",
+    whoSharedHead: "Qui en a pris\u00a0?",
     sharesInstead: (a: number, b: number) => `Vous payez ${a} ${a === 1 ? "part" : "parts"} au lieu de ${b}.`,
     makeSharedTitle: "Partager cet article ?",
     multiQtyShareHint: (q: number, tot: number) => `Attention : il s'agit de ${q} pièces. En article partagé, les €${tot.toFixed(2).replace(".", ",")} entiers sont répartis entre ceux qui partagent — le nombre ne compte plus séparément. Tu préfères attribuer à l'unité ? Ne le mets pas en partagé.`,
@@ -2195,6 +2203,9 @@ export default function RundoTable() {
   // overzicht per persoon. De ref houdt het bij één melding per keer dat de rekening
   // volledig raakt, zodat hij niet bij elk tikje terugkomt.
   const [allesPopup, setAllesPopup] = useState(false)
+  // Was het laatste item een gedeeld item? Dan toont de melding dát item, met wie erop
+  // staat — daar is een vergeten naam het makkelijkst te zien.
+  const [allesGedeeldId, setAllesGedeeldId] = useState<string | null>(null)
   // Kort oplichten van de afsluitknop nadat de melding "alles is toegewezen" is
   // weggetikt: het scherm springt ernaartoe, en dan moet je ook zien wélke knop bedoeld is.
   const [wijsAfsluit, setWijsAfsluit] = useState(false)
@@ -2783,13 +2794,18 @@ export default function RundoTable() {
     }
     // Bij heropenen laten we disputed_by staan — een open melding blijft dus openstaan
     // tot de beheerder ze bovenaan oplost.
-    setGroup((cur) => cur ? { ...cur, finalized: on } : cur)
-    const patch = on ? { finalized: true, finalized_at: new Date().toISOString() } : { finalized: false, finalized_at: null }
+    // Heropenen haalt ook het verrekend-vlaggetje weg. Anders bleef `pinned` aan staan en
+    // toonde de balk onderaan voor altijd "Alles verrekend" in plaats van de afsluitknop:
+    // je kon heropenen, wijzigen, en daarna nooit meer afsluiten. De gasten zien tegelijk
+    // hun verrekenvenster weer verdwijnen, wat klopt — de avond loopt weer.
+    setGroup((cur) => cur ? { ...cur, finalized: on, pinned: on ? cur.pinned : false } : cur)
+    const patch = on ? { finalized: true, finalized_at: new Date().toISOString() } : { finalized: false, finalized_at: null, pinned: false }
     const { error } = await supabase.from("table_groups").update(patch).eq("id", group.id)
     if (error && /finalized|disputed_by|finalized_at/.test(error.message || "")) {
       setError(L.finalizeColsMsg)
       return
     }
+    if (!on) setMyGroups((prev) => prev.map((x) => x.id === group.id ? { ...x, pinned: false } : x))
     await loadAll(group.id)
     setToast(on ? L.billClosedToast : L.billReopenedToast)
     // Dichtgeklapt openen: je ziet eerst de namen met hun bedrag, en klapt zelf open
@@ -2819,6 +2835,9 @@ export default function RundoTable() {
       try { al = localStorage.getItem(sleutel) === "1" } catch { /* geen opslag */ }
       if (!al) { setSettleGastPopup(true); try { localStorage.setItem(sleutel, "1") } catch { /* geen opslag */ } }
     } else {
+      // De beheerder opende de avond weer: het verrekenvenster hoort dan niet te blijven
+      // staan — zeker niet als tweede laag onder de melding dat er weer gewijzigd wordt.
+      setSettleGastPopup(false)
       try { localStorage.removeItem(sleutel) } catch { /* geen opslag */ }
     }
   }, [isAdmin, meId, group])
@@ -4306,6 +4325,51 @@ export default function RundoTable() {
               </div>
             )}
           </div>
+  )
+
+  // Springt naar de sectie onderaan. Eén plek, dus beide groene balken kunnen ernaartoe.
+  const naarEnNu = () => {
+    if (typeof document === "undefined") return
+    document.getElementById("en-nu-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" })
+  }
+
+  // "Nog iets samen met de groep?" — dezelfde twee rijen op drie plaatsen: in het
+  // eindvenster van de gast, in dat van de beheerder, en als vaste sectie onderaan het
+  // afgesloten scherm. Eén plek om ze te wijzigen, en overal hetzelfde beeld.
+  const renderEnNu = () => (
+    <>
+      {/* Het icoontje wisselt, zodat de knop niet meteen verklapt waar hij over gaat. */}
+      <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "0 0 8px" }}>{L.whatNowHead}</div>
+      <button onClick={() => setIdeeLijst(true)}
+        style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
+          border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 13, padding: "12px 13px" }}>
+        <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(20,153,176,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}><IdeeIcoon /></span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>{L.ideaBtnTitle}</span>
+          <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#0f7488", lineHeight: 1.3, marginTop: 1 }}>{L.ideaBtnSub}</span>
+        </span>
+        <span style={{ flexShrink: 0, fontSize: 16, color: "#0f7488" }}>→</span>
+      </button>
+      {/* De zwarte Rundo-kaart woog zwaarder dan alles erboven en stond als een blok
+          apart. Ze hoort bij dezelfde vraag, dus staat ze hier als tweede regel. Tik je
+          erop, dan klapt het volledige Rundo-scherm open zoals voorheen. */}
+      {partyInfo ? (
+        <div style={{ marginTop: 8 }}>{renderPartyVerwijzing()}</div>
+      ) : (
+        <button onClick={() => setPartyInfo(true)}
+          style={{ width: "100%", boxSizing: "border-box", marginTop: 8, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
+            border: "1.5px solid rgba(240,193,75,0.75)", background: "rgba(240,193,75,0.09)", borderRadius: 13, padding: "12px 13px" }}>
+          <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(240,179,1,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <RundoLogo size={24} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: "#123a42" }}>{L.cafeAfterQ}</span>
+            <span style={{ display: "block", fontSize: 13, color: "#8aa3a6", lineHeight: 1.35, marginTop: 1 }}>{L.seeWhatItDoes}</span>
+          </span>
+          <span style={{ flexShrink: 0, fontSize: 16, color: "#b3892a" }}>→</span>
+        </button>
+      )}
+    </>
   )
 
   const groepPeekLijst = () => {
@@ -5876,6 +5940,13 @@ export default function RundoTable() {
           </span>
           {/* Oranje op groen: de enige knop in de balk, en meteen herkenbaar als de
               uitzondering. Een halfdoorzichtige knop leest als "uitgeschakeld". */}
+          {/* Het lampje brengt je naar "Nog iets samen met de groep?" onderaan. De balk
+              loopt mee terwijl je scrolt, dus die sectie is overal één tik weg zonder dat
+              ze zich opdringt. */}
+          <button onClick={() => naarEnNu()} aria-label={L.whatNowHead} title={L.whatNowHead}
+            style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 11, padding: "8px 10px", display: "flex", alignItems: "center" }}>
+            <IdeeIcoon kleur="#fff" />
+          </button>
           <button onClick={() => finalizeBill(false)}
             style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", background: "linear-gradient(135deg,#f39c12,#e67e22)", border: "none", borderRadius: 11, padding: "10px 13px", color: "#fff", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap", boxShadow: "0 4px 12px -5px rgba(230,126,34,0.9)" }}>
             {L.reopenWord}
@@ -5917,14 +5988,14 @@ export default function RundoTable() {
             onRename={renameGuest}
             onEditMe={!isAdmin ? editMySpot : undefined}
             setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} magOntdelen={magOntdelen} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} jumpToAssign={jumpToAssign} onDeleteItem={isAdmin ? deleteItem : undefined}
-            onAllAssigned={() => { if (allesToegewezenGezien.current) return; allesToegewezenGezien.current = true; setAllesPopup(true) }}
+            onAllAssigned={(gedeeldId) => { if (allesToegewezenGezien.current) return; allesToegewezenGezien.current = true; setAllesGedeeldId(gedeeldId ?? null); setAllesPopup(true) }}
             klapSignaal={klapToewijzenSignaal}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
             claimMode={claimMode} setClaimMode={setClaimMode} claimPid={claimPid} setClaimPid={setClaimPid}
             iConfirmed={iConfirmed} confirmMe={confirmMe}
             onPickMe={pickMe}
-            finalized={!!group.finalized} iDispute={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name)} iResolved={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name && d.resolved)} iComment={(me && parseDisputes(group.disputed_by || "").find((d) => d.name === me.name)?.comment) || ""} onToggleDispute={(on, comment) => { if (me) flagDispute(me.name, on, comment) }}
+            finalized={!!group.finalized} verrekend={!!group.pinned} iDispute={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name)} iResolved={!!me && parseDisputes(group.disputed_by || "").some((d) => d.name === me.name && d.resolved)} iComment={(me && parseDisputes(group.disputed_by || "").find((d) => d.name === me.name)?.comment) || ""} onToggleDispute={(on, comment) => { if (me) flagDispute(me.name, on, comment) }}
             askConfirm={askConfirm}
             onNaarGasten={() => {
               // Niet zomaar naar de tab: naar de plaatsen zelf, opengeklapt. Anders sta je
@@ -6237,6 +6308,17 @@ export default function RundoTable() {
               ? L.finalizeBtnOpen(openUnits + undecidedShared.length)
               : L.stickyCheckFirst}
           </button>
+        </div>
+      )}
+
+      {/* ─── "Nog iets samen met de groep?" op het afgesloten scherm ───────────────
+          Dit stond enkel in het venster ná het verrekenen — het allerlaatste moment, als
+          de meesten de app al dicht hadden. Nu staat het er zodra de rekening afgesloten
+          is en de avond nog loopt, bij gast én beheerder, onder de verdeling. Wie het
+          venster later toch nog krijgt, ziet er hetzelfde staan. */}
+      {group.finalized && (!isAdmin || adminTab === "overview") && (
+        <div id="en-nu-sectie" style={{ ...S.card }}>
+          {renderEnNu()}
         </div>
       )}
 
@@ -6832,42 +6914,7 @@ export default function RundoTable() {
               <a href="https://www.rundo.be" style={{ fontWeight: 800, color: "#0f7488" }}>www.rundo.be</a>
             </div>
 
-            {/* De avond is klaar, de rekening staat vast — en dan pas komt dit. Het icoontje
-                wisselt, zodat de knop niet meteen verklapt waar hij over gaat. */}
-            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "18px 0 8px" }}>{L.whatNowHead}</div>
-            <button onClick={() => setIdeeLijst(true)}
-              style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
-                border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 13, padding: "12px 13px" }}>
-              <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(20,153,176,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}><IdeeIcoon /></span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                {/* "Wij wel!" is de wending die uitnodigt om te tikken — klein en grijs
-                    ging dat verloren onder de vraag erboven. Nu even groot, in de accentkleur. */}
-                <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>{L.ideaBtnTitle}</span>
-                <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#0f7488", lineHeight: 1.3, marginTop: 1 }}>{L.ideaBtnSub}</span>
-              </span>
-              <span style={{ flexShrink: 0, fontSize: 16, color: "#0f7488" }}>→</span>
-            </button>
-
-            {/* De zwarte Rundo-kaart stond hier als een blok apart en woog zwaarder dan de
-                rekening erboven. Ze hoort bij dezelfde vraag — wat doen we nu? — dus staat ze
-                nu als tweede regel in dezelfde sectie, in dezelfde lichte vorm. Tik je erop,
-                dan klapt het volledige Rundo-scherm open zoals voorheen. */}
-            {partyInfo ? (
-              <div style={{ marginTop: 8 }}>{renderPartyVerwijzing()}</div>
-            ) : (
-              <button onClick={() => setPartyInfo(true)}
-                style={{ width: "100%", boxSizing: "border-box", marginTop: 8, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
-                  border: "1.5px solid rgba(240,193,75,0.75)", background: "rgba(240,193,75,0.09)", borderRadius: 13, padding: "12px 13px" }}>
-                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(240,179,1,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <RundoLogo size={24} />
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: "#123a42" }}>{L.cafeAfterQ}</span>
-                  <span style={{ display: "block", fontSize: 13, color: "#8aa3a6", lineHeight: 1.35, marginTop: 1 }}>{L.seeWhatItDoes}</span>
-                </span>
-                <span style={{ flexShrink: 0, fontSize: 16, color: "#b3892a" }}>→</span>
-              </button>
-            )}
+            <div style={{ marginTop: 18 }}>{renderEnNu()}</div>
           </div>
         </div>
       )}
@@ -6911,40 +6958,7 @@ export default function RundoTable() {
               <a href="https://www.rundo.be" style={{ fontWeight: 800, color: "#0f7488" }}>www.rundo.be</a>
             </div>
 
-            {/* De avond is klaar, de rekening staat vast — en dan pas komt dit. Het icoontje
-                wisselt, zodat de knop niet meteen verklapt waar hij over gaat. */}
-            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "18px 0 8px" }}>{L.whatNowHead}</div>
-            <button onClick={() => setIdeeLijst(true)}
-              style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
-                border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 13, padding: "12px 13px" }}>
-              <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(20,153,176,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}><IdeeIcoon /></span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#4a6e73" }}>{L.ideaBtnTitle}</span>
-                <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, color: "#0f7488", lineHeight: 1.3, marginTop: 1 }}>{L.ideaBtnSub}</span>
-              </span>
-              <span style={{ flexShrink: 0, fontSize: 16, color: "#0f7488" }}>→</span>
-            </button>
-
-            {/* De zwarte Rundo-kaart woog zwaarder dan de rekening erboven en stond als een
-                blok apart. Ze hoort bij dezelfde vraag — wat doen we nu? — dus staat ze nu
-                als tweede regel in dezelfde sectie. Tik je erop, dan klapt het volledige
-                Rundo-scherm open zoals voorheen. */}
-            {partyInfo ? (
-              <div style={{ marginTop: 8 }}>{renderPartyVerwijzing()}</div>
-            ) : (
-              <button onClick={() => setPartyInfo(true)}
-                style={{ width: "100%", boxSizing: "border-box", marginTop: 8, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
-                  border: "1.5px solid rgba(240,193,75,0.75)", background: "rgba(240,193,75,0.09)", borderRadius: 13, padding: "12px 13px" }}>
-                <span style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, background: "rgba(240,179,1,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <RundoLogo size={24} />
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 15, fontWeight: 800, color: "#123a42" }}>{L.cafeAfterQ}</span>
-                  <span style={{ display: "block", fontSize: 13, color: "#8aa3a6", lineHeight: 1.35, marginTop: 1 }}>{L.seeWhatItDoes}</span>
-                </span>
-                <span style={{ flexShrink: 0, fontSize: 16, color: "#b3892a" }}>→</span>
-              </button>
-            )}
+            <div style={{ marginTop: 18 }}>{renderEnNu()}</div>
           </div>
         </div>
       )}
@@ -6977,7 +6991,49 @@ export default function RundoTable() {
               <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>✓</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: "#1f8a4c" }}>{L.allAssignedTitle}</span>
             </div>
-            <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 12px" }}>{L.allAssignedBody}</p>
+            {/* Was het laatste een gedeeld item, dan zegt de melding dát, en toont ze het
+                item met de namen die erop staan en wat het per persoon kost. Bij één deler
+                kleurt het kader oranje: daar is de kans op een vergeten naam het grootst. */}
+            {(() => {
+              const g = allesGedeeldId ? baseItems.find((x) => x.id === allesGedeeldId) : null
+              if (!g) return <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 12px" }}>{L.allAssignedBody}</p>
+              const st = sharedStatus(g)
+              // Zelfde splitsing als in het overzicht van gedeelde items: deelde maar één
+              // helft van een koppel mee, dan staat enkel die naam er.
+              const namen = claims.filter((c) => c.item_id === g.id && c.quantity > 0).flatMap((c) => {
+                const p = participants.find((x) => x.id === c.participant_id)
+                if (!p) return []
+                const delen = p.name.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+                const leden = c.members ? c.members.split(",").map((x) => parseInt(x, 10)).filter((x) => !isNaN(x)) : null
+                if (leden && delen.length > 1) return leden.map((i) => delen[i] || p.name)
+                if (delen.length > 1 && c.quantity < delen.length) return delen.slice(0, c.quantity)
+                return [p.name]
+              })
+              const weinig = st.heads <= 1
+              const tekort = g.share_expected && st.heads < g.share_expected ? g.share_expected - st.heads : 0
+              return (
+                <>
+                  <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 10px" }}>{L.allAssignedSharedBody}</p>
+                  <div style={{ borderRadius: 12, padding: "11px 12px", marginBottom: 12, textAlign: "left",
+                    background: weinig ? "rgba(243,156,18,0.1)" : "rgba(90,108,166,0.07)",
+                    border: weinig ? "1.5px solid rgba(243,156,18,0.55)" : "1px solid rgba(90,108,166,0.25)" }}>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 7 }}>
+                      <span style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", minWidth: 0, overflowWrap: "anywhere" }}>{g.name}</span>
+                      <span style={{ fontSize: 16.5, fontWeight: 800, color: "#0f7d90", flexShrink: 0 }}>€{itemTotal(g).toFixed(2).replace(".", ",")}</span>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 7 }}>
+                      {namen.map((nm, k) => (
+                        <span key={k} style={{ fontSize: 14, fontWeight: 700, borderRadius: 9, padding: "5px 9px", background: "rgba(18,58,66,0.06)", color: "#4a6e73" }}>{nm}</span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 15, color: weinig ? "#b5591a" : "#2b4f56", lineHeight: 1.4 }}>
+                      <b>{L.nSharers(st.heads)}</b> · {L.eachAmount(st.heads > 0 ? itemTotal(g) / st.heads : itemTotal(g))}
+                      {tekort > 0 && <span style={{ display: "block", fontWeight: 700, color: "#b5591a", marginTop: 2 }}>{L.sharedMissingN(tekort)}</span>}
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
             {/* Elk item heeft een naam, maar een lege stoel betekent dat gedeelde items over
                 te weinig mensen verdeeld worden. Dat mag niet stilzwijgend passeren in een
                 melding die zegt dat alles rond is. */}
@@ -7001,7 +7057,13 @@ export default function RundoTable() {
               <span style={{ fontSize: 14.5, color: "#8aa3a6", lineHeight: 1.4 }}>{L.allAssignedNotFinal}</span>
             </div>
             <button onClick={() => sluitAllesPopup()}
-              style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.allAssignedOk}</button>
+              style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{allesGedeeldId ? L.allAssignedSharedYes : L.allAssignedOk}</button>
+            {/* De weg terug naar dat ene item: het venster sluit en je staat er meteen bij,
+                zonder de lijst te moeten afzoeken. */}
+            {allesGedeeldId && (
+              <button onClick={() => { const id = allesGedeeldId; setAllesPopup(false); if (typeof window === "undefined") return; window.setTimeout(() => document.getElementById(`item-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 140) }}
+                style={{ ...S.btn, width: "100%", marginTop: 8, padding: "11px 0", fontSize: 16, fontWeight: 800, color: "#2b4f56", background: "#fff", border: "1.5px solid rgba(18,58,66,0.22)" }}>{L.addSharerBtn}</button>
+            )}
           </div>
         </div>
       )}
@@ -8191,7 +8253,7 @@ function ClaimScreen(props: {
   warnCount?: number
   jumpToAssign?: number
   /** roept de ouder zodra de laatste eenheid is toegewezen */
-  onAllAssigned?: () => void
+  onAllAssigned?: (gedeeldItemId?: string) => void
   /** gaat omhoog wanneer de toewijslijst mag dichtklappen */
   klapSignaal?: number
   onDeleteItem?: (id: string) => void
@@ -8204,14 +8266,14 @@ function ClaimScreen(props: {
   claimMode: "item" | "person"; setClaimMode: (m: "item" | "person") => void
   claimPid: string | null; setClaimPid: (id: string | null) => void
   iConfirmed: boolean; confirmMe: () => Promise<boolean> | void; onPickMe: (id: string) => void
-  finalized: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
+  finalized: boolean; verrekend: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
   askConfirm: (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean }) => void
   /** brengt de beheerder naar het tabblad waar hij die lege stoel wél kan oplossen */
   onNaarGasten?: () => void
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, iDispute, iResolved, iComment, onToggleDispute, askConfirm, onNaarGasten } = props
+  const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, onToggleShared, claimMembers, sharedStatus, warnCount, jumpToAssign, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, verrekend, iDispute, iResolved, iComment, onToggleDispute, askConfirm, onNaarGasten } = props
   const adminPid = props.claimPid
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
@@ -8275,6 +8337,13 @@ function ClaimScreen(props: {
           <span style={{ fontSize: 23, fontWeight: 800, whiteSpace: "nowrap", letterSpacing: -0.3 }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
           <span style={{ fontSize: 14, opacity: 0.85 }}>›</span>
         </button>
+        {/* Zelfde lampje als bij de beheerder: naar de sectie onderaan, zonder te scrollen. */}
+        <button onClick={() => { if (typeof document !== "undefined") document.getElementById("en-nu-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }}
+          aria-label={L.whatNowHead} title={L.whatNowHead}
+          style={{ flexShrink: 0, display: "flex", alignItems: "center", cursor: "pointer", fontFamily: "inherit",
+            background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 12, padding: "8px 9px" }}>
+          <IdeeIcoon kleur="#fff" />
+        </button>
       </div>
     )
   }
@@ -8301,7 +8370,10 @@ function ClaimScreen(props: {
     // afsluit, zodat een volgende heropening wél weer gemeld wordt.
     const gezien = `rundo_table_heropend_gezien_${meId}`
     if (finalized) {
-      if (prev !== true) setShowFinalPopup(true)
+      // Is de avond al verrekend, dan staat het verrekenvenster bovenop dit venster en
+      // blijft dit als tweede laag in de achtergrond hangen. Eén venster tegelijk.
+      if (prev !== true && !verrekend) setShowFinalPopup(true)
+      if (verrekend) setShowFinalPopup(false)
       try { localStorage.setItem(sleutel, "1"); localStorage.removeItem(gezien) } catch { /* geen opslag beschikbaar */ }
       setReviewing(false)
       setShowReopenPopup(false)
@@ -8314,7 +8386,7 @@ function ClaimScreen(props: {
       if (heropend && !al) setShowReopenPopup(true)
     }
     prevFinalizedRef.current = finalized
-  }, [finalized, isAdmin, meId])
+  }, [finalized, verrekend, isAdmin, meId])
 
   const _normal = items.filter((i) => !i.is_shared)
   const _shared = items.filter((i) => i.is_shared)
@@ -8375,10 +8447,38 @@ function ClaimScreen(props: {
   // verdwijnen zonder erom te vragen. Nu meldt hij het alleen; de ouder toont een bericht
   // en klapt pas dicht wanneer jij dat bericht volgt (via klapSignaal).
   const prevDoneRef = useRef(false)
+  // Eén naam op een gedeeld item liet het meteen als "klaar" tellen, dus viel de melding
+  // binnen terwijl je nog namen aan het aantikken was. Twee dingen lossen dat op: we
+  // onthouden of het láátste wat compleet werd een gedeeld item was, en in dat geval
+  // wacht de melding tot je vijf seconden stil bent. Elke extra tik zet die teller
+  // opnieuw. De ouder krijgt het item mee, zodat hij er een eigen melding van kan maken.
+  const vorigeDelersRef = useRef<Record<string, number> | null>(null)
+  const wachtRef = useRef<number | null>(null)
+  const gedeeldLaatstRef = useRef<string | null>(null)
+  // De ouder geeft hier een nieuwe functie bij elke render door; zonder deze ref zou het
+  // effect daarop opnieuw draaien en de teller eindeloos verzetten.
+  const meldRef = useRef(onAllAssigned)
+  meldRef.current = onAllAssigned
+  const delersHandtekening = _shared.map((i) => `${i.id}:${sharerIds(i.id).length}`).join(";")
   useEffect(() => {
-    if (isAdmin && allDone && !prevDoneRef.current) onAllAssigned?.()
-    prevDoneRef.current = allDone
-  }, [allDone, isAdmin, onAllAssigned])
+    const nu: Record<string, number> = {}
+    _shared.forEach((i) => { nu[i.id] = sharerIds(i.id).length })
+    const vorig = vorigeDelersRef.current
+    const netEersteNaam = vorig ? _shared.find((i) => (vorig[i.id] ?? 0) === 0 && nu[i.id] > 0) : undefined
+    vorigeDelersRef.current = nu
+    if (!isAdmin) return
+    if (typeof window !== "undefined" && wachtRef.current !== null) { window.clearTimeout(wachtRef.current); wachtRef.current = null }
+    if (!allDone) { prevDoneRef.current = false; gedeeldLaatstRef.current = null; return }
+    const werdNetKlaar = !prevDoneRef.current
+    prevDoneRef.current = true
+    if (werdNetKlaar) gedeeldLaatstRef.current = netEersteNaam ? netEersteNaam.id : null
+    const gedeeld = gedeeldLaatstRef.current
+    if (!gedeeld) { if (werdNetKlaar) meldRef.current?.(); return }
+    if (typeof window === "undefined") { if (werdNetKlaar) meldRef.current?.(gedeeld); return }
+    wachtRef.current = window.setTimeout(() => { wachtRef.current = null; meldRef.current?.(gedeeld) }, 5000)
+    return () => { if (typeof window !== "undefined" && wachtRef.current !== null) { window.clearTimeout(wachtRef.current); wachtRef.current = null } }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allDone, delersHandtekening, isAdmin])
   useEffect(() => { if (klapSignaal && klapSignaal > 0) setClaimCollapsed(true) }, [klapSignaal])
 
   // Afgesloten, en jij bent de beheerder: dan is dit geen werkblad meer maar een
@@ -8465,12 +8565,18 @@ function ClaimScreen(props: {
                     const fixed = !!it.share_fixed
                     const mine = adminPid ? sh.includes(adminPid) : false
                     return (
-                      <div key={it.id} style={{ padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: mine ? "rgba(233,196,95,0.16)" : "transparent", borderRadius: mine ? 10 : 0 }}>
+                      <div key={it.id} id={`item-${it.id}`} style={{ padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: mine ? "rgba(233,196,95,0.16)" : "transparent", borderRadius: mine ? 10 : 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 18, fontWeight: 700 }}>{it.name} <span style={{ fontSize: 15.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "3px 6px" }}>{L.sharedWord}</span></div>
-                            <div style={{ fontSize: 15.5, color: "#999" }}>€{itemTotal(it).toFixed(2).replace(".", ",")} {L.totalLower}</div>
+                            {/* Zelfde plaats en zelfde grootte als bij een gewoon item: het
+                                bedrag naast de naam, niet klein op de regel eronder. */}
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
+                              <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7d90", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
+                              <span style={{ fontSize: 14.5, color: "#999", flexShrink: 0 }}>{L.totalLower}</span>
+                              <span style={{ fontSize: 15.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "3px 6px", flexShrink: 0 }}>{L.sharedWord}</span>
+                            </div>
                           </div>
                           {/* De telbadge zei "3 personen" zonder te zeggen wélke, en de knop
                               die hier stond opende een venster om dat te bekijken. Beide zijn
@@ -8515,44 +8621,12 @@ function ClaimScreen(props: {
                             </div>
                           )
                         })()}
-                        {/* De beheerder moest langs "Wie deelt?" om zichzelf aan te duiden,
-                            terwijl een gast daar één knop voor heeft. Dit is diezelfde knop:
-                            voor jezelf, meteen. Zit je met meer op één plaats, dan kies je
-                            net als de gast wie van jullie meedeelde. */}
-                        {meId && (() => {
-                          const mijnZit = seatsOf(meId)
-                          const ikDeel = sh.includes(meId)
-                          const mijnNaam = participants.find((q) => q.id === meId)?.name ?? ""
-                          const mijnDelen = mijnNaam.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
-                          const gekozen = claimMembers(it.id, meId)
-                          if (fixed) return null
-                          return (
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 8, marginLeft: 25 }}>
-                              {mijnZit > 1
-                                ? Array.from({ length: mijnZit }, (_, i) => i).map((i) => {
-                                    const aan = gekozen.includes(i)
-                                    return (
-                                      <button key={i} onClick={() => toggleShareMember(it.id, meId, i)}
-                                        style={{ flexShrink: 0, maxWidth: mijnZit > 2 ? 104 : 132, fontSize: mijnZit > 2 ? 13.5 : 14.5, fontWeight: 800, padding: "9px 13px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", color: "#123a42",
-                                          background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
-                                          border: aan ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.18)",
-                                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                        {aan ? "✓ " : ""}{mijnDelen[i] || `${L.personWord} ${i + 1}`}
-                                      </button>
-                                    )
-                                  })
-                                : (
-                                  <button onClick={() => toggleShareClaim(it.id, meId)}
-                                    style={{ ...S.btn, flexShrink: 0, fontWeight: 700,
-                                      ...(ikDeel
-                                        ? { background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#123a42", border: "none" }
-                                        : heads === 0
-                                        ? { background: "rgba(243,156,18,0.12)", color: "#8a5a00", border: "1.5px solid rgba(243,156,18,0.6)" }
-                                        : {}) }}>{ikDeel ? L.iShareYes : L.iShareNo}</button>
-                                )}
-                            </div>
-                          )
-                        })()}
+                        {/* Hier stond een knop "Ik nam hiervan", enkel voor de beheerder zelf.
+                            Maar zijn eigen naam staat hieronder al tussen de andere, dus stond
+                            dezelfde handeling er twee keer. Nu één vraag boven de namen: wie
+                            nam hiervan? Tik een naam om hem aan te zetten, tik hem opnieuw of
+                            gebruik het kruisje om hem weg te halen. */}
+                        <div style={{ fontSize: 15.5, fontWeight: 800, color: "#2b4f56", marginTop: 10, marginLeft: 25 }}>{L.whoSharedHead}</div>
                         {/* Alle namen staan open, en elke persoon is één pil — ook de twee
                             helften van een koppel. Zo zet je Jan af zonder Lore aan te raken,
                             en hoef je geen venster te openen om één naam recht te zetten. */}
@@ -8592,7 +8666,17 @@ function ClaimScreen(props: {
                                         background: on ? (p.id === meId ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : viaLink ? "transparent" : "#fff",
                                         color: on ? "#5a4a1a" : viaLink ? "#8aa3a6" : "#123a42",
                                         fontWeight: on ? 800 : 700,
-                                      }}>{on ? "\u2713 " : ""}{viaLink && !on && <GsmIcon />}{naam}</button>
+                                        paddingRight: on ? 6 : 10,
+                                      }}>{on ? "\u2713 " : ""}{viaLink && !on && <GsmIcon />}{naam}
+                                        {/* Een tweede tik op de naam zet hem ook weer af, maar dat
+                                            is onzichtbaar. Het kruisje zegt het hardop \u2014 zelfde
+                                            handeling, voor wie het niet gokt. */}
+                                        {on && (
+                                          <span onClick={(e) => { e.stopPropagation(); doe() }} role="button" tabIndex={0} aria-label={L.removeOne} title={L.removeOne}
+                                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); doe() } }}
+                                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 7, background: "rgba(90,58,0,0.14)", color: "#5a4a1a", fontSize: 13, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>\u2715</span>
+                                        )}
+                                      </button>
                                     </span>
                                   )
                                 })
@@ -8792,8 +8876,15 @@ function ClaimScreen(props: {
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 18, fontWeight: 700 }}>{it.name}</div>
-                    <div style={{ fontSize: 15.5, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `€${itemTotal(it).toFixed(2).replace(".", ",")}${L.totalSharedByDrinkers}${it.share_expected ? ` · ${L.sharedForN(it.share_expected)}` : ""}`}</div>
+                    {/* Het bedrag stond klein en grijs op de regel eronder, terwijl het bij
+                        een gewoon item groot naast de naam staat. Het is dezelfde soort
+                        prijs, dus hoort ze op dezelfde plaats — de uitleg erover blijft
+                        eronder staan. */}
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
+                      <span style={{ fontSize: 18, fontWeight: 800, flexShrink: 0, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
+                    </div>
+                    <div style={{ fontSize: 15.5, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `${L.totalSharedByDrinkers.trim()}${it.share_expected ? ` · ${L.sharedForN(it.share_expected)}` : ""}`}</div>
                   </div>
                 </div>
                 {/* Ook de gast moet terug kunnen: hij mag een item op gedeeld zetten, dus ook
@@ -9187,7 +9278,10 @@ function ClaimScreen(props: {
           </div>
         )}
       </div>
-    {finalized && !isAdmin && (
+    {/* Zodra de beheerder de avond verrekende, valt dit blok weg: een opmerking sturen
+        naar iemand die de tafel al afsloot, komt nergens meer aan. Tot dan blijft het
+        staan — daar is het net voor bedoeld. */}
+    {finalized && !isAdmin && !verrekend && (
       <div style={{ marginTop: 14 }}>
           {disputeOpen ? (
             <div style={{ background: "rgba(90,108,166,0.06)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 12, padding: 12 }}>
@@ -9261,7 +9355,7 @@ const IDEE_TEKENINGEN = [
   // twee glazen
   <IdeeLijn><path d="M3.4 5.6h6.2l-1 6a2.2 2.2 0 0 1-4.2 0Z" /><path d="M6.5 13.8v5.4" /><path d="M4.4 19.2h4.2" /><path d="M14.4 5.6h6.2l-1 6a2.2 2.2 0 0 1-4.2 0Z" /><path d="M17.5 13.8v5.4" /><path d="M15.4 19.2h4.2" /></IdeeLijn>,
 ]
-function IdeeIcoon() {
+function IdeeIcoon({ kleur = "#0f7488" }: { kleur?: string }) {
   const [i, setI] = useState(0)
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -9269,7 +9363,7 @@ function IdeeIcoon() {
     const t = window.setInterval(() => setI((n) => (n + 1) % IDEE_TEKENINGEN.length), 1500)
     return () => window.clearInterval(t)
   }, [])
-  return <span style={{ display: "flex", color: "#0f7488" }}>{IDEE_TEKENINGEN[i]}</span>
+  return <span style={{ display: "flex", color: kleur }}>{IDEE_TEKENINGEN[i]}</span>
 }
 
 function UitgangIcon({ size = 20 }: { size?: number }) {
