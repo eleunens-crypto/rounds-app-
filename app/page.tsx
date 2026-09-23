@@ -10,8 +10,8 @@ import { Icoon } from "@/lib/RundoIconen"
 const T = {
   nl: {
     tagline: "Rondjes en rekeningen zonder gedoe!",
-    partySub: ["Rondjes opnemen", "… en splitten zonder gedoe"],
-    tableSub: ["Scan de rekening", "… en verdeel in groep"],
+    partySub: ["Rondjes opnemen", "… en splitten", "zonder gedoe"],
+    tableSub: ["Scan de rekening", "… en verdeel", "in groep"],
     dealsKorting: "korting",
     dealsLabel: "Groepsdeals",
     dealsSub: "Samen op stap = samen korting bij deelnemende zaken",
@@ -37,8 +37,8 @@ const T = {
   },
   fr: {
     tagline: "Tournées et additions, sans prise de tête !",
-    partySub: ["Note les tournées", "… et partage sans prise de tête"],
-    tableSub: ["Scanne l'addition", "… et partage en groupe"],
+    partySub: ["Note les tournées", "… et partage", "sans prise de tête"],
+    tableSub: ["Scanne l'addition", "… et partage", "en groupe"],
     dealsKorting: "remise",
     dealsLabel: "Deals groupe",
     dealsSub: "Sortir ensemble = réduction ensemble chez les partenaires",
@@ -239,7 +239,7 @@ export default function Home() {
   const modusKaart = (m: Mode) => {
     const resto = m === "table"
     const md = MODUS[m]
-    const [regel1, regel2] = resto ? t.tableSub : t.partySub
+    const [regel1, ...vervolg] = resto ? t.tableSub : t.partySub
     return (
       <div style={{ ...S.kaart, background: md.kaart, border: `1.5px solid ${md.kleur}99`, boxShadow: `0 12px 26px -18px ${md.schaduw}` }}>
         {/* Foto in twee lagen: over de hele kaart een zachte, vervaagde waas (zo schemert
@@ -253,12 +253,12 @@ export default function Home() {
           background: `linear-gradient(90deg, rgba(${md.kaartRgb},0.86) 0%, rgba(${md.kaartRgb},0.84) 30%, rgba(${md.kaartRgb},0.6) 46%, rgba(${md.kaartRgb},0.15) 66%, rgba(${md.kaartRgb},0) 82%)` }} />
         <div style={{ position: "relative", zIndex: 2, flex: 1, padding: "16px 16px 16px" }}>
           <span style={{ display: "inline-block", filter: `drop-shadow(0 0 8px rgb(${md.kaartRgb})) drop-shadow(0 0 3px rgb(${md.kaartRgb}))` }}><RundoLogo size={46} resto={resto} opDonker={false} /></span>
-          {/* Ondertitel op twee regels: de actie vet, het vervolg lichter eronder. Een
+          {/* Ondertitel: de actie vet, het vervolg lichter eronder over korte regels links. Een
               zachte gloed in de kaartkleur houdt logo en tekst leesbaar waar ze over de
               foto lopen. */}
           <div style={{ ...S.logoSub, marginTop: 6, textShadow: `0 0 10px rgb(${md.kaartRgb}), 0 0 18px rgb(${md.kaartRgb}), 0 0 4px rgb(${md.kaartRgb})` }}>
             <span style={{ display: "block", color: K.tekst, fontWeight: 800 }}>{regel1}</span>
-            <span style={{ display: "block" }}>{regel2}</span>
+            {vervolg.map((regel, i) => <span key={i} style={{ display: "block" }}>{regel}</span>)}
           </div>
         </div>
         {startKnop(m)}
