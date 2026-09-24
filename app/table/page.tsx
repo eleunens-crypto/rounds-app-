@@ -8184,7 +8184,11 @@ function ClaimScreen(props: {
   const toewijsbaar = participants
     .sort((a, b) => Number(!!a.self_joined) - Number(!!b.self_joined))
   // Dezelfde deel-knop als op de bon: hier kan de admin een item alsnog op "gedeeld" zetten.
-  const shareBtn = (it: BillItem) => !magOntdelen(it) ? (
+  // `stil` = alles is al toegewezen. Dan valt er niets meer te verdelen en hoeft deze knop
+  // niet meer te roepen: enkel het teken blijft over, zonder woord, op de achtergrond. Hij
+  // verdwijnt niet helemaal, want dit is de énige plek in de app waar een item nog op
+  // gedeeld gezet kan worden — en dat is net wat je ontdekt wanneer alles al verdeeld is.
+  const shareBtn = (it: BillItem, stil = false) => !magOntdelen(it) ? (
     <span title={L.sharedByOther}
       style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px",
         background: INDIGO.vlak, color: INDIGO.tekst, fontSize: 15.5, fontWeight: 800 }}>
@@ -8192,15 +8196,22 @@ function ClaimScreen(props: {
     </span>
   ) : (
     <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
+      aria-label={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
       // De knop toont de stand én zet hem om: nog eens tikken maakt het item weer gewoon.
       // Daarmee vervalt het aparte GEDEELD-label naast de naam, dat hetzelfde zei.
-      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px", cursor: "pointer",
+      style={stil ? {
+        flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center",
+        width: 31, height: 31, borderRadius: 9, cursor: "pointer", opacity: 0.75,
+        border: "1.5px solid rgba(90,108,166,0.28)", background: "#fff", padding: 0,
+      } : { flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px", cursor: "pointer",
         border: `1.5px solid ${it.is_shared ? "rgba(90,108,166,0.55)" : INDIGO.rand}`,
         background: it.is_shared ? INDIGO.vlak : "#fff" }}>
-      <ShareIcon on={it.is_shared} size={13} kleur={INDIGO.tekst} />
-      <span style={{ fontSize: 15.5, fontWeight: 800, color: INDIGO.tekst }}>
-        {it.is_shared ? `${L.sharedOnShort} ✓` : L.makeSharedShort}
-      </span>
+      <ShareIcon on={it.is_shared} size={stil ? 14 : 13} kleur={INDIGO.tekst} />
+      {!stil && (
+        <span style={{ fontSize: 15.5, fontWeight: 800, color: INDIGO.tekst }}>
+          {it.is_shared ? `${L.sharedOnShort} ✓` : L.makeSharedShort}
+        </span>
+      )}
     </button>
   )
   // Vroeger klapte deze lijst vanzelf dicht zodra alles was toegewezen — je zag je werk
@@ -8473,7 +8484,7 @@ function ClaimScreen(props: {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.quantity}× {it.name}</span>
-                            {isAdmin && shareBtn(it)}
+                            {isAdmin && shareBtn(it, open <= 0)}
                           </div>
                           {/* Hier stond rechts een rode knop "2 open — wijs toe". Die deed twee
                               dingen tegelijk: melden hoeveel er nog vrij was, én de kiezer openen.
@@ -8918,13 +8929,19 @@ function ClaimScreen(props: {
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}><span style={{ color: "#0f7d90" }}>{total}×</span> {it.name}</span>
                   <span style={{ fontSize: 18, fontWeight: 800, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
-                  <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
-                    style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 800, padding: "7px 9px", borderRadius: 8, cursor: "pointer",
-                      color: it.is_shared ? "#7a5300" : "#4a6e73",
-                      background: it.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
-                      border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(18,58,66,0.15)" }}>
-                    <ShareIcon on={it.is_shared} size={12} />{it.is_shared ? L.sharedOnShort : L.makeSharedShort}
-                  </button>
+                  {/* Is alles toegewezen, dan valt er voor een gast niets meer te beslissen:
+                      de deelknop gaat weg. Komt er een stuk vrij, dan staat hij er weer. Bij
+                      een gedeeld item blijft hij altijd — wie zelf iets op gedeeld zette,
+                      moet dat ook weer kunnen terugdraaien. */}
+                  {(open > 0 || it.is_shared) && (
+                    <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
+                      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 800, padding: "7px 9px", borderRadius: 8, cursor: "pointer",
+                        color: it.is_shared ? "#7a5300" : "#4a6e73",
+                        background: it.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
+                        border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(18,58,66,0.15)" }}>
+                      <ShareIcon on={it.is_shared} size={12} />{it.is_shared ? L.sharedOnShort : L.makeSharedShort}
+                    </button>
+                  )}
                 </div>
                 {it.unit_price <= 0.0001
                   ? <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
