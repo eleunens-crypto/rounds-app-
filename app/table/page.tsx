@@ -1280,6 +1280,10 @@ const STRINGS = {
     withdraw: "toch intrekken",
     assignFullTap: "Alles toegewezen — tik een naam om weg te halen",
     whoElseTook: "Wie nam dit nog?",
+    yourShare: (b: number) => `jouw deel \u20ac${b.toFixed(2).replace(".", ",")}`,
+    whatYouTook: "Wat jij zelf nam",
+    adminNoConfirmNote: "Je bevestigt niets apart \u2014 als beheerder sluit je straks de hele rekening af. Dit is om te zien wat er op jouw naam staat.",
+    nothingYoursYet: "Je hebt zelf nog niets aangeduid.",
     otherQ: "andere?",
     iTakeOne: "Ik neem er een",
     addSomeoneElse: "Iemand anders toevoegen",
@@ -1983,6 +1987,10 @@ const STRINGS = {
     withdraw: "retirer finalement",
     assignFullTap: "Tout attribué — touchez un nom pour le retirer",
     whoElseTook: "Qui d'autre en a pris\u00a0?",
+    yourShare: (b: number) => `ta part \u20ac${b.toFixed(2).replace(".", ",")}`,
+    whatYouTook: "Ce que tu as pris toi-m\u00eame",
+    adminNoConfirmNote: "Tu ne confirmes rien s\u00e9par\u00e9ment \u2014 en tant qu'organisateur, tu cl\u00f4tures ensuite toute l'addition. Ceci sert \u00e0 voir ce qui est \u00e0 ton nom.",
+    nothingYoursYet: "Tu n'as encore rien coch\u00e9 pour toi.",
     otherQ: "autre\u00a0?",
     iTakeOne: "J'en prends un",
     addSomeoneElse: "Ajouter quelqu'un d'autre",
@@ -8267,6 +8275,18 @@ function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confir
   )
 }
 
+// "Van jou" en "gedeeld" zijn allebei waar zodra jij meedeelt, maar ze vochten om dezelfde
+// plek: het vlak. Het goud won, en dan zag je niet meer dat het item gedeeld was. Nu houdt
+// het vlak zijn eigen betekenis (blauw = gedeeld, groen = alles verdeeld, wit = te doen) en
+// krijgt "van jou" een eigen plek: een gouden streep langs de linkerkant. Alle rijen van
+// jou liggen daardoor op één lijn — je kan er met je duim langs scrollen.
+const JOUW_STREEP = {
+  borderLeft: "5px solid #ecc564",
+  borderTopLeftRadius: 6,
+  borderBottomLeftRadius: 6,
+  paddingLeft: 9,
+} as const
+
 function ClaimScreen(props: {
   magOntdelen: (it: BillItem) => boolean
   items: BillItem[]; meId: string | null; me: Participant | null; isAdmin: boolean
@@ -8308,6 +8328,8 @@ function ClaimScreen(props: {
   // De beheerder is gewoon de persoon die hier zit: meId.
   const adminPid = props.meId
   const [assignItem, setAssignItem] = useState<string | null>(null)
+  // Het eigen overzicht van de beheerder staat open zolang hij verdeelt; dichtklappen mag.
+  const [eigenOpen, setEigenOpen] = useState(true)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
   // een volgend gezelschap krijg je ze opnieuw — dan zit er ook een ander gezelschap.
   // Bevestigd betekent: dit is wat ik nam. Dan hoort de lijst ook vast te staan — anders
@@ -8601,7 +8623,7 @@ function ClaimScreen(props: {
                     // voorbijlezen dat hier iets anders geldt. Zit jij er zelf in, dan
                     // wint het gouden vlak — dat zegt iets over jou, niet over het item.
                     return (
-                      <div key={it.id} id={`item-${it.id}`} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: mine ? "rgba(233,196,95,0.16)" : INDIGO.vlak, borderRadius: 10 }}>
+                      <div key={it.id} id={`item-${it.id}`} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: INDIGO.vlak, borderRadius: 10, ...(mine ? JOUW_STREEP : null) }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             {/* Zelfde plaats en zelfde grootte als bij een gewoon item: het
@@ -8633,7 +8655,7 @@ function ClaimScreen(props: {
                         <div style={{ marginTop: 10, fontSize: 15.5, lineHeight: 1.4 }}>
                           <span style={{ fontWeight: 800, color: "#2b4f56" }}>{L.whoSharedHead}</span>
                           {heads > 0
-                            ? <span style={{ color: INDIGO.tekst, fontWeight: 700 }}> ({L.nSharers(heads)} · {L.eachAmount(perHead)})</span>
+                            ? <span style={{ color: INDIGO.tekst, fontWeight: 700 }}> ({L.nSharers(heads)} · {L.eachAmount(perHead)}{ikDeel ? ` · ${L.yourShare(perHead * Math.max(1, myShareHeads(it.id, meId!)))}` : ""})</span>
                             : <span style={{ color: "#b5591a", fontWeight: 700 }}> — {L.nobodyShared}</span>}
                         </div>
                         {/* Jouw eigen keuze staat vooraan en werkt zoals bij een gast: één tik,
@@ -8729,7 +8751,7 @@ function ClaimScreen(props: {
                   const highlight = adminPid && mineQ > 0
                   return (
                     <div key={it.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 10,
-                      background: highlight ? "rgba(233,196,95,0.16)" : open <= 0 ? "rgba(39,174,96,0.09)" : "transparent" }}>
+                      background: highlight ? "rgba(233,196,95,0.16)" : open <= 0 ? "rgba(39,174,96,0.09)" : "transparent", ...(highlight ? JOUW_STREEP : null) }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -8851,6 +8873,47 @@ function ClaimScreen(props: {
             </div>
           )}
         </div>
+
+        {/* Een gast ziet altijd zijn eigen regels en zijn bedrag onder de lijst; de beheerder
+            nergens. Hij kon het alleen opzoeken in "Rekening per persoon", tussen alle andere
+            namen. Hier staat het gewoon: wat er op jouw naam staat, en wat dat kost. Geen
+            bevestigknop — als beheerder sluit je straks de hele rekening af. */}
+        {meId && items.length > 0 && (
+          <div style={{ ...S.card, background: "linear-gradient(135deg,#fffdf6,#fdf6e3)", border: "1.5px solid rgba(196,152,32,0.45)" }}>
+            <div onClick={() => setEigenOpen((v) => !v)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: eigenOpen ? 11 : 0 }}>
+              <span style={{ fontSize: 17.5, fontWeight: 800, color: "#5a4a1a" }}>{L.whatYouTook}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+                {!eigenOpen && <span style={{ fontSize: 19, fontWeight: 800, color: "#123a42" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>}
+                <span style={{ fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{eigenOpen ? L.collapseClose : L.collapseOpen}</span>
+              </span>
+            </div>
+            {eigenOpen && (() => {
+              const mijne = personItems(meId, false)
+              const t = personTotal(meId)
+              return (
+                <>
+                  {mijne.length === 0 && <div style={{ fontSize: 16.5, color: "#8aa3a6" }}>{L.nothingYoursYet}</div>}
+                  {mijne.map((d, k) => (
+                    <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 16.5, padding: "3px 0", color: "#2b4f56" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0 }}>
+                        {d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}
+                      </span>
+                      <span style={{ fontWeight: 700, flexShrink: 0, color: d.shared && !d.revealed ? "#a06b00" : "#123a42" }}>
+                        {d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}
+                      </span>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: "rgba(233,196,95,0.22)", border: "2px solid rgba(196,152,32,0.45)", borderRadius: 14, padding: "12px 14px", marginTop: 10 }}>
+                    <span style={{ fontSize: 17.5, fontWeight: 800, color: "#5a4a1a" }}>{L.yourTotal}</span>
+                    <span style={{ fontSize: 28, fontWeight: 800, color: "#123a42", flexShrink: 0 }}>€{t.settled.toFixed(2).replace(".", ",")}</span>
+                  </div>
+                  <div style={{ fontSize: 14.5, color: "#8aa3a6", lineHeight: 1.45, marginTop: 9 }}>{L.adminNoConfirmNote}</div>
+                </>
+              )
+            })()}
+          </div>
+        )}
       </div>
     )
   }
@@ -8940,7 +9003,7 @@ function ClaimScreen(props: {
               // Dezelfde vlakken als op het beheerdersscherm: blauw voor een gedeeld item,
               // goud zodra jij er zelf in zit. Een gast zag daarvoor alleen witte regels en
               // moest bij elk item opnieuw lezen wat hij al had aangeduid.
-              <div key={it.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 10, background: iShare ? "rgba(233,196,95,0.16)" : INDIGO.vlak }}>
+              <div key={it.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 10, background: INDIGO.vlak, ...(iShare ? JOUW_STREEP : null) }}>
                 {/* Naam en bedrag over de volle breedte, de standen op een eigen regel:
                     met alles op één lijn werd een lange itemnaam afgekapt op een telefoon. */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -9039,6 +9102,8 @@ function ClaimScreen(props: {
                         <>
                           <div style={{ fontSize: 15.5, color: isDone ? "#1f8a4c" : "#2b4f56", lineHeight: 1.4, marginBottom: 7 }}>
                             <b>{L.nSharers(heads)}</b> · {L.eachAmount(nowEach)}
+                            {/* Wat het jou kost, op de plek waar je toch al kijkt. */}
+                            {iShare && <span style={{ color: "#5a4a1a", fontWeight: 700 }}> · {L.yourShare(myShare)}</span>}
                             {!isDone && <span style={{ color: "#8aa3a6" }}> {L.dropsIfMore}</span>}
                           </div>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
@@ -9065,7 +9130,7 @@ function ClaimScreen(props: {
             // Goud = jij nam hiervan. Lichtgroen = alle stuks zijn verdeeld, er hoeft niets
             // meer te gebeuren. Zo zie je in één blik waar je nog moet kijken.
             <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 8px", borderRadius: 10, borderBottom: "1px solid rgba(0,0,0,0.05)",
-              background: mine > 0 ? "rgba(233,196,95,0.16)" : open <= 0 ? "rgba(39,174,96,0.09)" : "transparent" }}>
+              background: mine > 0 ? "rgba(233,196,95,0.16)" : open <= 0 ? "rgba(39,174,96,0.09)" : "transparent", ...(mine > 0 ? JOUW_STREEP : null) }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}><span style={{ color: "#0f7d90" }}>{total}×</span> {it.name}</span>
