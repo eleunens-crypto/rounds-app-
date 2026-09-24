@@ -882,6 +882,7 @@ const STRINGS = {
     quotaDayBody: "De gratis AI-scan heeft een daglimiet en die is bereikt. Opnieuw proberen helpt vandaag niet meer — morgenochtend werkt ze weer.",
     quotaDayQuickScan: "⚡ Gebruik de snelle scan",
     retryIn: (s: number) => `🔄 Opnieuw over ${s}s`,
+    photoLoading: "Foto wordt klaargezet\u2026",
     photoFailTitle: "Het lukt even niet",
     photoFailBody: "Dat kan aan de foto liggen, maar even goed aan de scandienst zelf. Ga terug en probeer het zo meteen nog eens \u2014 meestal lukt het dan wel.",
     photoTipsBody: "Leg de bon plat, zorg voor licht van opzij, en houd je gsm er recht boven. Is de bon lang? Neem hem in twee stukken.",
@@ -1598,6 +1599,7 @@ const STRINGS = {
     quotaDayBody: "Le scan IA gratuit a une limite journalière, atteinte pour aujourd'hui. Réessayer n'aidera plus — demain matin, ça refonctionne.",
     quotaDayQuickScan: "⚡ Utiliser le scan rapide",
     retryIn: (s: number) => `🔄 Réessayer dans ${s}s`,
+    photoLoading: "Photo en pr\u00e9paration\u2026",
     photoFailTitle: "\u00c7a ne marche pas pour le moment",
     photoFailBody: "\u00c7a peut venir de la photo, mais tout autant du service de scan. Reviens en arri\u00e8re et r\u00e9essaie dans un instant \u2014 en g\u00e9n\u00e9ral, \u00e7a marche.",
     photoTipsBody: "Pose l'addition à plat, éclaire-la de côté et tiens ton téléphone bien au-dessus. Addition longue ? Prends-la en deux morceaux.",
@@ -2314,6 +2316,8 @@ export default function RundoTable() {
   // Een wachttijd van de dienst zelf (daglimiet) telt niet mee — dan heb je niets kunnen
   // proberen.
   const [scanPogingen, setScanPogingen] = useState(0)
+  // Staat er een foto klaar te komen? Zolang dit aanstaat blijft de leesknop dicht.
+  const [fotoBezig, setFotoBezig] = useState(false)
   // Welke kiesvensters je met "Klaar" hebt dichtgedaan. Zonder deze verzameling bleef het
   // venster openstaan zodra er iemand geselecteerd was — en deed die knop dus niets.
   const [personsTouched, setPersonsTouched] = useState(false)
@@ -3409,23 +3413,53 @@ export default function RundoTable() {
   }
 
   // Voegt een foto toe aan de lijst (max 2: bovenste + onderste helft van een lange rekening).
+  // "Lees mijn bon" stond meteen klaar, ook terwijl de gsm de foto nog aan het wegschrijven
+  // was. Op een telefoon duurt dat bij een verse camerafoto van tien megapixel makkelijk een
+  // seconde: je tikte dan op een beeld dat er nog niet helemaal was, en de scan vertrok met
+  // een halve of een onleesbare foto. Nu wacht de knop tot het beeld écht gedecodeerd is,
+  // plus een korte tel extra zodat je de foto ook zelf nog even kan bekijken.
+  const fotoKlok = useRef<number | null>(null)
+  const wachtOpFoto = (url: string) => {
+    setFotoBezig(true)
+    if (fotoKlok.current) { window.clearTimeout(fotoKlok.current); fotoKlok.current = null }
+    const klaar = () => {
+      if (fotoKlok.current) window.clearTimeout(fotoKlok.current)
+      fotoKlok.current = window.setTimeout(() => { setFotoBezig(false); fotoKlok.current = null }, 1200)
+    }
+    const beeld = new window.Image()
+    beeld.onload = () => { const d = beeld.decode?.(); if (d) d.then(klaar, klaar); else klaar() }
+    // Lukt het inlezen niet, dan mag de knop toch weer aan: de scan zelf meldt dan wel
+    // wat er mis is. Blijven wachten op een beeld dat nooit komt is erger.
+    beeld.onerror = klaar
+    beeld.src = url
+    // Noodrem: wat er ook gebeurt, na vier seconden gaat de knop open.
+    window.setTimeout(() => setFotoBezig(false), 4000)
+  }
+
   const addPhoto = (file: File | undefined) => {
     if (!file) return
     setScanFail(null); setScanPogingen(0)
-    setPhotos((cur) => (cur.length >= 2 ? cur : [...cur, { file, url: URL.createObjectURL(file) }]))
+    setPhotos((cur) => {
+      if (cur.length >= 2) return cur
+      const url = URL.createObjectURL(file)
+      wachtOpFoto(url)
+      return [...cur, { file, url }]
+    })
   }
   const removePhoto = (idx: number) => {
     setPhotos((cur) => {
       const p = cur[idx]
       if (p) URL.revokeObjectURL(p.url)
-      return cur.filter((_, i) => i !== idx)
+      const rest = cur.filter((_, i) => i !== idx)
+      if (rest.length === 0) setFotoBezig(false)
+      return rest
     })
   }
 
   // Leest alle verzamelde foto's uit en plakt de items aan elkaar.
   // Eén druk op de knop = één scan, ook al zijn het twee foto's (het blijft één rekening).
   const scanPhotos = async () => {
-    if (photos.length === 0 || !group) return
+    if (photos.length === 0 || !group || fotoBezig) return
     setScanFail(null); setScanPreview([]); setScanProgress(0); setScanning(true)
     setScanFile(photos[0].file); setRetryFile(photos[0].file)
     laatFotoUrlLos(scanPhotoUrl)
@@ -7182,10 +7216,10 @@ export default function RundoTable() {
                             foutvenster heeft geen herprobeerknop meer. Daarom telt de
                             adempauze hier. Zonder haar drukte je meteen opnieuw en kreeg je
                             binnen de seconde dezelfde fout van dezelfde dienst. */}
-                        <button onMouseDown={(e) => e.preventDefault()} onClick={scanPhotos} disabled={cooldownLeft > 0}
-                          className={photos.length > 0 && !scanFail && cooldownLeft === 0 ? "rundo-scan-puls" : undefined}
-                          style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>
-                          {cooldownLeft > 0 ? L.retryIn(cooldownLeft) : photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}
+                        <button onMouseDown={(e) => e.preventDefault()} onClick={scanPhotos} disabled={cooldownLeft > 0 || fotoBezig}
+                          className={photos.length > 0 && !scanFail && cooldownLeft === 0 && !fotoBezig ? "rundo-scan-puls" : undefined}
+                          style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, opacity: cooldownLeft > 0 || fotoBezig ? 0.55 : 1, cursor: cooldownLeft > 0 || fotoBezig ? "default" : "pointer" }}>
+                          {fotoBezig ? L.photoLoading : cooldownLeft > 0 ? L.retryIn(cooldownLeft) : photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}
                         </button>
                         <div style={{ fontSize: 16, color: "#7d999d", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.scanSubNote}</div>
                         {photos.length > 1 && <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 6 }}>{L.countsAsOne}</div>}
