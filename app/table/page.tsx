@@ -433,11 +433,12 @@ function verdientWachttijd(status?: number, retryAfter?: number | null): boolean
 
 // Maar ook zonder limiet hoort er een adempauze te zijn. Dezelfde foto binnen de seconde
 // nog eens door dezelfde dienst halen geeft hetzelfde antwoord: je zag drie foutmeldingen
-// in drie tellen en wist niet meer wat je nu eigenlijk aan het proberen was. Dus na de
-// eerste mislukking drie seconden, na de tweede acht — genoeg om de melding te lezen, kort
-// genoeg om niet te wachten op niets.
+// in drie tellen en wist niet meer wat je nu eigenlijk aan het proberen was.
+// Drie seconden bleek te kort: de gebruiker drukte meteen opnieuw en kreeg opnieuw dezelfde
+// fout binnen de seconde. Vandaar acht seconden na de eerste mislukking en twintig na de
+// volgende — lang genoeg dat een hapering aan de overkant voorbij kan zijn.
 function korteAdem(pogingen: number): number {
-  return (pogingen <= 1 ? 3 : 8) * 1000
+  return (pogingen <= 1 ? 8 : 20) * 1000
 }
 
 async function scanReceipt(files: File | File[], onProgress?: (p: number) => void): Promise<{ items: ParsedItem[] | null; total: number | null; quotaDay?: boolean; retryAfter?: number | null; reason: "unavailable" | "empty" | null; status?: number; detail?: string }> {
@@ -546,7 +547,7 @@ async function scanReceiptOCR(file: File, onProgress?: (p: number) => void): Pro
   }
 }
 
-function Toast({ message, onDone }: { message: string; onDone: () => void }) {
+function Toast({ message, onDone, ms = 2400 }: { message: string; onDone: () => void; ms?: number }) {
   const doneRef = useRef(onDone)
   doneRef.current = onDone
   // Telefoons houden de ingezoomde stand vast over paginawissels heen (Table →
@@ -572,9 +573,9 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
     } catch { /* niets */ }
   }, [])
   useEffect(() => {
-    const t = setTimeout(() => doneRef.current(), 2400)
+    const t = setTimeout(() => doneRef.current(), ms)
     return () => clearTimeout(t)
-  }, [message])
+  }, [ms, message])
   return <div style={S.toast}>{message}</div>
 }
 
@@ -704,9 +705,6 @@ const STRINGS = {
     addFreeSeat: "+ Vrije plaats toevoegen",
     freeSeatAdded: (n: number) => `Plaats bijgezet — jullie zijn nu met ${n}.`,
     freeSeatRemoved: (n: number) => `Plaats weg \u2014 jullie zijn nu met ${n}.`,
-    seatsStillFreeWarn: (n: number) => n === 1
-      ? "Nog 1 plaats vrij. Je kan al beginnen, maar kijk de verdeling later nog eens na."
-      : `Nog ${n} plaatsen vrij. Je kan al beginnen, maar kijk de verdeling later nog eens na.`,
     nowAssignSub: "Dan kan je nu toewijzen wie wat nam.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Toewijzen eten & drinken \u2192",
     howManyPersonsQ: "Voor hoeveel personen?",
@@ -762,8 +760,6 @@ const STRINGS = {
     scanThis: "Laat je gasten dit scannen",
     personWord: "Persoon",
     onlyOneShares: "⚠️ Maar 1 persoon deelt mee",
-    sharedOverviewTitle: "Gedeelde items — wie deelde mee?",
-    sharedByLabel: "gedeeld door",
     nobodyShared: "Nog niemand duidde dit item aan",
     nSharers: (n: number) => n === 1 ? "1 deler" : `${n} delers`,
     eachAmount: (b: number) => `\u20ac${b.toFixed(2).replace(".", ",")} elk`,
@@ -863,9 +859,7 @@ const STRINGS = {
     goGuestsBtn: "Naar Gasten & QR",
     seatsFreeWarn: (n: number) => n === 1 ? "Nog 1 plaats vrij" : `Nog ${n} plaatsen vrij`,
     seatsFreeWarnHow: "Laat ze scannen of verwijder ze.",
-    groupFullTitle: "Iedereen is er",
-    groupFullBody: (n: number) => `Alle ${n} plaatsen van je groep zijn ingenomen. Je kan gerust verder toewijzen.`,
-    groupFullAdjust: "Groep aanpassen",
+    groupFullToast: (n: number) => `\u2713 Iedereen is er \u2014 alle ${n} plaatsen ingevuld`,
     scanModalTitle: "🧾 Rekening scannen",
     scanModalTitleAdded: "🧾 Foto toegevoegd",
     oneStepLeft: "nog 1 stap",
@@ -895,11 +889,10 @@ const STRINGS = {
     retryNow: "🔄 Opnieuw proberen",
     retriesLeft: (n: number) => `nog ${n} poging${n !== 1 ? "en" : ""} met deze foto`,
     retryLast: "laatste poging met deze foto",
-    photoFailTitle: "📷 Het lukt niet met deze foto",
-    photoFailBody: "Drie keer geprobeerd. Meestal ligt het aan de foto zelf — te donker, schuin genomen, of de bon staat er niet helemaal op.",
-    photoTipsTitle: "Zo lukt het meestal wel",
+    photoFailTitle: "Het lukt even niet",
+    photoFailBody: "Twee keer geprobeerd. Dat kan aan de foto liggen, maar even goed aan de scandienst zelf. Ga terug en probeer het zo meteen opnieuw \u2014 meestal lukt het dan wel.",
     photoTipsBody: "Leg de bon plat, zorg voor licht van opzij, en houd je gsm er recht boven. Is de bon lang? Neem hem in twee stukken.",
-    newPhotoBtn: "📷 Nieuwe foto nemen",
+    backToBillBtn: "\u2190 Terug",
     scanFailEmptyTitle: "📷 Niets herkend op de foto",
     scanFailEmptyBody: "De scan kon geen items lezen. Maak een scherpere foto — recht van boven, goed belicht en zonder plooien of schaduw — en probeer opnieuw.",
     yourPhoto: "Jouw foto — vergelijk met de lijst",
@@ -1438,9 +1431,6 @@ const STRINGS = {
     addFreeSeat: "+ Ajouter une place libre",
     freeSeatAdded: (n: number) => `Place ajoutée — vous êtes maintenant ${n}.`,
     freeSeatRemoved: (n: number) => `Place retir\u00e9e \u2014 vous \u00eates maintenant ${n}.`,
-    seatsStillFreeWarn: (n: number) => n === 1
-      ? "Encore 1 place libre. Tu peux d\u00e9j\u00e0 commencer, mais rev\u00e9rifie la r\u00e9partition plus tard."
-      : `Encore ${n} places libres. Tu peux d\u00e9j\u00e0 commencer, mais rev\u00e9rifie la r\u00e9partition plus tard.`,
     nowAssignSub: "Tu peux maintenant attribuer qui a pris quoi.",
     goAssignBtn: "\ud83c\udf7d\ufe0f Attribuer plats & boissons \u2192",
     howManyPersonsQ: "Pour combien de personnes ?",
@@ -1493,8 +1483,6 @@ const STRINGS = {
     scanThis: "Fais scanner à tes invités",
     personWord: "Personne",
     onlyOneShares: "⚠️ Une seule personne partage",
-    sharedOverviewTitle: "Articles partagés — qui a partagé ?",
-    sharedByLabel: "partagé par",
     nobodyShared: "Personne n'a encore coché cet article",
     nSharers: (n: number) => n === 1 ? "1 participant" : `${n} participants`,
     eachAmount: (b: number) => `\u20ac${b.toFixed(2).replace(".", ",")} chacun`,
@@ -1594,9 +1582,7 @@ const STRINGS = {
     goGuestsBtn: "Vers Invités & QR",
     seatsFreeWarn: (n: number) => n === 1 ? "Encore 1 place libre" : `Encore ${n} places libres`,
     seatsFreeWarnHow: "Fais-les scanner ou retire-les.",
-    groupFullTitle: "Tout le monde est là",
-    groupFullBody: (n: number) => `Les ${n} places de ton groupe sont prises. Tu peux continuer à attribuer.`,
-    groupFullAdjust: "Modifier le groupe",
+    groupFullToast: (n: number) => `\u2713 Tout le monde est l\u00e0 \u2014 les ${n} places sont prises`,
     scanModalTitle: "🧾 Scanner l'addition",
     scanModalTitleAdded: "🧾 Photo ajoutée",
     oneStepLeft: "encore 1 étape",
@@ -1626,11 +1612,10 @@ const STRINGS = {
     retryNow: "🔄 Réessayer",
     retriesLeft: (n: number) => `encore ${n} essai${n !== 1 ? "s" : ""} avec cette photo`,
     retryLast: "dernier essai avec cette photo",
-    photoFailTitle: "📷 Ça ne marche pas avec cette photo",
-    photoFailBody: "Trois essais. C'est presque toujours la photo — trop sombre, prise de biais, ou l'addition n'y est pas entièrement.",
-    photoTipsTitle: "Voilà ce qui marche",
+    photoFailTitle: "\u00c7a ne marche pas pour le moment",
+    photoFailBody: "Deux essais. \u00c7a peut venir de la photo, mais tout autant du service de scan. Reviens en arri\u00e8re et r\u00e9essaie dans un instant \u2014 en g\u00e9n\u00e9ral, \u00e7a marche.",
     photoTipsBody: "Pose l'addition à plat, éclaire-la de côté et tiens ton téléphone bien au-dessus. Addition longue ? Prends-la en deux morceaux.",
-    newPhotoBtn: "📷 Prendre une nouvelle photo",
+    backToBillBtn: "\u2190 Retour",
     scanFailEmptyTitle: "📷 Rien reconnu sur la photo",
     scanFailEmptyBody: "Le scan n'a lu aucun article. Prends une photo plus nette — de face, bien éclairée et sans plis ni ombres — puis réessaie.",
     yourPhoto: "Ta photo — compare avec la liste",
@@ -2255,7 +2240,6 @@ export default function RundoTable() {
   // Meldt de laatste gast zich terwijl jij op het toewijsscherm bezig bent, dan merkte je
   // daar niets van: het scherm springt niet en er komt niets. Eén keer een venstertje, en
   // je blijft gewoon staan waar je stond.
-  const [groepVolPopup, setGroepVolPopup] = useState(false)
   const allesToegewezenGezien = useRef(false)
   // Gaat met één omhoog wanneer de toewijslijst mag dichtklappen. ClaimScreen houdt zijn
   // eigen open/dicht bij, dus vragen we het via een signaal in plaats van die stand
@@ -2337,11 +2321,13 @@ export default function RundoTable() {
   const [photos, setPhotos] = useState<{ file: File; url: string }[]>([])
   const [scanStep, setScanStep] = useState<{ i: number; n: number } | null>(null)
   const [multiFails, setMultiFails] = useState(0)
-  // Hoeveel keer de slimme scan al mislukte op dezelfde foto. Na drie pogingen ligt het
-  // niet meer aan de dienst maar aan het beeld, en heeft nog eens drukken geen zin: dan
-  // vraagt de app een nieuwe foto. Een wachttijd van de dienst telt niet mee — dan heb
-  // je niets kunnen proberen.
-  const MAX_POGINGEN = 3
+  // Hoeveel keer de slimme scan al mislukte op dezelfde foto. Er is geen herprobeerknop
+  // meer in het foutvenster: die gaf binnen de seconde exact dezelfde fout terug, want
+  // dezelfde foto door dezelfde dienst halen verandert niets. Eén mislukking is dus meteen
+  // het eindstation — terug, en zo meteen nog eens. De teller bepaalt nog wel hoelang de
+  // leesknop op pauze staat: acht seconden na de eerste, twintig na de volgende.
+  // Een wachttijd van de dienst zelf (daglimiet) telt niet mee — dan heb je niets kunnen
+  // proberen.
   const [scanPogingen, setScanPogingen] = useState(0)
   // Welke kiesvensters je met "Klaar" hebt dichtgedaan. Zonder deze verzameling bleef het
   // venster openstaan zodra er iemand geselecteerd was — en deed die knop dus niets.
@@ -2405,6 +2391,8 @@ export default function RundoTable() {
   const [taxModal, setTaxModal] = useState<null | { kind: "cost" | "vat" | "discount"; mode: "amount" | "pct"; pct: string; name: string; amount: string; scope: "all" | "items"; ids: string[]; vanItem?: string }>(null)
   const [recentItemId, setRecentItemId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  // Een melding die je echt moet lezen mag iets langer blijven staan dan de gewone 2,4 s.
+  const [toastMs, setToastMs] = useState(2400)
   const [shareConfirm, setShareConfirm] = useState<BillItem | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [asleep, setAsleep] = useState(false)
@@ -3159,7 +3147,6 @@ export default function RundoTable() {
   // Alle stoelen hebben een naam: dan is wachten zinloos geworden en mag het scherm je
   // naar de volgende stap sturen.
   const zitKlaar = adminNamed && personsSet && vrijeZitplaatsen === 0
-  const tafelWasVol = useRef(false)
   // Hetzelfde moment, maar je staat op het toewijsscherm: dan hoort er geen sprong te
   // gebeuren — je bent daar met iets anders bezig. Enkel een melding dat de groep
   // compleet is, met de weg terug naar de teller voor wie er toch nog iemand bij wil.
@@ -3170,22 +3157,17 @@ export default function RundoTable() {
     // Is de rekening al afgesloten, dan is "iedereen is er" geen nieuws meer, en zou de
     // melding tussen de afsluitvensters door komen — precies waar je ze niet wil.
     if (group?.finalized) { volGemeld.current = true; return }
-    if (adminTab !== "overview") return
+    // Vroeger kwam dit venster alleen op de toewijstab, en op de gastentab klapte in de
+    // plaats daarvan de plaatsenlijst dicht met een sprong naar de groene kaart. Zelfde
+    // nieuws in twee vormen, en op de bontab hoorde je het pas veel later. Nu één vorm.
     if (volGemeld.current) return
     volGemeld.current = true
-    setGroepVolPopup(true)
-  }, [zitKlaar, isAdmin, adminTab, group?.finalized])
-  useEffect(() => {
-    if (!isAdmin || adminTab !== "guests") { if (!zitKlaar) tafelWasVol.current = false; return }
-    if (zitKlaar && !tafelWasVol.current) {
-      tafelWasVol.current = true
-      // Er valt niets meer te controleren in die lijst, dus ze mag dicht — en het scherm
-      // brengt je meteen bij de enige knop die er nog toe doet.
-      setShowNamesBlock(false)
-      window.setTimeout(() => document.getElementById("naar-toewijzen")?.scrollIntoView({ behavior: "smooth", block: "center" }), 350)
-    }
-    if (!zitKlaar) tafelWasVol.current = false
-  }, [zitKlaar, isAdmin, adminTab])
+    // Een venster was hier te zwaar: het legt je werk stil voor nieuws waar je niets mee
+    // hoeft te doen. Een melding die vijf seconden blijft staan zegt evenveel, en wie er
+    // toch iemand bij wil zetten, weet de weg naar Gasten & QR.
+    setToastMs(5000)
+    setToast(L.groupFullToast(totalPersons))
+  }, [zitKlaar, isAdmin, group?.finalized])
 
   const requirePersons = (): boolean => {
     if (personsSet) return true
@@ -4450,7 +4432,7 @@ export default function RundoTable() {
     <>
       {/* De toast hing aan hetzelfde hoofdscherm: een mislukte verwijdering op het
           startscherm meldde zich dus nergens. */}
-      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      {toast && <Toast message={toast} ms={toastMs} onDone={() => { setToast(null); setToastMs(2400) }} />}
         {centerNote && (
           <div style={{ ...S.overlay, zIndex: 3200 }}>
             <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
@@ -5915,18 +5897,9 @@ export default function RundoTable() {
                 De ondertitel herhaalde wat je een scherm verder toch te zien krijgt. */}
             <div style={{ fontSize: 21, fontWeight: 800, color: zitKlaar ? "#15703f" : adminNamed ? "#123a42" : "#8aa3a6", marginBottom: 3, lineHeight: 1.25 }}>{zitKlaar ? L.everyoneInTitle : L.nowAssignTitle}</div>
             <div style={{ fontSize: 15.5, color: zitKlaar ? "#3c6b51" : adminNamed ? "#4a6e73" : "#8aa3a6", lineHeight: 1.45, marginBottom: 13 }}>{zitKlaar ? L.everyoneInSub : L.nowAssignSub}</div>
-            {/* Zolang er stoelen leegstaan hoor je dat te weten vóór je op de knop tikt,
-                niet erna in een venster dat je moet wegklikken. */}
-            {adminNamed && vrijeZitplaatsen > 0 && (
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 10, padding: "9px 10px", marginBottom: 12 }}>
-                <span style={{ flexShrink: 0, marginTop: 1 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4514" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-                  </svg>
-                </span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#8a4514", lineHeight: 1.45 }}>{L.seatsStillFreeWarn(vrijeZitplaatsen)}</span>
-              </div>
-            )}
+            {/* Hier stond een geel kadertje "nog x plaatsen vrij". Datzelfde bericht
+                staat in het venster "Alles toegewezen", met dezelfde knop ernaartoe —
+                en de kaart hieronder is al niet groen zolang er plaatsen leegstaan. */}
             {/* Pas pulseren als er ook echt niets meer te wachten valt: pulseert het blok
                 al terwijl er nog drie stoelen leeg zijn, dan jaagt het je vooruit terwijl
                 je gasten nog aan het scannen zijn. */}
@@ -6065,35 +6038,9 @@ export default function RundoTable() {
         </>
       )}
 
-      {adminTab === "overview" && baseItems.some((it) => it.is_shared) && (
-        <div id="gedeelde-items" style={{ ...S.card, padding: 12 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "#2b4f56", marginBottom: 9, display: "flex", alignItems: "center", gap: 6 }}><ShareIcon on size={14} /> {L.sharedOverviewTitle}</div>
-          {baseItems.filter((it) => it.is_shared).map((it) => {
-            const st = sharedStatus(it)
-            const names = claims.filter((c) => c.item_id === it.id && c.quantity > 0).map((c) => {
-              const p = participants.find((x) => x.id === c.participant_id)
-              if (!p) return null
-              const parts = p.name.split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
-              const mem = c.members ? c.members.split(",").map((x) => parseInt(x, 10)).filter((x) => !isNaN(x)) : null
-              if (mem && parts.length > 1) return mem.map((i) => parts[i] || p.name).join(", ")
-              if (parts.length > 1 && c.quantity < parts.length) return parts.slice(0, c.quantity).join(", ")
-              return p.name
-            }).filter(Boolean).join(", ")
-            return (
-              <div key={it.id} style={{ marginBottom: 8, padding: "8px 10px", borderRadius: 10, background: st.warn ? "rgba(243,156,18,0.09)" : "rgba(39,174,96,0.07)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-                  <span style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{it.name}</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: "#4a6e73", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
-                </div>
-                <div style={{ fontSize: 15.5, color: "#4a6e73", marginTop: 3, lineHeight: 1.45 }}>
-                  {st.heads > 0 ? <>{L.sharedByLabel} <b style={{ color: "#123a42" }}>{st.heads}</b>: {names}</> : L.nobodyShared}
-                </div>
-                {st.warn === "one" && <div style={{ fontSize: 15.5, fontWeight: 700, color: "#b5591a", marginTop: 4 }}>{L.onlyOneShares}</div>}
-              </div>
-            )
-          })}
-        </div>
-      )}
+      {/* Hier stond de kaart "Gedeelde items": per gedeeld item de delers en het bedrag.
+          Sinds die namen openstaan bij het item zelf in "Wie nam wat", stond alles er twee
+          keer — op het drukste scherm van de app. */}
 
       {/* ─── ADMIN: Per persoon (overzicht-tab) ─── */}
       {isAdmin && adminTab === "overview" && (
@@ -7040,23 +6987,6 @@ export default function RundoTable() {
           groene knop volgde — en sloeg daarmee de fooi over, die je op dat moment nog
           niet had ingevuld. Ze meldt nu enkel dát het compleet is en zet je bij de
           afsluitknop; wat daar nog moet gebeuren, bewaakt die knop zelf. */}
-      {/* ─── Venster: de laatste plaats is ingenomen ─── */}
-      {isAdmin && groepVolPopup && (
-        <div style={{ ...S.overlay, zIndex: 3100 }}>
-          <div style={{ ...S.modal, width: "min(330px, 92vw)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ width: 46, height: 46, margin: "0 auto 10px", borderRadius: "50%", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 800 }}>✓</div>
-            <div style={{ fontSize: 19, fontWeight: 800, color: "#123a42", marginBottom: 4 }}>{L.groupFullTitle}</div>
-            <div style={{ fontSize: 16, color: "#4a6e73", lineHeight: 1.45, marginBottom: 14 }}>{L.groupFullBody(totalPersons)}</div>
-            <button onClick={() => setGroepVolPopup(false)}
-              style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.allAssignedOk}</button>
-            {/* Er schuift toch nog iemand aan: dan moet je bij de teller zijn, niet bij de
-                plaatsenlijst — want een plaats bijzetten begint daar. */}
-            <button onClick={() => { setGroepVolPopup(false); setAdminTab("guests"); scrollTop(); if (typeof window !== "undefined") window.setTimeout(() => document.getElementById("plaatsen-sectie")?.scrollIntoView({ behavior: "smooth", block: "start" }), 220) }}
-              style={{ ...S.btn, width: "100%", marginTop: 8, padding: "11px 0", fontSize: 16, fontWeight: 800, color: "#2b4f56", background: "#fff", border: "1.5px solid rgba(18,58,66,0.22)" }}>{L.groupFullAdjust}</button>
-          </div>
-        </div>
-      )}
-
       {isAdmin && allesPopup && (
         <div style={{ ...S.overlay, zIndex: 3100 }}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
@@ -7318,19 +7248,21 @@ export default function RundoTable() {
                   </>
                 ) : scanFail.reason === "unavailable" && scanPogingen >= MAX_POGINGEN ? (
                   <>
-                    {/* Drie keer dezelfde foto door dezelfde dienst halen geeft drie keer
-                        hetzelfde antwoord. De herprobeerknop verdwijnt dus, en in de plaats
-                        komt wat je wél kan doen. Met een nieuwe foto begint de teller opnieuw. */}
+                    {/* Twee keer dezelfde foto door dezelfde dienst halen geeft twee keer
+                        hetzelfde antwoord, en de tweede kwam binnen de seconde binnen. Dus
+                        geen herprobeerknop meer hier — en ook geen "nieuwe foto nemen", want
+                        het ligt lang niet altijd aan de foto. Eén uitweg: terug, en straks
+                        nog eens proberen. Dat lukt meestal wel. */}
                     <div style={{ fontSize: 18, fontWeight: 800, color: "#b5591a", marginBottom: 4 }}>{L.photoFailTitle}</div>
                     <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 11 }}>{L.photoFailBody}</div>
-                    <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#8a4514", textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 6 }}>{L.photoTipsTitle}</div>
-                      <div style={{ fontSize: 14.5, color: "#7a5a30", lineHeight: 1.5 }}>{L.photoTipsBody}</div>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(255,255,255,0.7)", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+                      <span style={{ flexShrink: 0, fontSize: 15, lineHeight: 1.4 }}>💡</span>
+                      <span style={{ fontSize: 14.5, color: "#7a5a30", lineHeight: 1.5 }}>{L.photoTipsBody}</span>
                     </div>
-                    <label style={{ ...S.btn, ...S.btnPrimary, display: "block", textAlign: "center", padding: "12px 0", fontSize: 18, fontWeight: 800, cursor: "pointer" }}>
-                      {L.newPhotoBtn}
-                      <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => onPhotoPicked(e.target.files?.[0])} />
-                    </label>
+                    <button onClick={() => { setScanFail(null); setShowScan(false); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}
+                      style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>
+                      {L.backToBillBtn}
+                    </button>
                   </>
                 ) : scanFail.reason === "unavailable" ? (
                   <>
@@ -8749,12 +8681,12 @@ function ClaimScreen(props: {
                                         paddingRight: on ? 6 : 10,
                                       }}>{on ? "\u2713 " : ""}{viaLink && !on && <GsmIcon />}{naam}
                                         {/* Een tweede tik op de naam zet hem ook weer af, maar dat
-                                            is onzichtbaar. Het kruisje zegt het hardop \u2014 zelfde
+                                            is onzichtbaar. Het kruisje zegt het hardop — zelfde
                                             handeling, voor wie het niet gokt. */}
                                         {on && (
                                           <span onClick={(e) => { e.stopPropagation(); doe() }} role="button" tabIndex={0} aria-label={L.removeOne} title={L.removeOne}
                                             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); doe() } }}
-                                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 7, background: "rgba(90,58,0,0.14)", color: "#5a4a1a", fontSize: 13, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>\u2715</span>
+                                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 7, background: "rgba(90,58,0,0.14)", color: "#5a4a1a", fontSize: 13, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>✕</span>
                                         )}
                                       </button>
                                     </span>
