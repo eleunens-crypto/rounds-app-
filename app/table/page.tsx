@@ -1051,13 +1051,7 @@ const STRINGS = {
     settleSavedToast: "Afgesloten en bewaard",
     statusBusy: "● bezig",
     statusNothing: "nog niets",
-    todoTitle: "⚠️ Nog te regelen — wijs snel toe",
-    addGuestsToAssign: "Voeg eerst gasten toe om te kunnen toewijzen.",
-    notClaimedSuffix: "niet geclaimd",
-    assignDots: "+ wijs toe…",
-    sharedNobody: "— gedeeld, nog niemand",
     nothingForPerson: (naam: string) => `${naam} duidde nog niets aan`,
-    letShareDots: "+ laat meedelen…",
     perPersonTitle: "🧾 Per persoon",
     detailsHide: "▲ Details verbergen",
     detailsShow: "▼ Details tonen",
@@ -1146,6 +1140,7 @@ const STRINGS = {
     assignOwnTitle: (name: string | undefined) => `Jij duidt aan voor ${name}`,
     assignOwnBody: (name: string | undefined) => `${name} kwam niet via de QR binnen, dus jij tikt aan wat hij nam. Dat is hier de gewone gang van zaken.\n\nDit vragen we maar één keer — daarna gaat het meteen door.`,
     assignOwnYes: "Ja, doorgaan",
+    unitsProgress: (n: number, t: number) => `${n} van ${t} stuks verdeeld`,
     unitsClaimed: "Stuks geclaimd",
     sharedItemsHandled: "Gedeelde items geregeld",
     billTotalLabel: "Totaal rekening",
@@ -1734,13 +1729,7 @@ const STRINGS = {
     settleSavedToast: "Clôturée et gardée",
     statusBusy: "● en cours",
     statusNothing: "rien encore",
-    todoTitle: "⚠️ Encore à régler — attribue vite",
-    addGuestsToAssign: "Ajoute d'abord des invités pour pouvoir attribuer.",
-    notClaimedSuffix: "non attribué(s)",
-    assignDots: "+ attribuer…",
-    sharedNobody: "— partagé, personne encore",
     nothingForPerson: (naam: string) => `${naam} n'a encore rien indiqué`,
-    letShareDots: "+ faire participer…",
     perPersonTitle: "🧾 Par personne",
     detailsHide: "▲ Masquer les détails",
     detailsShow: "▼ Afficher les détails",
@@ -1829,6 +1818,7 @@ const STRINGS = {
     assignOwnTitle: (name: string | undefined) => `Tu attribues pour ${name}`,
     assignOwnBody: (name: string | undefined) => `${name} n'est pas arrivé via le QR, c'est donc toi qui coches ce qu'il a pris. C'est le fonctionnement normal ici.\n\nOn ne te le demande qu'une seule fois — ensuite ça passe directement.`,
     assignOwnYes: "Oui, continuer",
+    unitsProgress: (n: number, t: number) => `${n} articles sur ${t} attribués`,
     unitsClaimed: "Unités attribuées",
     sharedItemsHandled: "Articles partagés réglés",
     billTotalLabel: "Total de l'addition",
@@ -2291,7 +2281,6 @@ export default function RundoTable() {
   const [claimSpot, setClaimSpot] = useState<string | null>(null)
   const [claimSeats, setClaimSeats] = useState(1)
   const [claimNames, setClaimNames] = useState<string[]>([""])
-  const [showTodo, setShowTodo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
   const [taxConfig, setTaxConfig] = useState<string | null>(null)
   const [bezetOpen, setBezetOpen] = useState(false)  // ingenomen plaatsen uitgeklapt
@@ -2621,7 +2610,7 @@ export default function RundoTable() {
     setViaLink(false); setShowSaved(false)
     setScanPreview([]); setScanFile(null); setScanPhotoUrl(null); setScanTotal(""); setScanFail(null); setShowScan(false)
     setAdminTab("scan"); setExpandedPeople(new Set()); setClaimMode("item"); setClaimPid(null)
-    setShowTodo(false); setViewReceipt(null)
+    setViewReceipt(null)
     setAsleep(false)
     autoJoined.current = true
     rememberLastGroup(null)
@@ -4050,7 +4039,6 @@ export default function RundoTable() {
       if (openUnits > 0) delen.push(L.unitsNotAssigned(openUnits))
       if (undecidedShared.length > 0) delen.push(L.sharedNobodyTakes(undecidedShared.length))
       setCenterNote({ title: L.cantFinalizeTitle, body: `• ${delen.join("\n• ")}\n\n${L.assignFirstHint}` })
-      setShowTodo(true)
       return
     }
     // De bon klopt niet: toon de in-app waarschuwing i.p.v. een browser-popup.
@@ -5623,45 +5611,10 @@ export default function RundoTable() {
       {/* De todo-lijst blijft: die springt open als je wil afsluiten terwijl er nog
           items open staan. De overzicht- en 'wie doet mee'-blokken zijn weg — je komt
           hier om toe te wijzen, niet om statistieken te lezen. */}
-      {isAdmin && adminTab === "overview" && showTodo && (openUnits > 0 || undecidedShared.length > 0) && (
-        <div style={{ ...S.card, padding: 12 }} id="nog-te-doen">
-            <div style={{ border: "1px solid rgba(224,107,94,0.35)", background: "rgba(224,107,94,0.05)", borderRadius: 12, padding: "10px 12px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontSize: 16, fontWeight: 800, color: "#c0392b" }}>{L.todoTitle}</span>
-                <button onClick={() => setShowTodo(false)} style={{ background: "none", border: "none", fontSize: 20, color: "#c0392b", cursor: "pointer", padding: 0, lineHeight: 1 }}>✕</button>
-              </div>
-              {participants.length === 0 && <div style={{ fontSize: 16, color: "#a06b00", marginBottom: 6 }}>{L.addGuestsToAssign}</div>}
-              {items.filter((it) => !it.is_shared && it.quantity - claimedQty(it.id) > 0).map((it) => {
-                const openN = it.quantity - claimedQty(it.id)
-                return (
-                  <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16.5, padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-                    <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{openN}× {showTip(it.name, L)}</b> {L.notClaimedSuffix}</span>
-                    {participants.length > 0 && (
-                      <select value="" onChange={(e) => { const pid = e.target.value; if (pid) setClaim(it.id, pid, myQty(it.id, pid) + 1) }}
-                        style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "7px 8px", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
-                        <option value="">{L.assignDots}</option>
-                        {participants.filter((p) => !isFreeSpot(p) || p.self_joined).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      </select>
-                    )}
-                  </div>
-                )
-              })}
-              {undecidedShared.map((it) => (
-                <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16.5, padding: "5px 0", borderBottom: "1px solid rgba(0,0,0,0.05)", color: "#a06b00" }}>
-                  <span style={{ flex: 1, minWidth: 0, display: "inline-flex", alignItems: "center", gap: 5 }}><ShareIcon on size={14} /> <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b>{showTip(it.name, L)}</b> {L.sharedNobody}</span></span>
-                  {participants.length > 0 && (
-                    <select value="" onChange={(e) => { const pid = e.target.value; if (pid) toggleShareClaim(it.id, pid) }}
-                      style={{ ...S.input, flexShrink: 0, maxWidth: 150, padding: "7px 8px", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
-                      <option value="">{L.letShareDots}</option>
-                      {participants.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  )}
-                </div>
-              ))}
-            </div>
-        </div>
-      )}
-
+      {/* Hier stond de kaart "Nog te regelen — wijs snel toe": dezelfde open items nog eens,
+          met een keuzemenu in plaats van naampillen. Twee manieren om op één scherm dezelfde
+          drie items te verdelen. Sinds de afgewerkte items in de lijst samenklappen, staan
+          die open items daar vanzelf bovenaan in beeld. */}
       {/* ─── Aantikken & bewerken (admin op overzicht-tab óf gast-hoofdscherm) ─── */}
       {/* Afgesloten rekening: één balk die meeloopt terwijl je scrolt, met de melding én
           het heropenen erin. Vroeger stonden die twee als losse blokken onderaan de
@@ -5809,7 +5762,10 @@ export default function RundoTable() {
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                       <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.assignedLabel}{" "}
-                        <span onClick={() => { setShowTodo(true); setTimeout(() => { if (typeof document !== "undefined") document.getElementById("nog-te-doen")?.scrollIntoView({ behavior: "smooth", block: "start" }) }, 50) }}
+                        {/* Wees naar de losse kaart "Nog te regelen"; die is er niet meer.
+                            De open items staan nu bovenaan in de lijst zelf, want alles wat af
+                            is klapt samen. */}
+                        <span onClick={() => { if (typeof document !== "undefined") document.getElementById("wie-nam-wat")?.scrollIntoView({ behavior: "smooth", block: "start" }) }}
                           style={{ color: "#c0392b", fontWeight: 800, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>{L.todoLeft(todo)}</span>
                       </span>
                       <span style={{ fontSize: 19, fontWeight: 800, color: "#123a42" }}>€{assignedSum.toFixed(2).replace(".", ",")} <span style={{ fontSize: 16, color: "#8aa3a6", fontWeight: 700 }}>/ €{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span></span>
@@ -7999,6 +7955,16 @@ const JOUW_STREEP = {
   paddingLeft: 9,
 } as const
 
+// Een gedeeld item houdt als enige een gekleurd vlak, met een blauwe streep ervoor. Het
+// gouden streepje hoeft daar niet bij: dat jij meedeelt, zegt de gouden pil al. Zo staat
+// het balkje vooraan altijd voor één ding tegelijk.
+const DEEL_STREEP = {
+  background: INDIGO.vlak,
+  borderLeft: "5px solid #7b87c4",
+  borderRadius: 10,
+  paddingLeft: 9,
+} as const
+
 function ClaimScreen(props: {
   magOntdelen: (it: BillItem) => boolean
   items: BillItem[]; meId: string | null; me: Participant | null; isAdmin: boolean
@@ -8040,6 +8006,17 @@ function ClaimScreen(props: {
   // De beheerder is gewoon de persoon die hier zit: meId.
   const adminPid = props.meId
   const [assignItem, setAssignItem] = useState<string | null>(null)
+  // Bij veertien items zijn er meestal elf af, en die elf namen evenveel plaats in als de
+  // drie die nog moeten. Een afgewerkt item klapt daarom samen tot één regel: vinkje, naam,
+  // wie het nam. Tik erop en hij gaat weer helemaal open — de knoppen blijven dus allemaal
+  // bereikbaar, ze staan alleen niet meer allemaal tegelijk open. De volgorde van de bon
+  // verandert niet: een item blijft staan waar je het verwacht.
+  const [opengeklapt, setOpengeklapt] = useState<Set<string>>(new Set())
+  const klapOm = (id: string) => setOpengeklapt((cur) => {
+    const n = new Set(cur)
+    if (n.has(id)) n.delete(id); else n.add(id)
+    return n
+  })
   // Het eigen overzicht van de beheerder staat open zolang hij verdeelt; dichtklappen mag.
   const [eigenOpen, setEigenOpen] = useState(true)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
@@ -8188,6 +8165,22 @@ function ClaimScreen(props: {
   // niet meer te roepen: enkel het teken blijft over, zonder woord, op de achtergrond. Hij
   // verdwijnt niet helemaal, want dit is de énige plek in de app waar een item nog op
   // gedeeld gezet kan worden — en dat is net wat je ontdekt wanneer alles al verdeeld is.
+  // De samengeklapte regel. Half zo hoog als een open rij, met alles wat je nog wil weten:
+  // dat het af is, wat het was, en wie het nam.
+  const klaarRegel = (it: BillItem, namen: string, mijn: boolean) => (
+    <button key={it.id} onClick={() => klapOm(it.id)}
+      style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 9, textAlign: "left",
+        padding: "8px", borderBottom: "1px solid rgba(0,0,0,0.05)", border: "none", background: "none",
+        cursor: "pointer", fontFamily: "inherit", ...(mijn ? JOUW_STREEP : null) }}>
+      <span style={{ flexShrink: 0, color: "#1f8a4c", fontSize: 15, fontWeight: 800 }}>✓</span>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 700, color: "#4a6e73", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {it.quantity > 1 ? `${it.quantity}× ` : ""}{showTip(it.name, L)}
+      </span>
+      <span style={{ flexShrink: 0, fontSize: 14, color: "#8aa3a6", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{namen}</span>
+      <span style={{ flexShrink: 0, fontSize: 16, color: "#b3bac6", fontWeight: 800 }}>›</span>
+    </button>
+  )
+
   const shareBtn = (it: BillItem, stil = false) => !magOntdelen(it) ? (
     <span title={L.sharedByOther}
       style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px",
@@ -8328,6 +8321,18 @@ function ClaimScreen(props: {
             ? <div style={{ fontSize: 16, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
+                {/* Eén regel die zegt hoever je staat. Nodig sinds de afgewerkte items
+                    samenklappen: anders zie je wel een korte lijst, maar niet waaróm. */}
+                {totalUnits > 0 && (
+                  <div style={{ marginBottom: 11 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 800, color: claimedUnits >= totalUnits ? "#1f8a4c" : "#4a6e73" }}>
+                      {L.unitsProgress(claimedUnits, totalUnits)}
+                    </div>
+                    <div style={{ height: 7, borderRadius: 4, background: "rgba(18,58,66,0.08)", overflow: "hidden", marginTop: 6 }}>
+                      <div style={{ height: "100%", width: `${Math.round((claimedUnits / totalUnits) * 100)}%`, borderRadius: 4, background: "linear-gradient(90deg,#1f8a4c,#27ae60)", transition: "width 220ms ease-out" }} />
+                    </div>
+                  </div>
+                )}
                 {items.map((it) => {
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
@@ -8337,13 +8342,12 @@ function ClaimScreen(props: {
                     const perHead = heads > 0 ? itemTotal(it) / heads : 0
                     const mijnZitjes = meId ? Math.max(1, seatsOf(meId)) : 1
                     const ikDeel = meId ? sh.includes(meId) : false
-                    const mine = adminPid ? sh.includes(adminPid) : false
                     // Een gedeeld item ligt nu op een lichtblauw vlak. Het staat tussen
                     // gewone items in, en enkel een icoontje links liet je te makkelijk
                     // voorbijlezen dat hier iets anders geldt. Zit jij er zelf in, dan
                     // wint het gouden vlak — dat zegt iets over jou, niet over het item.
                     return (
-                      <div key={it.id} id={`item-${it.id}`} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: INDIGO.vlak, borderRadius: 10, ...(mine ? JOUW_STREEP : null) }}>
+                      <div key={it.id} id={`item-${it.id}`} style={{ padding: "10px 8px", marginBottom: 4, ...DEEL_STREEP }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             {/* Zelfde plaats en zelfde grootte als bij een gewoon item: het
@@ -8364,7 +8368,7 @@ function ClaimScreen(props: {
                           {/* De telbadge zei "3 personen" zonder te zeggen wélke, en de knop
                               die hier stond opende een venster om dat te bekijken. Beide zijn
                               overbodig: de namen staan nu gewoon open in het kader eronder. */}
-                          {isAdmin && shareBtn(it)}
+                          {isAdmin && shareBtn(it, true)}
                         </div>
                         {/* Hier stond een apart kader met de delers nog eens in grijze chips,
                             plus "x delers · €x elk → daalt als er meer meedelen". Diezelfde
@@ -8477,14 +8481,21 @@ function ClaimScreen(props: {
                   // Jouw eigen stuks staan in de teller rechts, dus hier alleen de anderen.
                   const anderen = who.filter((x) => x.p.id !== adminPid)
                   const highlight = adminPid && mineQ > 0
+                  // Af en niet met de hand opengezet? Dan volstaat één regel.
+                  if (open <= 0 && !opengeklapt.has(it.id)) {
+                    return klaarRegel(it, who.map(({ p, q }) => `${naamVan(p)}${q > 1 ? ` ×${q}` : ""}`).join(", "), !!highlight)
+                  }
+                  // Het gouden en het groene vlak zijn weg: drie gekleurde vlakken onder
+                  // elkaar maakten van elke rij een mededeling. Wat jij nam zegt het balkje
+                  // vooraan, samen met de gouden pil en het gouden aantal; dat alles verdeeld
+                  // is, zeggen de groene woorden.
                   return (
-                    <div key={it.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 10,
-                      background: highlight ? "rgba(233,196,95,0.16)" : open <= 0 ? "rgba(39,174,96,0.09)" : "transparent", ...(highlight ? JOUW_STREEP : null) }}>
+                    <div key={it.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", ...(highlight ? JOUW_STREEP : null) }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.quantity}× {it.name}</span>
-                            {isAdmin && shareBtn(it, open <= 0)}
+                            {isAdmin && shareBtn(it, true)}
                           </div>
                           {/* Hier stond rechts een rode knop "2 open — wijs toe". Die deed twee
                               dingen tegelijk: melden hoeveel er nog vrij was, én de kiezer openen.
@@ -8791,7 +8802,7 @@ function ClaimScreen(props: {
               // Dezelfde vlakken als op het beheerdersscherm: blauw voor een gedeeld item,
               // goud zodra jij er zelf in zit. Een gast zag daarvoor alleen witte regels en
               // moest bij elk item opnieuw lezen wat hij al had aangeduid.
-              <div key={it.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 10, background: INDIGO.vlak, ...(iShare ? JOUW_STREEP : null) }}>
+              <div key={it.id} style={{ padding: "10px 8px", marginBottom: 4, ...DEEL_STREEP }}>
                 {/* Naam en bedrag over de volle breedte, de standen op een eigen regel:
                     met alles op één lijn werd een lange itemnaam afgekapt op een telefoon. */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -8804,12 +8815,15 @@ function ClaimScreen(props: {
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                       <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
                       <span style={{ fontSize: 18, fontWeight: 800, flexShrink: 0, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
+                      {/* Dezelfde pil als op de bon en bij de beheerder. Ze verving de deelknop
+                          die hier stond: een gast beslist niet wat gedeeld is, hij leest het. */}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13.5, fontWeight: 700, color: INDIGO.tekst, background: "#fff", border: `1px solid ${INDIGO.rand}`, borderRadius: 8, padding: "3px 8px", flexShrink: 0 }}>
+                        <ShareIcon on size={13} />{L.sharedOnShort}
+                      </span>
                     </div>
                     <div style={{ fontSize: 15.5, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : L.totalSharedByDrinkers.trim()}</div>
                   </div>
                 </div>
-                {/* Ook de gast moet terug kunnen: hij mag een item op gedeeld zetten, dus ook
-                    weer af. shareBtn toont vanzelf een label wanneer hij het niet deelde. */}
                 {/* De aanduiding staat op dezelfde regel als de deelknop, rechts — daar duid je
                     bij een gewoon item ook aan dat je het nam. Bij een plaats met meerdere
                     personen zijn de namen zélf de aanduiding: je tikt wie ervan nam, meerdere
@@ -8818,7 +8832,6 @@ function ClaimScreen(props: {
                     daaronder altijd al de vraag wie precies. Nu is het één vraag, en verschijnt
                     er pas iets onder het item zodra er iemand is aangeduid. */}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 7 }}>
-                  {shareBtn(it)}
                   <span style={{ flex: 1, minWidth: 0 }} />
                   {meId && mySeats > 1 && !fixed ? (() => {
                     const raw = participants.find((p) => p.id === meId)?.name ?? ""
@@ -8920,28 +8933,23 @@ function ClaimScreen(props: {
               </div>
             )
           }
+          // Af en niet met de hand opengezet? Dan volstaat één regel — ook hier.
+          if (open <= 0 && !opengeklapt.has(it.id)) {
+            return klaarRegel(it, participants.map((p) => ({ p, q: myQty(it.id, p.id) })).filter((x) => x.q > 0)
+              .map(({ p, q }) => `${naamVan(p)}${q > 1 ? ` ×${q}` : ""}`).join(", "), mine > 0)
+          }
           return (
-            // Goud = jij nam hiervan. Lichtgroen = alle stuks zijn verdeeld, er hoeft niets
-            // meer te gebeuren. Zo zie je in één blik waar je nog moet kijken.
-            <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 8px", borderRadius: 10, borderBottom: "1px solid rgba(0,0,0,0.05)",
-              background: mine > 0 ? "rgba(233,196,95,0.16)" : open <= 0 ? "rgba(39,174,96,0.09)" : "transparent", ...(mine > 0 ? JOUW_STREEP : null) }}>
+            // Geen gekleurd vlak meer: een goud balkje vooraan zodra jij erin zit, en verder
+            // zeggen de gouden pil, het gouden aantal en de groene of rode woorden de rest.
+            <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", ...(mine > 0 ? JOUW_STREEP : null) }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}><span style={{ color: "#0f7d90" }}>{total}×</span> {it.name}</span>
                   <span style={{ fontSize: 18, fontWeight: 800, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
-                  {/* Is alles toegewezen, dan valt er voor een gast niets meer te beslissen:
-                      de deelknop gaat weg. Komt er een stuk vrij, dan staat hij er weer. Bij
-                      een gedeeld item blijft hij altijd — wie zelf iets op gedeeld zette,
-                      moet dat ook weer kunnen terugdraaien. */}
-                  {(open > 0 || it.is_shared) && (
-                    <button onClick={() => onToggleShared(it)} title={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
-                      style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 15.5, fontWeight: 800, padding: "7px 9px", borderRadius: 8, cursor: "pointer",
-                        color: it.is_shared ? "#7a5300" : "#4a6e73",
-                        background: it.is_shared ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
-                        border: it.is_shared ? "1px solid rgba(196,152,32,0.5)" : "1px solid rgba(18,58,66,0.15)" }}>
-                      <ShareIcon on={it.is_shared} size={12} />{it.is_shared ? L.sharedOnShort : L.makeSharedShort}
-                    </button>
-                  )}
+                  {/* De deelknop stond hier ook voor de gast. Maar op dit scherm verdeel je;
+                      wát een item is, is op de bon al beslist. Voor een gast is dat sowieso
+                      niet zijn beslissing, dus bij hem is de knop helemaal weg — bij een
+                      gedeeld item blijft "gedeeld" staan als label. */}
                 </div>
                 {it.unit_price <= 0.0001
                   ? <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
