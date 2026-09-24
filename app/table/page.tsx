@@ -1185,8 +1185,6 @@ const STRINGS = {
     totalLower: "totaal",
     sharedWord: "gedeeld",
     notSelectedShare: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch laten meedelen?`,
-    openAssign: "open — wijs toe ▾",
-    fullyClaimed: "volledig",
     removeOne: "verwijder er één",
     notSelectedAdd: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch toevoegen?`,
     assignQrTitle: (name: string | undefined) => `${name} duidt zelf aan`,
@@ -1283,7 +1281,12 @@ const STRINGS = {
     remarkReceived: "💬 De beheerder heeft je opmerking ontvangen en bekijkt ze.",
     withdraw: "toch intrekken",
     assignFullTap: "Alles toegewezen — tik een naam om weg te halen",
-    assignToWhom: "Aan wie toewijzen?",
+    whoElseTook: "Wie nam dit nog?",
+    iTakeOne: "Ik neem er een",
+    addSomeoneElse: "Iemand anders toevoegen",
+    addedByYou: "door jou toegevoegd",
+    cameViaQr: "kwamen via de QR",
+    qrPicksSelf: "Zij duiden normaal zelf aan — daarom vraagt de app het elke keer.",
     youJoinPrefix: "Je sluit aan bij",
     sharedByName: (naam: string) => `gedeeld door ${naam}`,
     restoTagline: "Scan de rekening en verdeel ze in groep",
@@ -1890,8 +1893,6 @@ const STRINGS = {
     totalLower: "total",
     sharedWord: "partagé",
     notSelectedShare: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. Le faire participer quand même ?`,
-    openAssign: "à prendre — attribuer ▾",
-    fullyClaimed: "complet",
     removeOne: "en retirer un",
     notSelectedAdd: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. L'ajouter quand même ?`,
     assignQrTitle: (name: string | undefined) => `${name} attribue lui-même`,
@@ -1984,7 +1985,12 @@ const STRINGS = {
     remarkReceived: "💬 L'hôte a reçu ta remarque et l'examine.",
     withdraw: "retirer finalement",
     assignFullTap: "Tout attribué — touchez un nom pour le retirer",
-    assignToWhom: "À qui attribuer ?",
+    whoElseTook: "Qui d'autre en a pris\u00a0?",
+    iTakeOne: "J'en prends un",
+    addSomeoneElse: "Ajouter quelqu'un d'autre",
+    addedByYou: "ajout\u00e9s par toi",
+    cameViaQr: "arriv\u00e9s via le QR",
+    qrPicksSelf: "Ils cochent normalement eux-m\u00eames \u2014 c'est pourquoi l'appli le demande \u00e0 chaque fois.",
     youJoinPrefix: "Tu rejoins",
     sharedByName: (naam: string) => `partagé par ${naam}`,
     restoTagline: "Scanne l'addition et partage-la en groupe",
@@ -8166,6 +8172,31 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   )
 }
 
+// Het knopje dat de namenkiezer opent. Een getekend poppetje met een vraagteken op de
+// schouder: "wie nam dit nog?". Bewust géén plusteken — de teller in dezelfde rij heeft er
+// al een, en die betekent iets anders: nog een stuk voor jezelf. Twee plussen naast elkaar
+// met twee betekenissen is precies de vergissing die je maakt als je snel zit te verdelen.
+function WieNogBtn({ onClick, open, title }: { onClick: () => void; open?: boolean; title: string }) {
+  return (
+    <button onClick={onClick} title={title} aria-label={title} style={{
+      position: "relative", width: 38, height: 38, borderRadius: "50%", flexShrink: 0, cursor: "pointer", padding: 0,
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      background: open ? "rgba(20,153,176,0.24)" : "rgba(20,153,176,0.1)",
+      border: "1.5px solid rgba(20,153,176,0.4)",
+    }}>
+      <svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="#0f7488" strokeWidth="2.1" strokeLinecap="round" style={{ display: "block" }}>
+        <circle cx="12" cy="8" r="3.7" />
+        <path d="M5.3 19.4c0-3.6 3-6.1 6.7-6.1s6.7 2.5 6.7 6.1" />
+      </svg>
+      <span aria-hidden style={{
+        position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: "50%",
+        background: "#0f7d90", color: "#fff", fontSize: 12, fontWeight: 800, lineHeight: 1,
+        display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff",
+      }}>?</span>
+    </button>
+  )
+}
+
 function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confirmedFn, vrijFn, naamVan, onAssign, onClose }: {
   participants: Participant[]; itemId: string; isShared?: boolean; meId: string | null; vol?: boolean
   qtyFn: (pid: string) => number
@@ -8176,59 +8207,68 @@ function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confir
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
-  // Alle namen meteen zichtbaar — niets meer verstopt achter "andere persoon". Wie via de
-  // link binnenkwam staat achteraan en gedimd: die duidt normaal zelf aan. Aantikken kan
-  // nog altijd, want er loopt wel eens iets mis en dan moet jij kunnen bijspringen.
-  const gesorteerd = [...participants].sort((a, b) => Number(!!a.self_joined) - Number(!!b.self_joined))
-  const eersteViaLink = gesorteerd.findIndex((p) => p.self_joined)
+  // Jouw eigen naam stond hier ook tussen. Die hoort er niet meer bij: op de rij zelf staat
+  // nu jouw teller (of jouw "Ik nam hiervan"), dus hier gaat het enkel over de anderen.
+  const anderen = participants.filter((p) => p.id !== meId)
+  // Twee groepjes, want ze gedragen zich anders. Wie jij toevoegde vult niets zelf in — daar
+  // vraagt de app maar één keer iets. Wie via de QR of de link kwam, zit op zijn eigen gsm
+  // hetzelfde te doen; daar vraagt ze het elke keer opnieuw.
+  const vanJou = anderen.filter((p) => !p.self_joined)
+  const viaLink = anderen.filter((p) => p.self_joined)
+
+  const knop = (p: Participant) => {
+    const klaar = confirmedFn(p.id)
+    const viaQr = !!p.self_joined
+    const nogVrij = vrijFn(p)
+    const mij = qtyFn(p.id)   // hoeveel dit item al op zijn naam staat
+    const aan = mij > 0
+    const reden: "bevestigd" | "qr" | "vrij" | "ander" | null = klaar ? "bevestigd" : viaQr ? "qr" : nogVrij ? "vrij" : "ander"
+    return (
+      /* Deze knop voegt toe, altijd één stuk per tik. Weghalen gebeurt met het kruisje op de
+         chips erboven: dat kan per stuk, en het is de handeling die je níét per ongeluk wil
+         doen. Vol geel = staat al op zijn naam, turkoois = jij duidt voor hem aan,
+         stippellijn met gsm = hij duidt zelf aan. Een nog naamloze plaats krijgt een lichte
+         rand en schuine letters, anders lijkt ze op de stippellijn van de QR-gasten. */
+      <button key={p.id} disabled={vol && !isShared} onClick={() => onAssign(p.id, reden)} style={{
+        display: "inline-flex", alignItems: "center", gap: 5,
+        fontSize: 15, fontWeight: viaQr ? 700 : 800, borderRadius: 9, padding: "7px 10px",
+        cursor: vol && !isShared ? "not-allowed" : "pointer",
+        fontStyle: !aan && !viaQr && nogVrij ? "italic" : "normal",
+        border: aan ? "1px solid rgba(196,152,32,0.5)"
+          : viaQr ? "1.5px dashed rgba(18,58,66,0.3)"
+          : nogVrij ? "1.5px solid rgba(18,58,66,0.14)"
+          : "1.5px solid rgba(20,153,176,0.45)",
+        background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : viaQr ? "transparent" : nogVrij ? "#fff" : "rgba(20,153,176,0.06)",
+        color: aan ? "#5a4a1a" : viaQr ? "#8aa3a6" : nogVrij ? "#6b8489" : "#123a42",
+        opacity: vol && !isShared ? 0.45 : aan ? 1 : klaar ? 0.75 : viaQr ? 0.85 : 1,
+      }}>{!aan && viaQr && <GsmIcon />}{naamVan(p)}{aan ? (isShared ? " \u2713" : ` \u00d7${mij}`) : klaar ? " \u2713" : ""}</button>
+    )
+  }
+
+  const kopje = (tekst: string) => (
+    <div style={{ fontSize: 12.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#8aa3a6", marginBottom: 6 }}>{tekst}</div>
+  )
+
   return (
-    <div style={{ marginTop: 8, marginLeft: 25, padding: "9px 10px", borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
-        <span style={{ fontSize: 14.5, fontWeight: 800, color: vol ? "#1f8a4c" : "#4a6e73" }}>{vol ? L.assignFullTap : L.assignToWhom}</span>
+    <div style={{ marginTop: 8, padding: "10px 11px", borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}>
+        <span style={{ fontSize: 15, fontWeight: 800, color: vol && !isShared ? "#1f8a4c" : "#4a6e73" }}>{vol && !isShared ? L.assignFullTap : L.whoElseTook}</span>
         <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16.5, color: "#8aa3a6", fontWeight: 800 }}>✕</button>
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-        {gesorteerd.map((p, i) => {
-          const klaar = confirmedFn(p.id)
-          const viaQr = !!p.self_joined
-          const nogVrij = vrijFn(p)
-          const mij = qtyFn(p.id)   // hoeveel dit item al op zijn naam staat
-          // Wie zelf aanduidde of via de link binnenkwam, verdient een vraag vóór je het
-          // voor hem invult. Een nog vrije plaats óók, maar één keer volstaat — daarna weet
-          // je het en zou het alleen nog in de weg zitten.
-          const reden: "bevestigd" | "qr" | "vrij" | "ander" | null = p.id === meId ? null
-              : klaar ? "bevestigd" : viaQr ? "qr" : vrijFn(p) ? "vrij" : "ander"
-          return (
-            <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-              {i === eersteViaLink && eersteViaLink > 0 && (
-                <span style={{ width: 1, height: 24, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
-              )}
-              {/* Deze knop voegt toe, altijd één stuk per tik. Weghalen gebeurt met de min
-                  op de chips erboven: dat kan per stuk, en het is de handeling die je
-                  níét per ongeluk wil doen.
-                  Drie soorten in één rij, elk met een eigen rand: vol geel = staat al op
-                  zijn naam, turkoois = jij duidt voor hem aan, stippellijn met gsm = hij
-                  duidt zelf aan. Een nog naamloze plaats krijgt een lichte rand en schuine
-                  letters — anders lijkt ze op de stippellijn van de QR-gasten. */}
-              <button disabled={vol} onClick={() => onAssign(p.id, reden)} style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                fontSize: 15, fontWeight: viaQr ? 700 : 800, borderRadius: 9, padding: "7px 10px",
-                cursor: vol ? "not-allowed" : "pointer",
-                fontStyle: mij <= 0 && !viaQr && nogVrij ? "italic" : "normal",
-                border: mij > 0 ? "1px solid rgba(196,152,32,0.5)"
-                  : viaQr ? "1.5px dashed rgba(18,58,66,0.3)"
-                  : nogVrij ? "1.5px solid rgba(18,58,66,0.14)"
-                  : "1.5px solid rgba(20,153,176,0.45)",
-                background: mij > 0 ? "linear-gradient(135deg,#f3d27c,#ecc564)" : viaQr ? "transparent" : nogVrij ? "#fff" : "rgba(20,153,176,0.06)",
-                color: mij > 0 ? "#5a4a1a" : viaQr ? "#8aa3a6" : nogVrij ? "#6b8489" : "#123a42",
-                opacity: vol ? 0.45 : mij > 0 ? 1 : klaar ? 0.75 : viaQr ? 0.85 : 1,
-              }}>{mij <= 0 && viaQr && <GsmIcon />}{naamVan(p)}{mij > 0 ? ` ×${mij}` : klaar ? " ✓" : ""}</button>
-            </span>
-          )
-        })}
-      </div>
-      {/* De uitlegregel is weg: het gsm-teken staat nu op de pil zelf, en op een telefoon
-          is die regel puur verloren hoogte. */}
+      {vanJou.length > 0 && (
+        <div style={{ marginBottom: viaLink.length > 0 ? 12 : 0 }}>
+          {viaLink.length > 0 && kopje(L.addedByYou)}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>{vanJou.map(knop)}</div>
+        </div>
+      )}
+      {viaLink.length > 0 && (
+        <div>
+          {kopje(L.cameViaQr)}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>{viaLink.map(knop)}</div>
+          <div style={{ fontSize: 13.5, color: "#8aa3a6", lineHeight: 1.45, marginTop: 7 }}>{L.qrPicksSelf}</div>
+        </div>
+      )}
+      {anderen.length === 0 && <div style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</div>}
     </div>
   )
 }
@@ -8418,7 +8458,6 @@ function ClaimScreen(props: {
   // gaat over iedereen die aan tafel zit.
   const toewijsbaar = participants
     .sort((a, b) => Number(!!a.self_joined) - Number(!!b.self_joined))
-  const eersteLinkGast = toewijsbaar.findIndex((p) => p.self_joined)
   // Dezelfde deel-knop als op de bon: hier kan de admin een item alsnog op "gedeeld" zetten.
   const shareBtn = (it: BillItem) => !magOntdelen(it) ? (
     <span title={L.sharedByOther}
@@ -8558,6 +8597,8 @@ function ClaimScreen(props: {
                     const sh = sharerIds(it.id)
                     const heads = shareHeads(it.id)
                     const perHead = heads > 0 ? itemTotal(it) / heads : 0
+                    const mijnZitjes = meId ? Math.max(1, seatsOf(meId)) : 1
+                    const ikDeel = meId ? sh.includes(meId) : false
                     const mine = adminPid ? sh.includes(adminPid) : false
                     // Een gedeeld item ligt nu op een lichtblauw vlak. Het staat tussen
                     // gewone items in, en enkel een icoontje links liet je te makkelijk
@@ -8599,100 +8640,136 @@ function ClaimScreen(props: {
                             ? <span style={{ color: INDIGO.tekst, fontWeight: 700 }}> ({L.nSharers(heads)} · {L.eachAmount(perHead)})</span>
                             : <span style={{ color: "#b5591a", fontWeight: 700 }}> — {L.nobodyShared}</span>}
                         </div>
-                        {/* Alle namen staan open, en elke persoon is één pil — ook de twee
-                            helften van een koppel. Zo zet je Jan af zonder Lore aan te raken,
-                            en hoef je geen venster te openen om één naam recht te zetten. */}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8, alignItems: "center" }}>
-                          {named.length === 0
-                            ? <span style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</span>
-                            : toewijsbaar.flatMap((p, i) => {
-                                const pSeats = Math.max(1, p.seats ?? 1)
-                                const viaLink = !!p.self_joined
-                                const delen = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
-                                const leden = claimMembers(it.id, p.id)
-                                return Array.from({ length: pSeats }, (_, k) => k).map((k) => {
-                                  const on = pSeats > 1 ? leden.includes(k) : sh.includes(p.id)
-                                  const naam = pSeats > 1 ? (delen[k] || `${L.personWord} ${k + 1}`) : naamVan(p)
-                                  const doe = () => { if (pSeats > 1) toggleShareMember(it.id, p.id, k); else toggleShareClaim(it.id, p.id) }
-                                  // Aanduiden voor iemand anders vraagt een bevestiging: het is zijn
-                                  // rekening. Weghalen niet — dat herstelt hoogstens een vergissing.
-                                  const klik = () => {
-                                    if (on || p.id === meId) { doe(); return }
-                                    if (vrijFn(p)) { askConfirm(L.freeSeatNoAssignBody, L.goGuestsBtn, () => onNaarGasten?.(), { title: L.freeSeatNoAssignTitle }); return }
-                                    if (explicitConfirmed(p.id)) { askConfirm(L.notSelectedShare(naamVan(p)), L.yes, doe); return }
-                                    if (viaLink) { askConfirm(L.assignToQrGuest(naamVan(p), it.name), L.assignQrYes, doe, { title: L.assignQrTitle(naamVan(p)) }); return }
-                                    if (uitlegGezien("ander")) { doe(); return }
-                                    askConfirm(L.assignOwnBody(naamVan(p)), L.assignOwnYes, () => { markUitleg("ander"); doe() }, { title: L.assignOwnTitle(naamVan(p)) })
-                                  }
-                                  return (
-                                    <span key={`${p.id}:${k}`} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                                      {/* Streepje vóór de eerste gast die zelf binnenkwam: die duidt
-                                          normaal zelf aan, jij vult de anderen in. */}
-                                      {i === eersteLinkGast && eersteLinkGast > 0 && k === 0 && (
-                                        <span style={{ width: 1, height: 22, background: "rgba(18,58,66,0.12)", marginRight: 2 }} />
-                                      )}
-                                      <button onClick={klik} style={{
-                                        fontSize: 15, borderRadius: 10, padding: "6px 10px", cursor: "pointer", fontFamily: "inherit",
-                                        display: "inline-flex", alignItems: "center", gap: 5,
-                                        border: on ? "none" : viaLink ? "1.5px dashed rgba(18,58,66,0.3)" : "1.5px solid rgba(20,153,176,0.45)",
-                                        background: on ? (p.id === meId ? "rgba(233,196,95,0.5)" : "linear-gradient(135deg,#f3d27c,#ecc564)") : viaLink ? "transparent" : "#fff",
-                                        color: on ? "#5a4a1a" : viaLink ? "#8aa3a6" : "#123a42",
-                                        fontWeight: on ? 800 : 700,
-                                        paddingRight: on ? 6 : 10,
-                                      }}>{on ? "\u2713 " : ""}{viaLink && !on && <GsmIcon />}{naam}
-                                        {/* Een tweede tik op de naam zet hem ook weer af, maar dat
-                                            is onzichtbaar. Het kruisje zegt het hardop — zelfde
-                                            handeling, voor wie het niet gokt. */}
-                                        {on && (
-                                          <span onClick={(e) => { e.stopPropagation(); doe() }} role="button" tabIndex={0} aria-label={L.removeOne} title={L.removeOne}
-                                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); doe() } }}
-                                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 7, background: "rgba(90,58,0,0.14)", color: "#5a4a1a", fontSize: 13, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>✕</span>
-                                        )}
-                                      </button>
-                                    </span>
-                                  )
-                                })
-                              })}
+                        {/* Jouw eigen keuze staat vooraan en werkt zoals bij een gast: één tik,
+                            geen vraag, want het is jouw rekening. Wie al meedeelt staat ernaast
+                            als chip met een kruisje. Iedereen die er nog bij moet, zit achter het
+                            ronde knopje — zo blijft deze rij kort, ook aan een tafel van acht. */}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 9, alignItems: "center" }}>
+                          {named.length === 0 && <span style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</span>}
+                          {meId && mijnZitjes <= 1 && (
+                            <button onClick={() => toggleShareClaim(it.id, meId)} style={{
+                              display: "inline-flex", alignItems: "center", gap: 6, fontSize: 15, fontWeight: 800, borderRadius: 11,
+                              padding: "8px 12px", cursor: "pointer", fontFamily: "inherit",
+                              border: ikDeel ? "none" : "1.5px solid rgba(18,58,66,0.18)",
+                              background: ikDeel ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
+                              color: ikDeel ? "#123a42" : "#4a6e73",
+                            }}>{ikDeel ? L.iShareYes : L.iShareNo}</button>
+                          )}
+                          {/* Zit je met twee op één plaats, dan volstaat "ik" niet: dan moet je per
+                              persoon kunnen kiezen, en blijven het twee pillen. */}
+                          {meId && mijnZitjes > 1 && Array.from({ length: mijnZitjes }, (_, k) => k).map((k) => {
+                            const on = claimMembers(it.id, meId).includes(k)
+                            const delen = (participants.find((x) => x.id === meId)?.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+                            return (
+                              <button key={`ik:${k}`} onClick={() => toggleShareMember(it.id, meId, k)} style={{
+                                fontSize: 15, borderRadius: 11, padding: "8px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 800,
+                                border: on ? "none" : "1.5px solid rgba(18,58,66,0.18)",
+                                background: on ? "rgba(233,196,95,0.5)" : "#fff",
+                                color: on ? "#5a4a1a" : "#4a6e73",
+                              }}>{on ? "✓ " : ""}{delen[k] || `${L.personWord} ${k + 1}`}</button>
+                            )
+                          })}
+                          {/* De anderen die al meedelen. Een koppel dat maar met één persoon
+                              meedeelt, staat hier met die ene naam — anders zet je Lore af terwijl
+                              je Jan bedoelde. */}
+                          {sh.filter((pid) => pid !== meId).flatMap((pid) => {
+                            const p = participants.find((x) => x.id === pid)
+                            if (!p) return []
+                            const pz = Math.max(1, p.seats ?? 1)
+                            const leden = claimMembers(it.id, p.id)
+                            const delen = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+                            const stuks = pz > 1 && leden.length > 0 && leden.length < pz
+                              ? leden.map((k) => ({ nm: delen[k] || `${L.personWord} ${k + 1}`, af: () => toggleShareMember(it.id, p.id, k) }))
+                              : [{ nm: naamVan(p), af: () => toggleShareClaim(it.id, p.id) }]
+                            return stuks.map((d, k) => (
+                              <span key={`${pid}:${k}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 15, fontWeight: 700, borderRadius: 10, padding: "3px 3px 3px 10px", color: "#4a6e73", background: "rgba(90,108,166,0.1)" }}>
+                                {d.nm}
+                                <button onClick={d.af} title={L.removeOne} aria-label={L.removeOne}
+                                  style={{ border: "none", background: "rgba(224,107,94,0.16)", color: "#c0392b", borderRadius: 8, width: 26, height: 26, cursor: "pointer", fontSize: 14, fontWeight: 800, lineHeight: 1, fontFamily: "inherit" }}>✕</button>
+                              </span>
+                            ))
+                          })}
+                          {named.length > 0 && <WieNogBtn onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} open={assignItem === it.id} title={L.addSomeoneElse} />}
                         </div>
+                        {assignItem === it.id && (
+                          <AssignPicker participants={participants} itemId={it.id} isShared meId={meId}
+                            qtyFn={(pid) => sh.includes(pid) ? 1 : 0}
+                            confirmedFn={explicitConfirmed}
+                            vrijFn={vrijFn} naamVan={naamVan}
+                            onAssign={(pid, reden) => {
+                              const wie = participants.find((x) => x.id === pid)
+                              const naam = wie ? naamVan(wie) : ""
+                              const doe = () => toggleShareClaim(it.id, pid)
+                              // Weghalen vraagt niets: dat herstelt hoogstens een vergissing.
+                              if (sh.includes(pid)) { doe(); return }
+                              if (reden === "vrij") { askConfirm(L.freeSeatNoAssignBody, L.goGuestsBtn, () => onNaarGasten?.(), { title: L.freeSeatNoAssignTitle }); return }
+                              if (reden === "bevestigd") { askConfirm(L.notSelectedShare(naam), L.yes, doe); return }
+                              // Wie via de QR of de link kwam, zit op zijn eigen gsm hetzelfde te
+                              // doen: daar vraagt de app het elke keer opnieuw. Bij je eigen gasten
+                              // is invullen net de bedoeling, dus daar volstaat één keer uitleg.
+                              if (reden === "qr") { askConfirm(L.assignToQrGuest(naam, it.name), L.assignQrYes, doe, { title: L.assignQrTitle(naam) }); return }
+                              if (uitlegGezien("ander")) { doe(); return }
+                              askConfirm(L.assignOwnBody(naam), L.assignOwnYes, () => { markUitleg("ander"); doe() }, { title: L.assignOwnTitle(naam) })
+                            }}
+                            onClose={() => setAssignItem(null)} />
+                        )}
                       </div>
                     )
                   }
                   const who = toewijsbaar.map((p) => ({ p, q: myQty(it.id, p.id) })).filter((x) => x.q > 0)
                   const mineQ = adminPid ? myQty(it.id, adminPid) : 0
-                  const ok = open === 0
+                  // Jouw eigen stuks staan in de teller rechts, dus hier alleen de anderen.
+                  const anderen = who.filter((x) => x.p.id !== adminPid)
                   const highlight = adminPid && mineQ > 0
                   return (
-                    <div key={it.id} style={{ padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: highlight ? "rgba(233,196,95,0.16)" : "transparent", borderRadius: highlight ? 10 : 0 }}>
+                    <div key={it.id} style={{ padding: "10px 6px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: highlight ? "rgba(233,196,95,0.16)" : "transparent", borderRadius: highlight ? 10 : 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.quantity}× {it.name}</span>
                             {isAdmin && shareBtn(it)}
                           </div>
-                          <div style={{ fontSize: 15.5, color: "#999" }}>€{it.unit_price.toFixed(2).replace(".", ",")}/stuk</div>
+                          {/* Hier stond rechts een rode knop "2 open — wijs toe". Die deed twee
+                              dingen tegelijk: melden hoeveel er nog vrij was, én de kiezer openen.
+                              Het getal hoort bij de prijsregel, het openen bij het knopje onderaan. */}
+                          <div style={{ fontSize: 15.5, color: "#999" }}>
+                            €{it.unit_price.toFixed(2).replace(".", ",")}/stuk
+                            {" · "}
+                            <span style={{ fontWeight: 700, color: open > 0 ? "#c0392b" : "#1f8a4c" }}>{open > 0 ? L.stillFree(open) : L.allClaimedWord}</span>
+                          </div>
                         </div>
-                        {open > 0
-                          ? <button onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} style={{ fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "5px 10px", cursor: "pointer", border: "none", color: "#c0392b", background: "rgba(224,107,94,0.14)" }}>{open} {L.openAssign}</button>
-                          /* Is alles verdeeld, dan valt er niets meer te kiezen: de kiezer
-                             toonde dan dezelfde namen nog eens, gedimd, met de uitnodiging
-                             om er één weg te halen — wat je hierboven al op de naam zelf
-                             doet. Nu is dit enkel nog een vaststelling. */
-                          : <span style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "6px 10px", border: "1px solid rgba(39,174,96,0.35)", color: "#1f8a4c", background: "rgba(39,174,96,0.12)", whiteSpace: "nowrap" }}>{L.fullyClaimed} ✓</span>}
+                        {/* Precies de strook die een gast op zijn eigen scherm heeft. Jij nam het
+                            vaakst zelf iets, en dat ging tot nu via dezelfde omweg als voor
+                            iedereen: knop, kiezer, naam zoeken. Nu is het één tik, zonder vraag —
+                            het is jouw rekening. */}
+                        {adminPid && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                            <button onClick={() => setClaim(it.id, adminPid, Math.max(0, mineQ - 1))} disabled={mineQ <= 0} title={L.removeOne} aria-label={L.removeOne}
+                              style={{ width: 40, height: 33, borderRadius: 8, fontSize: 21, fontWeight: 800, lineHeight: 1, fontFamily: "inherit",
+                                cursor: mineQ > 0 ? "pointer" : "default", background: "#fff",
+                                color: mineQ > 0 ? "#c0392b" : "#c9ced8", border: "2px solid " + (mineQ > 0 ? "#2b2f38" : "#e2e6ee") }}>−</button>
+                            <span style={{ fontSize: 19, fontWeight: 800, minWidth: 20, textAlign: "center" }}>{mineQ}</span>
+                            <button onClick={() => setClaim(it.id, adminPid, mineQ + 1)} disabled={open <= 0} title={L.iTakeOne} aria-label={L.iTakeOne}
+                              style={{ ...S.iconBtn, width: 33, height: 33, fontSize: 19, fontWeight: 800, background: "rgba(27,42,74,0.12)", opacity: open <= 0 ? 0.35 : 1, cursor: open > 0 ? "pointer" : "default" }}>+</button>
+                          </div>
+                        )}
                       </div>
-                      {/* Blijft staan met de kiezer open: hier haal je per stuk weg,
-                          daar voeg je per stuk toe. */}
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: 25, alignItems: "center" }}>
-                        {who.map(({ p, q: pq }) => (
-                          <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "3px 3px 3px 10px", color: p.id === adminPid ? "#5a4a1a" : "#4a6e73", background: p.id === adminPid ? "rgba(233,196,95,0.5)" : "rgba(90,108,166,0.1)" }}>
+                      {/* De anderen, en daarachter het knopje dat de namenkiezer opent. */}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7, alignItems: "center" }}>
+                        {anderen.map(({ p, q: pq }) => (
+                          <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 15, fontWeight: 700, borderRadius: 10, padding: "3px 3px 3px 10px", color: "#4a6e73", background: "rgba(90,108,166,0.1)" }}>
                             {naamVan(p)} ×{pq}
                             {/* Een kruisje leest als "weg", een minnetje als "minder" — en bij
                                 ×1 is dat hetzelfde. Staan er meerdere, dan gaat er telkens één
                                 af; dat hoeft er niet bij te staan, je ziet het cijfer zakken. */}
                             <button onClick={() => setClaim(it.id, p.id, Math.max(0, pq - 1))} title={L.removeOne} aria-label={L.removeOne}
-                              style={{ border: "none", background: "rgba(224,107,94,0.16)", color: "#c0392b", borderRadius: 8, width: 28, height: 28, cursor: "pointer", fontSize: 15, fontWeight: 800, lineHeight: 1, fontFamily: "inherit" }}>✕</button>
+                              style={{ border: "none", background: "rgba(224,107,94,0.16)", color: "#c0392b", borderRadius: 8, width: 26, height: 26, cursor: "pointer", fontSize: 14, fontWeight: 800, lineHeight: 1, fontFamily: "inherit" }}>✕</button>
                           </span>
                         ))}
-                        {who.length === 0 && open === 0 && <span style={{ fontSize: 15.5, color: "#aaa" }}>—</span>}
+                        {open > 0 && participants.length > 0 && (
+                          <WieNogBtn onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} open={assignItem === it.id} title={L.addSomeoneElse} />
+                        )}
+                        {anderen.length === 0 && open === 0 && mineQ === 0 && <span style={{ fontSize: 15.5, color: "#aaa" }}>—</span>}
                       </div>
                       {assignItem === it.id && open > 0 && (
                         <AssignPicker participants={participants} itemId={it.id} meId={meId} vol={open <= 0}
