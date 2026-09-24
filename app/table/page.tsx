@@ -1168,7 +1168,6 @@ const STRINGS = {
     iShareNo: "Ik nam hiervan",
     pickWhoTook: "Tik wie ervan nam — meerdere mag.",
     whoSharedHead: "Wie nam hiervan?",
-    sharesInstead: (a: number, b: number) => `Jullie betalen ${a} ${a === 1 ? "aandeel" : "aandelen"} in plaats van ${b}.`,
     makeSharedTitle: "Dit item delen?",
     multiQtyShareHint: (q: number, tot: number) => `Let op: dit zijn ${q} stuks. Als gedeeld item wordt de volle €${tot.toFixed(2).replace(".", ",")} verdeeld over wie meedeelt — het aantal telt dan niet meer apart mee. Wil je liever per stuk toewijzen? Zet het dan niet op gedeeld.`,
     makeSharedBody: "De prijs wordt dan verdeeld over iedereen die meedeelt.",
@@ -1851,7 +1850,6 @@ const STRINGS = {
     iShareNo: "J'en ai pris",
     pickWhoTook: "Touche qui en a pris — plusieurs, c'est possible.",
     whoSharedHead: "Qui en a pris\u00a0?",
-    sharesInstead: (a: number, b: number) => `Vous payez ${a} ${a === 1 ? "part" : "parts"} au lieu de ${b}.`,
     makeSharedTitle: "Partager cet article ?",
     multiQtyShareHint: (q: number, tot: number) => `Attention : il s'agit de ${q} pièces. En article partagé, les €${tot.toFixed(2).replace(".", ",")} entiers sont répartis entre ceux qui partagent — le nombre ne compte plus séparément. Tu préfères attribuer à l'unité ? Ne le mets pas en partagé.`,
     makeSharedBody: "Le prix sera réparti entre tous ceux qui partagent.",
@@ -8948,22 +8946,14 @@ function ClaimScreen(props: {
                           : {}) }}>{iShare ? L.iShareYes : L.iShareNo}</button>
                   )}
                 </div>
-                {/* Niets aangeduid: één regeltje uitleg, geen kader. Zodra er iemand aan staat,
-                    zegt dit hoeveel aandelen jullie betalen, met één tik om alles te wissen. */}
-                {meId && mySeats > 1 && !fixed && (() => {
-                  const sel = claimMembers(it.id, meId)
-                  if (sel.length === 0) return (
-                    <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 7, lineHeight: 1.4 }}>{L.pickWhoTook}</div>
-                  )
-                  return (
-                    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.35)", borderRadius: 12, padding: "9px 11px" }}>
-                      {/* Hier stond een knop "✕ Wissen". Overbodig: de naampil erboven is
-                          zelf de schakelaar, en twee manieren om hetzelfde te doen trokken
-                          de aandacht weg van de zin die er echt toe doet. */}
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, color: "#4a6e73", lineHeight: 1.4 }}>{L.sharesInstead(sel.length, mySeats)}</span>
-                    </div>
-                  )
-                })()}
+                {/* Zit je met twee op één plaats en staat er nog niemand aan, dan vraagt dit
+                    regeltje wie van jullie ervan nam. Stond er iemand aan, dan volgde hier een
+                    kader "Jullie betalen 1 aandeel in plaats van 2" — dat zei voor de derde
+                    keer hetzelfde: de naampillen erboven tonen wíé meedeelt en het kader
+                    eronder zegt in euro's wat jouw deel is. Dat kader is weg. */}
+                {meId && mySeats > 1 && !fixed && claimMembers(it.id, meId).length === 0 && (
+                  <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 7, lineHeight: 1.4 }}>{L.pickWhoTook}</div>
+                )}
                 {it.is_shared && (() => {
                   const heads = shareHeads(it.id)
                   const total = itemTotal(it)
@@ -9101,15 +9091,17 @@ function ClaimScreen(props: {
             in de groene balk bovenaan, één tik van het detail. */}
         {!finalized && (<>
         <div onClick={() => setGastBevestigdOpen((v) => !v)}
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: gastBevestigdOpen ? 10 : 0 }}>
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: 10 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
             {blokBol(2, iConfirmed)}
             <span style={{ fontSize: 17.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56", lineHeight: 1.25 }}>{finalized ? "" : "2 · "}{iConfirmed ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
           </span>
           {toonKnop(gastBevestigdOpen)}
         </div>
-        {gastBevestigdOpen && (<>
-        {(() => {
+        {/* Alleen de regels klappen dicht. Het bedrag eronder is wáárvoor een gast dit
+            scherm opent — dat verstoppen achter dezelfde knop maakte het blok leeg, en
+            precies daarom is bij de eindverdeling hieronder die knop ooit al geschrapt. */}
+        {gastBevestigdOpen && (() => {
           const mine = personItems(meId, false)
           return (
             <div style={{ marginBottom: 12 }}>
@@ -9138,7 +9130,6 @@ function ClaimScreen(props: {
             {L.sharingPendingNote}
           </div>
         )}
-        </>)}
         </>)}
         {/* Is de rekening afgesloten, dan blijft hier alleen de definitieve verdeling van
             de tafel staan. De eigen regels die hier stonden waren een derde keer hetzelfde:
