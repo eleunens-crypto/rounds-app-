@@ -816,8 +816,6 @@ const STRINGS = {
     reopenBill: "🔓 Rekening heropenen — gasten kunnen weer wijzigen",
     viewReceipt: "🧾 Bon bekijken",
     bonViewerTitle: "Je gescande bon",
-    toTotalBtn: "⤓ Naar het totaal",
-    fitBtn: "Passend",
     pinchHint: "Knijp met twee vingers om te zoomen · dubbeltik om te wisselen",
     groupWord: "Groep",
     nStillFree: (n: number) => `${n} nog vrij`,
@@ -1176,7 +1174,6 @@ const STRINGS = {
     errSave: "Opslaan mislukt",
     enterTipFirst: "Vul eerst een fooibedrag in.",
     confirmDeleteItem: "Dit item van de bon verwijderen? Wat er al aan toegewezen werd, verdwijnt mee.",
-    claimTitle: "Wie heeft wat genomen? Wijs hier toe!",
     collapseOpen: "▶ openen",
     collapseClose: "▼ inklappen",
     reviewAgain: "Opnieuw bekijken",
@@ -1207,6 +1204,7 @@ const STRINGS = {
     reopenedBody: "De beheerder past nog iets aan. Je bevestiging blijft staan, maar je kan nog wijzigen.",
     selectItemsPlural: "Selecteer jullie consumpties",
     selectItemsSingular: "Selecteer jouw consumpties",
+    claimSubAdmin: "\u2026 en vul aan voor wie het zelf niet doet",
     noItemsWaitScan: "Nog geen items — wacht tot de bon gescand is.",
     totalSharedByDrinkers: " totaal · wordt gedeeld door wie meedeelt",
     iShareYes: "✓ Ik nam hiervan",
@@ -1232,8 +1230,6 @@ const STRINGS = {
     tooSlowTip: "Blijft het mislukken? Twee foto's zijn zwaarder om te lezen. Eén foto van heel de bon werkt meestal beter — recht erboven, goed licht, beeld vullen.",
     tooSlowOne: "📷 Toch 1 foto maken",
     taxAddBtn: "BTW / kosten / korting toevoegen?",
-    legendShare: "Aantikken voor gedeelde items (water, wijn, dessert…). De prijs verdeelt zich over wie meedeelt.",
-    sharedItemsQ: "Gedeelde items?",
     sharedByOther: "Alleen wie dit deelde of de beheerder kan het terugdraaien.",
     shareLocked: "Vastgezet door de beheerder",
     stillFree: (n: number) => `nog ${n} vrij`,
@@ -1282,6 +1278,7 @@ const STRINGS = {
     withdraw: "toch intrekken",
     assignFullTap: "Alles toegewezen — tik een naam om weg te halen",
     whoElseTook: "Wie nam dit nog?",
+    otherQ: "andere?",
     iTakeOne: "Ik neem er een",
     addSomeoneElse: "Iemand anders toevoegen",
     addedByYou: "door jou toegevoegd",
@@ -1534,8 +1531,6 @@ const STRINGS = {
     reopenBill: "🔓 Rouvrir l'addition — les invités peuvent à nouveau modifier",
     viewReceipt: "🧾 Voir l'addition",
     bonViewerTitle: "Ton addition scannée",
-    toTotalBtn: "⤓ Aller au total",
-    fitBtn: "Ajuster",
     pinchHint: "Pince à deux doigts pour zoomer · double-tape pour basculer",
     groupWord: "Groupe",
     nStillFree: (n: number) => `${n} encore libre${n !== 1 ? "s" : ""}`,
@@ -1884,7 +1879,6 @@ const STRINGS = {
     errSave: "Échec de l'enregistrement",
     enterTipFirst: "Indique d'abord un montant de pourboire.",
     confirmDeleteItem: "Supprimer cet article de l'addition ? Ce qui y était attribué disparaît aussi.",
-    claimTitle: "Qui a pris quoi ? Répartis ici !",
     collapseOpen: "▶ ouvrir",
     collapseClose: "▼ réduire",
     reviewAgain: "Revoir",
@@ -1915,6 +1909,7 @@ const STRINGS = {
     reopenedBody: "L'organisateur modifie encore quelque chose. Ta confirmation reste valable, mais tu peux encore modifier.",
     selectItemsPlural: "Sélectionnez vos consommations",
     selectItemsSingular: "Sélectionne tes consommations",
+    claimSubAdmin: "\u2026 et compl\u00e8te pour ceux qui ne le font pas eux-m\u00eames",
     noItemsWaitScan: "Aucun article — attends que l'addition soit scannée.",
     totalSharedByDrinkers: " au total · réparti entre ceux qui en boivent",
     iShareYes: "✓ J'en ai pris",
@@ -1940,8 +1935,6 @@ const STRINGS = {
     tooSlowTip: "Ça continue à échouer ? Deux photos sont plus lourdes à lire. Une seule photo de toute l'addition marche généralement mieux — bien au-dessus, bonne lumière, remplis l'image.",
     tooSlowOne: "📷 Prendre quand même 1 photo",
     taxAddBtn: "Ajouter TVA / frais / remise ?",
-    legendShare: "À cocher pour les articles partagés (eau, vin, dessert…). Le prix se répartit entre ceux qui partagent.",
-    sharedItemsQ: "Articles partagés ?",
     sharedByOther: "Seul celui qui l'a partagé ou l'organisateur peut l'annuler.",
     shareLocked: "Verrouillé par l'administrateur",
     stillFree: (n: number) => `encore ${n} de libre`,
@@ -1986,6 +1979,7 @@ const STRINGS = {
     withdraw: "retirer finalement",
     assignFullTap: "Tout attribué — touchez un nom pour le retirer",
     whoElseTook: "Qui d'autre en a pris\u00a0?",
+    otherQ: "autre\u00a0?",
     iTakeOne: "J'en prends un",
     addSomeoneElse: "Ajouter quelqu'un d'autre",
     addedByYou: "ajout\u00e9s par toi",
@@ -7718,15 +7712,6 @@ function BonKijker({ urls, onClose }: { urls: string[]; onClose: () => void }) {
     }
   }
 
-  // Het totaal staat onderaan de bon. Deze knop zoomt in en schuift naar die onderkant.
-  const naarTotaal = () => {
-    const doos = doosRef.current, inhoud = inhoudRef.current
-    if (!doos || !inhoud) return
-    const s = 2.2
-    const nodig = doos.clientHeight / 2 - 96 - (inhoud.offsetHeight * s) / 2
-    zet(s, 0, nodig)
-  }
-
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 4000, background: "#0b0f12", overscrollBehavior: "contain" }}>
       <div ref={doosRef}
@@ -7756,11 +7741,12 @@ function BonKijker({ urls, onClose }: { urls: string[]; onClose: () => void }) {
         <div style={{ position: "absolute", bottom: "calc(74px + env(safe-area-inset-bottom))", left: 16, right: 16, textAlign: "center", color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 700, lineHeight: 1.4, pointerEvents: "none" }}>{L.pinchHint}</div>
       )}
 
-      <div style={{ position: "absolute", bottom: "calc(14px + env(safe-area-inset-bottom))", left: 12, right: 12, display: "flex", gap: 8 }}>
-        <button onClick={naarTotaal}
-          style={{ flex: 1, cursor: "pointer", fontFamily: "inherit", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 16, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{L.toTotalBtn}</button>
-        <button onClick={() => zet(1, 0, 0)}
-          style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 12, padding: "13px 18px", fontSize: 16, fontWeight: 800 }}>{L.fitBtn}</button>
+      {/* Hier stonden "Naar het totaal" en "Passend maken". Allebei deden ze iets met de
+          zoom, en allebei kwamen ze in de weg van het enige wat je hier écht nog wil: terug.
+          Knijpen en dubbeltikken doen het zoomwerk al; dit is nu gewoon de uitgang. */}
+      <div style={{ position: "absolute", bottom: "calc(14px + env(safe-area-inset-bottom))", left: 12, right: 12 }}>
+        <button onClick={onClose}
+          style={{ width: "100%", cursor: "pointer", fontFamily: "inherit", background: "rgba(255,255,255,0.16)", border: "1px solid rgba(255,255,255,0.32)", color: "#fff", borderRadius: 12, padding: "14px 0", fontSize: 17, fontWeight: 800 }}>{L.close}</button>
       </div>
     </div>
   )
@@ -7824,31 +7810,10 @@ function TopBar({ group, isAdmin, onHome, totalPersons, status, onRenameGroup }:
 // de beheerder, zijn toewijsscherm en dat van een gast. Vroeger stond op elk van die
 // drie een andere formulering van hetzelfde. Dichtgeklapt zie je alleen waar het over
 // gaat en hoe de knop eruitziet — de zin erbij was voor wie hem al kent alleen ruis.
-function DeelUitleg() {
-  const [deelInfoOpen, setDeelInfoOpen] = useState(false)
-  const [lang] = useLang()
-  const L = STRINGS[lang]
-  return (
-
-    <div style={{ background: "rgba(90,108,166,0.06)", borderRadius: 12, padding: "11px 12px", marginBottom: 10 }}>
-      <div onClick={() => setDeelInfoOpen((v) => !v)}
-        style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}>
-        {/* Titel en voorbeeldknop links, pijltje rechts. De voorbeeldknop heeft dezelfde
-            stijl als de echte deelknoppen op de rijen — anders lijkt het voorbeeld niet
-            op wat het uitlegt. */}
-        <span style={{ flexShrink: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>{L.sharedItemsQ}</span>
-        <span style={{ flex: 1, minWidth: 0 }} />
-        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px", background: "#fff", border: `1.5px solid ${INDIGO.rand}` }}><ShareIcon size={14} kleur={INDIGO.tekst} /><span style={{ fontSize: 15.5, fontWeight: 800, color: INDIGO.tekst }}>{L.makeSharedShort}</span></span>
-        <span style={{ flex: 1, minWidth: 0 }} />
-        <span style={{ flexShrink: 0, fontSize: 17, fontWeight: 800, color: "#4a6e73" }}>{deelInfoOpen ? "▴" : "▾"}</span>
-      </div>
-      {deelInfoOpen && (
-        <div style={{ fontSize: 15, color: "#4a6e73", lineHeight: 1.5, marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(18,58,66,0.1)" }}>{L.legendShare}</div>
-      )}
-    </div>
-  )
-}
-
+// Hier stond DeelUitleg: een uitklapbaar kadertje "Gedeelde items?" met een voorbeeldknop,
+// bovenaan zowel het beheerders- als het gastenscherm. Het legde iets uit wat je al ziet
+// zodra je de deelknop op een item aantikt — en het stond in de weg van het enige wat hier
+// telt: de lijst zelf.
 
 const BON_STRINGS = {
   nl: {
@@ -8172,28 +8137,21 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
   )
 }
 
-// Het knopje dat de namenkiezer opent. Een getekend poppetje met een vraagteken op de
-// schouder: "wie nam dit nog?". Bewust géén plusteken — de teller in dezelfde rij heeft er
-// al een, en die betekent iets anders: nog een stuk voor jezelf. Twee plussen naast elkaar
-// met twee betekenissen is precies de vergissing die je maakt als je snel zit te verdelen.
+// Het knopje dat de namenkiezer opent. Dit was een rond poppetje met een vraagteken erop,
+// maar tussen de naampillen trok die cirkel te veel aandacht — hij leek belangrijker dan de
+// namen zelf. Nu is het een pil in dezelfde vorm als de rest, met een stippellijn: dezelfde
+// taal als een plaats die nog ingevuld moet worden.
 function WieNogBtn({ onClick, open, title }: { onClick: () => void; open?: boolean; title: string }) {
+  const [lang] = useLang()
+  const L = STRINGS[lang]
   return (
     <button onClick={onClick} title={title} aria-label={title} style={{
-      position: "relative", width: 38, height: 38, borderRadius: "50%", flexShrink: 0, cursor: "pointer", padding: 0,
-      display: "inline-flex", alignItems: "center", justifyContent: "center",
-      background: open ? "rgba(20,153,176,0.24)" : "rgba(20,153,176,0.1)",
-      border: "1.5px solid rgba(20,153,176,0.4)",
-    }}>
-      <svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="#0f7488" strokeWidth="2.1" strokeLinecap="round" style={{ display: "block" }}>
-        <circle cx="12" cy="8" r="3.7" />
-        <path d="M5.3 19.4c0-3.6 3-6.1 6.7-6.1s6.7 2.5 6.7 6.1" />
-      </svg>
-      <span aria-hidden style={{
-        position: "absolute", top: -5, right: -5, width: 18, height: 18, borderRadius: "50%",
-        background: "#0f7d90", color: "#fff", fontSize: 12, fontWeight: 800, lineHeight: 1,
-        display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff",
-      }}>?</span>
-    </button>
+      display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0, cursor: "pointer", fontFamily: "inherit",
+      fontSize: 15, fontWeight: 800, borderRadius: 10, padding: "6px 11px",
+      background: open ? "rgba(20,153,176,0.16)" : "transparent",
+      border: `1.5px dashed ${open ? "rgba(20,153,176,0.7)" : "rgba(20,153,176,0.5)"}`,
+      color: "#0f7488",
+    }}>{L.otherQ}</button>
   )
 }
 
@@ -8566,7 +8524,12 @@ function ClaimScreen(props: {
       <div id="wie-nam-wat">
         <div style={S.card}>
           <div onClick={isAdmin && !(warnCount && warnCount > 0) ? () => setClaimCollapsed((v) => !v) : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: isAdmin ? "pointer" : "default", marginBottom: (isAdmin && claimCollapsed) ? 0 : 10 }}>
-            <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.claimTitle}</h3>
+            {/* Dezelfde titel als de gast ziet, want het is dezelfde handeling: eerst jouw
+                eigen consumpties, en daarna vul je aan voor wie het zelf niet deed. */}
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ ...S.h3, marginBottom: 2 }}>{meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</h3>
+              <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.claimSubAdmin}</div>
+            </div>
             {isAdmin && !(warnCount && warnCount > 0) && <span style={{ fontSize: 16, color: "#8aa3a6", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? L.collapseOpen : L.collapseClose}</span>}
           </div>
           {isAdmin && claimCollapsed && !(warnCount && warnCount > 0)
@@ -8587,9 +8550,6 @@ function ClaimScreen(props: {
             ? <div style={{ fontSize: 16, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
-                {/* Dezelfde balk als in de itemlijst en op het gastenscherm: één uitleg over
-                    gedeelde items, overal in dezelfde woorden en met dezelfde knop erbij. */}
-                <DeelUitleg />
                 {items.map((it) => {
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
@@ -8653,7 +8613,17 @@ function ClaimScreen(props: {
                               border: ikDeel ? "none" : "1.5px solid rgba(18,58,66,0.18)",
                               background: ikDeel ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
                               color: ikDeel ? "#123a42" : "#4a6e73",
-                            }}>{ikDeel ? L.iShareYes : L.iShareNo}</button>
+                            }}>{ikDeel ? L.iShareYes : L.iShareNo}
+                              {/* Jij kon jezelf alleen weghalen door nog eens op de knop te
+                                  tikken, en dat ziet niemand. De anderen hadden hun kruisje al;
+                                  jij nu ook. */}
+                              {ikDeel && (
+                                <span onClick={(e) => { e.stopPropagation(); toggleShareClaim(it.id, meId) }} role="button" tabIndex={0}
+                                  aria-label={L.removeOne} title={L.removeOne}
+                                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggleShareClaim(it.id, meId) } }}
+                                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 7, background: "rgba(90,58,0,0.16)", color: "#5a4a1a", fontSize: 13, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>✕</span>
+                              )}
+                            </button>
                           )}
                           {/* Zit je met twee op één plaats, dan volstaat "ik" niet: dan moet je per
                               persoon kunnen kiezen, en blijven het twee pillen. */}
@@ -8722,7 +8692,8 @@ function ClaimScreen(props: {
                   const anderen = who.filter((x) => x.p.id !== adminPid)
                   const highlight = adminPid && mineQ > 0
                   return (
-                    <div key={it.id} style={{ padding: "10px 6px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: highlight ? "rgba(233,196,95,0.16)" : "transparent", borderRadius: highlight ? 10 : 0 }}>
+                    <div key={it.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 10,
+                      background: highlight ? "rgba(233,196,95,0.16)" : open <= 0 ? "rgba(39,174,96,0.09)" : "transparent" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -8889,9 +8860,6 @@ function ClaimScreen(props: {
           {toonKnop(gastItemsOpen)}
         </h3>
         {gastItemsOpen && (<>
-        {items.length > 0 && !vast && (
-          <DeelUitleg />
-        )}
         {/* Eén regel die zegt waaróm er niets meer beweegt, met de knop erbij genoemd.
             Zonder die regel lijkt het scherm gewoon stuk. */}
         {vast && items.length > 0 && (
@@ -8919,7 +8887,10 @@ function ClaimScreen(props: {
             const myShare = perHead * (myHeads || 1)
             const mySeats = seatsOf(meId)
             return (
-              <div key={it.id} style={{ padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+              // Dezelfde vlakken als op het beheerdersscherm: blauw voor een gedeeld item,
+              // goud zodra jij er zelf in zit. Een gast zag daarvoor alleen witte regels en
+              // moest bij elk item opnieuw lezen wat hij al had aangeduid.
+              <div key={it.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 10, background: iShare ? "rgba(233,196,95,0.16)" : INDIGO.vlak }}>
                 {/* Naam en bedrag over de volle breedte, de standen op een eigen regel:
                     met alles op één lijn werd een lange itemnaam afgekapt op een telefoon. */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -9041,7 +9012,10 @@ function ClaimScreen(props: {
             )
           }
           return (
-            <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+            // Goud = jij nam hiervan. Lichtgroen = alle stuks zijn verdeeld, er hoeft niets
+            // meer te gebeuren. Zo zie je in één blik waar je nog moet kijken.
+            <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 8px", borderRadius: 10, borderBottom: "1px solid rgba(0,0,0,0.05)",
+              background: mine > 0 ? "rgba(233,196,95,0.16)" : open <= 0 ? "rgba(39,174,96,0.09)" : "transparent" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}><span style={{ color: "#0f7d90" }}>{total}×</span> {it.name}</span>
