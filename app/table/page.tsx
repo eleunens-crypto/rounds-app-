@@ -883,14 +883,9 @@ const STRINGS = {
     quotaDayTitle: "🔒 Slimme scan is voor vandaag op",
     quotaDayBody: "De gratis AI-scan heeft een daglimiet en die is bereikt. Opnieuw proberen helpt vandaag niet meer — morgenochtend werkt ze weer.",
     quotaDayQuickScan: "⚡ Gebruik de snelle scan",
-    scanFailUnavailTitle: "😕 De slimme scan is even niet beschikbaar",
-    scanFailUnavailBody: "De AI-herkenning is overbelast of tijdelijk offline. Je foto blijft bewaard — probeer het zo meteen opnieuw.",
-    retryIn: (s: number) => `🔄 Opnieuw proberen over ${s}s`,
-    retryNow: "🔄 Opnieuw proberen",
-    retriesLeft: (n: number) => `nog ${n} poging${n !== 1 ? "en" : ""} met deze foto`,
-    retryLast: "laatste poging met deze foto",
+    retryIn: (s: number) => `🔄 Opnieuw over ${s}s`,
     photoFailTitle: "Het lukt even niet",
-    photoFailBody: "Twee keer geprobeerd. Dat kan aan de foto liggen, maar even goed aan de scandienst zelf. Ga terug en probeer het zo meteen opnieuw \u2014 meestal lukt het dan wel.",
+    photoFailBody: "Dat kan aan de foto liggen, maar even goed aan de scandienst zelf. Ga terug en probeer het zo meteen nog eens \u2014 meestal lukt het dan wel.",
     photoTipsBody: "Leg de bon plat, zorg voor licht van opzij, en houd je gsm er recht boven. Is de bon lang? Neem hem in twee stukken.",
     backToBillBtn: "\u2190 Terug",
     scanFailEmptyTitle: "📷 Niets herkend op de foto",
@@ -1241,7 +1236,6 @@ const STRINGS = {
     tooSlowBody: "De scan raakte niet door je foto's binnen de tijd. Probeer het gerust nog eens — je foto's blijven bewaard.",
     tooSlowTip: "Blijft het mislukken? Twee foto's zijn zwaarder om te lezen. Eén foto van heel de bon werkt meestal beter — recht erboven, goed licht, beeld vullen.",
     tooSlowOne: "📷 Toch 1 foto maken",
-    tooSlowRetry: "🔄 Toch met twee",
     taxAddBtn: "BTW / kosten / korting toevoegen?",
     legendShare: "Aantikken voor gedeelde items (water, wijn, dessert…). De prijs verdeelt zich over wie meedeelt.",
     sharedItemsQ: "Gedeelde items?",
@@ -1606,14 +1600,9 @@ const STRINGS = {
     quotaDayTitle: "🔒 Le scan intelligent est épuisé pour aujourd'hui",
     quotaDayBody: "Le scan IA gratuit a une limite journalière, atteinte pour aujourd'hui. Réessayer n'aidera plus — demain matin, ça refonctionne.",
     quotaDayQuickScan: "⚡ Utiliser le scan rapide",
-    scanFailUnavailTitle: "😕 Le scan intelligent est momentanément indisponible",
-    scanFailUnavailBody: "La reconnaissance IA est surchargée ou temporairement hors ligne. Ta photo reste enregistrée — réessaie dans un instant.",
     retryIn: (s: number) => `🔄 Réessayer dans ${s}s`,
-    retryNow: "🔄 Réessayer",
-    retriesLeft: (n: number) => `encore ${n} essai${n !== 1 ? "s" : ""} avec cette photo`,
-    retryLast: "dernier essai avec cette photo",
     photoFailTitle: "\u00c7a ne marche pas pour le moment",
-    photoFailBody: "Deux essais. \u00c7a peut venir de la photo, mais tout autant du service de scan. Reviens en arri\u00e8re et r\u00e9essaie dans un instant \u2014 en g\u00e9n\u00e9ral, \u00e7a marche.",
+    photoFailBody: "\u00c7a peut venir de la photo, mais tout autant du service de scan. Reviens en arri\u00e8re et r\u00e9essaie dans un instant \u2014 en g\u00e9n\u00e9ral, \u00e7a marche.",
     photoTipsBody: "Pose l'addition à plat, éclaire-la de côté et tiens ton téléphone bien au-dessus. Addition longue ? Prends-la en deux morceaux.",
     backToBillBtn: "\u2190 Retour",
     scanFailEmptyTitle: "📷 Rien reconnu sur la photo",
@@ -1954,7 +1943,6 @@ const STRINGS = {
     tooSlowBody: "Le scan n'a pas réussi à lire tes photos à temps. Réessaie tranquillement — tes photos restent enregistrées.",
     tooSlowTip: "Ça continue à échouer ? Deux photos sont plus lourdes à lire. Une seule photo de toute l'addition marche généralement mieux — bien au-dessus, bonne lumière, remplis l'image.",
     tooSlowOne: "📷 Prendre quand même 1 photo",
-    tooSlowRetry: "🔄 Réessayer à deux",
     taxAddBtn: "Ajouter TVA / frais / remise ?",
     legendShare: "À cocher pour les articles partagés (eau, vin, dessert…). Le prix se répartit entre ceux qui partagent.",
     sharedItemsQ: "Articles partagés ?",
@@ -3413,10 +3401,14 @@ export default function RundoTable() {
     await opnieuw()
   }
 
-  const retryAiScan = () => {
-    if (!retryFile) { setToast(L.errNoPhotoRescan); return }
-    setShowScan(true)
-    onPhotoPicked(retryFile, false)
+  // De grote voorbeeldfoto in het scanvenster deelt zijn blob-URL met het duimnageltje in
+  // het fotolijstje: het is dezelfde foto. Blind intrekken maakte dus ook dat duimnageltje
+  // stuk — je ging terug na een mislukte scan en zag een gebroken beeldje, terwijl de foto
+  // er nog gewoon was. Dus: enkel loslaten wat het lijstje niet meer nodig heeft.
+  const laatFotoUrlLos = (url: string | null) => {
+    if (!url) return
+    if (photos.some((p) => p.url === url)) return
+    URL.revokeObjectURL(url)
   }
 
   // Voegt een foto toe aan de lijst (max 2: bovenste + onderste helft van een lange rekening).
@@ -3439,7 +3431,7 @@ export default function RundoTable() {
     if (photos.length === 0 || !group) return
     setScanFail(null); setScanPreview([]); setScanProgress(0); setScanning(true)
     setScanFile(photos[0].file); setRetryFile(photos[0].file)
-    if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
+    laatFotoUrlLos(scanPhotoUrl)
     setScanPhotoUrl(photos[0].url)
     setScanStep(photos.length > 1 ? { i: 1, n: photos.length } : null)
 
@@ -3482,7 +3474,7 @@ export default function RundoTable() {
     if (nieuw) setScanPogingen(0)
     setScanFail(null); setScanPreview([]); setScanProgress(0); setScanning(true)
     setScanFile(file); setRetryFile(file)
-    if (scanPhotoUrl) URL.revokeObjectURL(scanPhotoUrl)
+    laatFotoUrlLos(scanPhotoUrl)
     setScanPhotoUrl(URL.createObjectURL(file))
     const res = await scanReceipt(file, (pr) => setScanProgress(pr))
     setScanning(false)
@@ -3624,7 +3616,7 @@ export default function RundoTable() {
       if (!tErr) setGroup((g) => g ? { ...g, receipt_total: billNum } : g)
     }
     setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null)
-    if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) }
+    laatFotoUrlLos(scanPhotoUrl); setScanPhotoUrl(null)
     setShowScan(false)
     await loadAll(group.id)
     // Hier stond een balkje dat na 2,4 s wegviel en beweerde dat het totaal klopte —
@@ -7191,9 +7183,15 @@ export default function RundoTable() {
                         {/* De foto staat erop, en dan? Deze knop is de volgende stap, maar hij
                             zag er hetzelfde uit als daarvoor. Hij pulseert nu zolang er een
                             foto klaarligt en er niets misging. */}
-                        <button onMouseDown={(e) => e.preventDefault()} onClick={scanPhotos}
-                          className={photos.length > 0 && !scanFail ? "rundo-scan-puls" : undefined}
-                          style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>{photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}</button>
+                        {/* De leesknop is sinds kort de enige weg terug naar de scan: het
+                            foutvenster heeft geen herprobeerknop meer. Daarom telt de
+                            adempauze hier. Zonder haar drukte je meteen opnieuw en kreeg je
+                            binnen de seconde dezelfde fout van dezelfde dienst. */}
+                        <button onMouseDown={(e) => e.preventDefault()} onClick={scanPhotos} disabled={cooldownLeft > 0}
+                          className={photos.length > 0 && !scanFail && cooldownLeft === 0 ? "rundo-scan-puls" : undefined}
+                          style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800, opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>
+                          {cooldownLeft > 0 ? L.retryIn(cooldownLeft) : photos.length > 1 ? L.readBillBtn2 : L.readBillBtn}
+                        </button>
                         <div style={{ fontSize: 16, color: "#7d999d", textAlign: "center", marginTop: 8, lineHeight: 1.45 }}>{L.scanSubNote}</div>
                         {photos.length > 1 && <div style={{ fontSize: 15.5, color: "#8aa3a6", textAlign: "center", marginTop: 6 }}>{L.countsAsOne}</div>}
                       </>
@@ -7217,18 +7215,11 @@ export default function RundoTable() {
               <div style={{ background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.5)", borderRadius: 12, padding: "12px 13px", marginBottom: 12 }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: "#b5591a", marginBottom: 4 }}>{L.tooSlowTitle}</div>
                 <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.tooSlowBody}</div>
-                {/* Opnieuw proberen lukt vaak al. Pas als dat blijft mislukken is een
-                    nieuwe foto zinvol — daarom staat de camera achter een lijn, als tweede keuze. */}
-                {/* Deze knop telde niet mee met de pogingen: via dit paneel kon je eindeloos
-                    blijven drukken terwijl het gewone paneel na drie keer al stopte. Nu geldt
-                    dezelfde grens, en blijft na de laatste poging enkel de nieuwe foto over. */}
-                {scanPogingen < MAX_POGINGEN && (
-                  <button onClick={() => { setScanFail(null); scanPhotos() }} disabled={cooldownLeft > 0}
-                    style={{ ...S.btn, ...S.btnPrimary, width: "100%", fontWeight: 800, fontSize: 17.5, padding: "12px 0", opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>
-                    {cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.tooSlowRetry}
-                  </button>
-                )}
-                <div style={{ fontSize: 15.5, color: "#9a6a30", lineHeight: 1.45, marginTop: 12, paddingTop: 11, borderTop: "1px solid rgba(243,156,18,0.35)", marginBottom: 8 }}>{L.tooSlowTip}</div>
+                {/* Hier stond een tweede herprobeerknop. Die deed precies wat het gewone
+                    foutvenster ook al deed — dezelfde foto's, dezelfde dienst, binnen de
+                    seconde dezelfde fout. Bij twee foto's is één foto van de hele bon de
+                    enige zet die wél iets verandert, dus die blijft als enige over. */}
+                <div style={{ fontSize: 15.5, color: "#9a6a30", lineHeight: 1.45, paddingTop: 2, marginBottom: 8 }}>{L.tooSlowTip}</div>
                 <label style={{ ...S.btn, width: "100%", boxSizing: "border-box", display: "block", textAlign: "center", cursor: "pointer", fontWeight: 800, fontSize: 16.5, padding: "11px 0" }}>
                   {L.tooSlowOne}
                   <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
@@ -7246,40 +7237,32 @@ export default function RundoTable() {
                     <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.quotaDayBody}</div>
                     <button onMouseDown={(e) => e.preventDefault()} onClick={runLocalScan} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800 }}>{L.quotaDayQuickScan}</button>
                   </>
-                ) : scanFail.reason === "unavailable" && scanPogingen >= MAX_POGINGEN ? (
+                ) : scanFail.reason === "unavailable" ? (
                   <>
-                    {/* Twee keer dezelfde foto door dezelfde dienst halen geeft twee keer
-                        hetzelfde antwoord, en de tweede kwam binnen de seconde binnen. Dus
-                        geen herprobeerknop meer hier — en ook geen "nieuwe foto nemen", want
-                        het ligt lang niet altijd aan de foto. Eén uitweg: terug, en straks
-                        nog eens proberen. Dat lukt meestal wel. */}
+                    {/* Dezelfde foto door dezelfde dienst halen geeft hetzelfde antwoord, en
+                        dat kwam binnen de seconde terug. Dus geen herprobeerknop meer hier —
+                        en ook geen "nieuwe foto nemen", want het ligt lang niet altijd aan de
+                        foto. Eén uitweg: terug, en zo meteen nog eens. Dat lukt meestal wel.
+                        De leesknop zelf staat een paar tellen op pauze, zodat "zo meteen" ook
+                        echt even later is. */}
                     <div style={{ fontSize: 18, fontWeight: 800, color: "#b5591a", marginBottom: 4 }}>{L.photoFailTitle}</div>
                     <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 11 }}>{L.photoFailBody}</div>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(255,255,255,0.7)", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
                       <span style={{ flexShrink: 0, fontSize: 15, lineHeight: 1.4 }}>💡</span>
                       <span style={{ fontSize: 14.5, color: "#7a5a30", lineHeight: 1.5 }}>{L.photoTipsBody}</span>
                     </div>
-                    <button onClick={() => { setScanFail(null); setShowScan(false); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}
+                    <button onClick={() => { setScanFail(null); setShowScan(false); laatFotoUrlLos(scanPhotoUrl); setScanPhotoUrl(null) }}
                       style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>
                       {L.backToBillBtn}
                     </button>
-                  </>
-                ) : scanFail.reason === "unavailable" ? (
-                  <>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: "#c0392b", marginBottom: 4 }}>{L.scanFailUnavailTitle}</div>
-                    <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 10 }}>{L.scanFailUnavailBody}</div>
-                    <button onClick={retryAiScan} disabled={cooldownLeft > 0} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 18, fontWeight: 800, opacity: cooldownLeft > 0 ? 0.55 : 1, cursor: cooldownLeft > 0 ? "default" : "pointer" }}>{cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.retryNow}</button>
-                    {/* Weten hoeveel je er nog hebt, voorkomt dat de derde mislukking je
-                        overvalt — en bij de laatste kleurt de regel mee. */}
-                    {(() => {
-                      const rest = MAX_POGINGEN - scanPogingen
-                      const laatste = rest <= 1
-                      return (
-                        <div style={{ textAlign: "center", marginTop: 8, fontSize: 13.5, fontWeight: laatste ? 800 : 700, color: laatste ? "#c0392b" : "#9a6a30" }}>
-                          {laatste ? L.retryLast : L.retriesLeft(rest)}
-                        </div>
-                      )
-                    })()}
+                    {/* Klein en grijs, onderaan: het antwoord van de server zelf. Niemand
+                        hoeft dit te lezen, maar wie meldt dat de scan blijft mislukken kan
+                        nu zeggen wát er misging — anders is elke fout "het lukt even niet". */}
+                    {(scanFail.status != null || scanFail.detail) && (
+                      <div style={{ fontSize: 11.5, color: "#b39a7a", textAlign: "center", marginTop: 9, wordBreak: "break-word", lineHeight: 1.35 }}>
+                        code {scanFail.status ?? "?"}{scanFail.detail ? " · " + scanFail.detail.slice(0, 70) : ""}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>
@@ -7456,7 +7439,7 @@ export default function RundoTable() {
             })()}
 
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null); if (scanPhotoUrl) { URL.revokeObjectURL(scanPhotoUrl); setScanPhotoUrl(null) } }}>{scanPreview.length > 0 ? L.cancel : L.backWord}</button>
+              <button style={{ ...S.btn, flex: 1 }} disabled={scanning} onClick={() => { setShowScan(false); setScanPreview([]); setScanTotal(""); setScanFail(null); setScanFile(null); laatFotoUrlLos(scanPhotoUrl); setScanPhotoUrl(null) }}>{scanPreview.length > 0 ? L.cancel : L.backWord}</button>
               {scanPreview.length > 0 && (
                 <button onMouseDown={(e) => e.preventDefault()} style={{ ...S.btn, ...S.btnPrimary, flex: 1, fontWeight: 700 }} onClick={() => confirmScan()} disabled={scanning}>{L.confirmAdd}</button>
               )}
@@ -8577,7 +8560,11 @@ function ClaimScreen(props: {
                     const fixed = !!it.share_fixed
                     const mine = adminPid ? sh.includes(adminPid) : false
                     return (
-                      <div key={it.id} id={`item-${it.id}`} style={{ padding: "10px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: mine ? "rgba(233,196,95,0.16)" : "transparent", borderRadius: mine ? 10 : 0 }}>
+                      {/* Een gedeeld item ligt nu op een lichtblauw vlak. Het staat tussen
+                          gewone items in, en enkel een icoontje links liet je te makkelijk
+                          voorbijlezen dat hier iets anders geldt. Zit jij er zelf in, dan
+                          wint het gouden vlak — dat zegt iets over jou, niet over het item. */}
+                      <div key={it.id} id={`item-${it.id}`} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: mine ? "rgba(233,196,95,0.16)" : INDIGO.vlak, borderRadius: 10 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -8587,7 +8574,9 @@ function ClaimScreen(props: {
                               <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
                               <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7d90", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
                               <span style={{ fontSize: 14.5, color: "#999", flexShrink: 0 }}>{L.totalLower}</span>
-                              <span style={{ fontSize: 15.5, fontWeight: 700, color: "#a06b00", background: "rgba(233,196,95,0.2)", borderRadius: 8, padding: "3px 6px", flexShrink: 0 }}>{L.sharedWord}</span>
+                              {/* De gele pil "gedeeld" is weg: het icoontje links, het blauwe
+                                  vlak en de vraag "Wie nam hiervan?" zeggen het samen al drie
+                                  keer. Eén teken is genoeg. */}
                             </div>
                           </div>
                           {/* De telbadge zei "3 personen" zonder te zeggen wélke, en de knop
@@ -8595,50 +8584,18 @@ function ClaimScreen(props: {
                               overbodig: de namen staan nu gewoon open in het kader eronder. */}
                           {isAdmin && shareBtn(it)}
                         </div>
-                        {/* Hetzelfde kader als op het gastenscherm: eerst hoeveel delers en wat
-                            het per persoon kost, dan de namen. Zo lees je in één oogopslag of er
-                            iemand vergeten is — en dat is precies waar je bij het nakijken op let. */}
-                        {(() => {
-                          const isError = heads === 0
-                          const delers = sh.map((q) => participants.find((x) => x.id === q)).filter(Boolean) as Participant[]
-                          return (
-                            <div style={{ marginTop: 8, marginLeft: 25, borderRadius: 10, padding: "10px 11px",
-                              background: isError ? "rgba(243,156,18,0.1)" : "rgba(90,108,166,0.07)",
-                              border: isError ? "1px solid rgba(243,156,18,0.45)" : "1px solid rgba(90,108,166,0.25)" }}>
-                              {isError ? (
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                  <span style={{ flexShrink: 0, fontSize: 16.5 }}>👥</span>
-                                  <span style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 700, color: "#b5591a" }}>{L.nobodyShared}</span>
-                                </div>
-                              ) : (
-                                <>
-                                  <div style={{ fontSize: 15.5, color: "#2b4f56", lineHeight: 1.4, marginBottom: 7 }}>
-                                    <b>{L.nSharers(heads)}</b> · {L.eachAmount(perHead)}
-                                    {!fixed && <span style={{ color: "#8aa3a6" }}> {L.dropsIfMore}</span>}
-                                  </div>
-                                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                                    {delers.flatMap((q) => {
-                                      const ikZelf = q.id === meId
-                                      return delerNamen(it.id, q).map((nm, k) => (
-                                        <span key={`${q.id}:${k}`} style={{ fontSize: 14, fontWeight: ikZelf ? 800 : 700, borderRadius: 9, padding: "5px 9px",
-                                          background: ikZelf ? "rgba(233,196,95,0.35)" : "rgba(18,58,66,0.06)",
-                                          color: ikZelf ? "#5a4a1a" : "#4a6e73" }}>
-                                          {nm}{ikZelf ? ` · ${L.youWord}` : ""}
-                                        </span>
-                                      ))
-                                    })}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )
-                        })()}
-                        {/* Hier stond een knop "Ik nam hiervan", enkel voor de beheerder zelf.
-                            Maar zijn eigen naam staat hieronder al tussen de andere, dus stond
-                            dezelfde handeling er twee keer. Nu één vraag boven de namen: wie
-                            nam hiervan? Tik een naam om hem aan te zetten, tik hem opnieuw of
-                            gebruik het kruisje om hem weg te halen. */}
-                        <div style={{ fontSize: 15.5, fontWeight: 800, color: "#2b4f56", marginTop: 10, marginLeft: 25 }}>{L.whoSharedHead}</div>
+                        {/* Hier stond een apart kader met de delers nog eens in grijze chips,
+                            plus "x delers · €x elk → daalt als er meer meedelen". Diezelfde
+                            namen staan er vlak onder al, als pillen die je kan aan- en
+                            uitzetten — je las dus twee keer hetzelfde en kon maar op één
+                            plaats iets veranderen. Het telwerk hoort bij de vraag, dus staat
+                            het nu achter "Wie nam hiervan?". */}
+                        <div style={{ marginTop: 10, marginLeft: 25, fontSize: 15.5, lineHeight: 1.4 }}>
+                          <span style={{ fontWeight: 800, color: "#2b4f56" }}>{L.whoSharedHead}</span>
+                          {heads > 0
+                            ? <span style={{ color: INDIGO.tekst, fontWeight: 700 }}> ({L.nSharers(heads)} · {L.eachAmount(perHead)})</span>
+                            : <span style={{ color: "#b5591a", fontWeight: 700 }}> — {L.nobodyShared}</span>}
+                        </div>
                         {/* Alle namen staan open, en elke persoon is één pil — ook de twee
                             helften van een koppel. Zo zet je Jan af zonder Lore aan te raken,
                             en hoef je geen venster te openen om één naam recht te zetten. */}
