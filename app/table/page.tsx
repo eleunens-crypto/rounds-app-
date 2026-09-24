@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
 import { QRCodeSVG } from "qrcode.react"
 import { useLang, LanguageToggle, getLang } from "@/lib/i18n"
@@ -1142,11 +1142,9 @@ const STRINGS = {
     assignOwnTitle: (name: string | undefined) => `Jij duidt aan voor ${name}`,
     assignOwnBody: (name: string | undefined) => `${name} kwam niet via de QR binnen, dus jij tikt aan wat hij nam. Dat is hier de gewone gang van zaken.\n\nDit vragen we maar één keer — daarna gaat het meteen door.`,
     assignOwnYes: "Ja, doorgaan",
-    doneProgress: (n: number, t: number) => `${n} van ${t} items volledig toegewezen`,
-    sharedExtra: (n: number) => `+ ${n} gedeeld`,
     sharedQ: "gedeeld item?",
-    showThose: (n: number) => `die ${n} tonen`,
-    foldAgain: "weer inklappen",
+    hideAssigned: "Verberg toegewezen items",
+    showAllItems: "Toon alle items",
     unitsClaimed: "Stuks geclaimd",
     sharedItemsHandled: "Gedeelde items geregeld",
     billTotalLabel: "Totaal rekening",
@@ -1823,11 +1821,9 @@ const STRINGS = {
     assignOwnTitle: (name: string | undefined) => `Tu attribues pour ${name}`,
     assignOwnBody: (name: string | undefined) => `${name} n'est pas arrivé via le QR, c'est donc toi qui coches ce qu'il a pris. C'est le fonctionnement normal ici.\n\nOn ne te le demande qu'une seule fois — ensuite ça passe directement.`,
     assignOwnYes: "Oui, continuer",
-    doneProgress: (n: number, t: number) => `${n} sur ${t} articles entièrement attribués`,
-    sharedExtra: (n: number) => `+ ${n} partag\u00e9${n === 1 ? "" : "s"}`,
     sharedQ: "article partag\u00e9\u00a0?",
-    showThose: (n: number) => `afficher ces ${n}`,
-    foldAgain: "replier",
+    hideAssigned: "Masquer les articles attribués",
+    showAllItems: "Afficher tous les articles",
     unitsClaimed: "Unités attribuées",
     sharedItemsHandled: "Articles partagés réglés",
     billTotalLabel: "Total de l'addition",
@@ -8054,7 +8050,14 @@ function ClaimScreen(props: {
   // liet ik ze als korte regel staan, maar dan stonden er afgewerkte items tussen de open
   // items door terwijl de knop erboven beweerde dat ze samengeklapt waren — twee dingen die
   // elkaar tegenspraken. Nu is het één ding: verborgen of getoond.
-  const [allesOpen, setAllesOpen] = useState(false)
+  // De beheerder deelt de héle bon uit en heeft dus baat bij een lijst die stilstaat: bij
+  // hem staat alles open tot hij zelf opruimt. Een gast duidt enkel zichzelf aan — bij hem
+  // is wat af is en niet van hem meteen weg, want daar valt voor hem niets meer te doen.
+  const [allesOpen, setAllesOpen] = useState(isAdmin)
+  // Het item waar de beheerder het laatst aan zat. Dat blijft staan, ook al is het af en
+  // ook al staat de lijst op opgeruimd: anders verdwijnt de regel onder zijn duim vandaan
+  // op het moment dat hij hem volmaakt, en landt zijn volgende tik op het verkeerde item.
+  const [netId, setNetId] = useState<string | null>(null)
   // Na het afsluiten is de regel-per-regel-verdeling naslagwerk: je kijkt hem één keer na
   // en daarna wil je "Per persoon" zien, want dat is wat er betaald moet worden. Hij staat
   // dus dicht, met zijn titel als knop.
@@ -8209,52 +8212,74 @@ function ClaimScreen(props: {
   // niet meer te roepen: enkel het teken blijft over, zonder woord, op de achtergrond. Hij
   // verdwijnt niet helemaal, want dit is de énige plek in de app waar een item nog op
   // gedeeld gezet kan worden — en dat is net wat je ontdekt wanneer alles al verdeeld is.
-  // Wat volledig toegewezen is, verdwijnt uit de lijst en zit achter één knop. Er is maar
-  // één stand die telt: verborgen of getoond.
-  // Alles telt in ITEMS — zo slaat het getal in de zin op precies hetzelfde als het getal
-  // op de knop, en verschijnen er na een tik even veel regels als er aangekondigd waren.
-  // Gedeelde items blijven er buiten: die klappen nooit in, want een fles die uit beeld
-  // verdwijnt nodigt niemand meer uit om mee te delen. Ze staan apart vermeld in de kop.
-  const normaalItems = items.filter((it) => !it.is_shared)
-  const gedeeldeItems = items.filter((it) => it.is_shared)
+  // Wat volledig toegewezen is, kan achter één knop. Gedeelde items blijven er buiten:
+  // die klappen nooit in, want een fles die uit beeld verdwijnt nodigt niemand meer uit
+  // om mee te delen.
   const volGenomen = (it: BillItem) => it.quantity - claimedQty(it.id) <= 0
-  const afgewerkt = normaalItems.filter(volGenomen)
-  const verborgen = (it: BillItem) => !allesOpen && !it.is_shared && volGenomen(it)
+  // Wat gaat er achter de knop? Nooit een gedeeld item en nooit iets waar nog stuks vrij
+  // zijn. Bij de beheerder: alleen als hij zelf opruimde, en nooit het item waar hij net
+  // aan zat. Bij de gast: alles wat af is en niet op zijn naam staat — hij kan met zijn
+  // eigen tik nooit iets doen verdwijnen, want die zet hem er juist óp.
+  const verborgen = (it: BillItem) => {
+    if (it.is_shared || !volGenomen(it) || allesOpen) return false
+    return isAdmin ? it.id !== netId : myQty(it.id, meId) <= 0
+  }
+  const inklapbaar = items.some((it) => !it.is_shared && volGenomen(it) && (isAdmin || myQty(it.id, meId) <= 0))
 
-  // Eigen kader rond de voortgang, want los boven de lijst leek de zin bij het eerste item
-  // te horen. Bovenin waar je staat, onderin — over de volle breedte, met een scheidingslijn
-  // ertussen — de knop. Die volle balk is met de duim niet te missen.
-  // `metBalk` staat alleen bij de beheerder aan: hoever de hele tafel staat is zijn werk.
-  const klaarBlok = (metBalk: boolean) => {
-    if (normaalItems.length === 0) return null
-    const af = afgewerkt.length >= normaalItems.length
-    const rand = allesOpen ? "rgba(20,153,176,0.35)" : "rgba(18,58,66,0.14)"
+  // ── Niet laten springen ──
+  // Verdwijnt er een regel bóven wat jij op dat moment leest, dan schuift de hele lijst
+  // omhoog en sta je ineens ergens anders. We onthouden daarom welke rij bovenaan in beeld
+  // staat en hoe ver die van de bovenrand zit; is die afstand na een verandering anders,
+  // dan scrollen we er precies evenveel weer bij. Wat je aan het lezen was blijft dus
+  // staan waar het stond, ook als er boven je iets wegvalt.
+  // We houden drie kandidaten bij: valt de bovenste rij zelf weg, dan dient de volgende.
+  const ankerRef = useRef<{ id: string; top: number }[]>([])
+  const meetAnker = useCallback(() => {
+    if (typeof document === "undefined") return
+    const rijen = Array.from(document.querySelectorAll<HTMLElement>("[data-rij]"))
+    const zicht: { id: string; top: number }[] = []
+    for (const el of rijen) {
+      const r = el.getBoundingClientRect()
+      if (r.bottom > 0 && zicht.length < 3) zicht.push({ id: el.dataset.rij || "", top: r.top })
+    }
+    ankerRef.current = zicht
+  }, [])
+  useEffect(() => {
+    meetAnker()
+    if (typeof window === "undefined") return
+    window.addEventListener("scroll", meetAnker, { passive: true })
+    window.addEventListener("resize", meetAnker)
+    return () => { window.removeEventListener("scroll", meetAnker); window.removeEventListener("resize", meetAnker) }
+  }, [meetAnker])
+  // Welke rijen staan er? Verandert die lijst, dan is dit het moment om bij te sturen —
+  // vóór de browser het scherm tekent, zodat je de sprong niet ziet gebeuren.
+  const zichtbaarHandtekening = items.filter((it) => !verborgen(it)).map((it) => it.id).join(",")
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return
+    for (const a of ankerRef.current) {
+      const el = document.querySelector<HTMLElement>(`[data-rij="${a.id}"]`)
+      if (!el) continue
+      const dy = el.getBoundingClientRect().top - a.top
+      if (Math.abs(dy) > 1) window.scrollBy(0, dy)
+      break
+    }
+    meetAnker()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zichtbaarHandtekening])
+
+  // Eén knop, meer niet. Hier stond ook nog "x van y items volledig toegewezen" met een
+  // balk, maar dat was de derde plek waar hetzelfde geteld werd: onderaan deze kaart staat
+  // al "Stuks geclaimd 4/7" en "Gedeelde items geregeld 1/1". Bij de gast telde niemand
+  // mee hoever de héle tafel stond — dat is zijn zorg niet.
+  const klaarBlok = () => {
+    if (!inklapbaar) return null
     return (
-      <div style={{ border: `1px solid ${rand}`, borderRadius: 13, overflow: "hidden", marginBottom: 11 }}>
-        <div style={{ padding: metBalk ? "10px 11px 11px" : "10px 11px", background: allesOpen ? "rgba(20,153,176,0.06)" : "rgba(18,58,66,0.035)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", fontSize: 14.5, fontWeight: 800, color: af ? "#1f8a4c" : "#2b4f56" }}>
-            <span>{L.doneProgress(afgewerkt.length, normaalItems.length)}</span>
-            {gedeeldeItems.length > 0 && (
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: INDIGO.tekst, background: INDIGO.vlak, borderRadius: 8, padding: "2px 8px" }}>
-                {L.sharedExtra(gedeeldeItems.length)}
-              </span>
-            )}
-          </div>
-          {metBalk && (
-            <div style={{ height: 7, borderRadius: 4, background: "rgba(18,58,66,0.10)", overflow: "hidden", marginTop: 7 }}>
-              <div style={{ height: "100%", width: `${Math.round((afgewerkt.length / normaalItems.length) * 100)}%`, borderRadius: 4, background: "linear-gradient(90deg,#1f8a4c,#27ae60)", transition: "width 220ms ease-out" }} />
-            </div>
-          )}
-        </div>
-        {afgewerkt.length > 0 && (
-          <button onClick={() => setAllesOpen((v) => !v)}
-            style={{ width: "100%", boxSizing: "border-box", border: "none", borderTop: `1px solid ${allesOpen ? "rgba(20,153,176,0.3)" : "rgba(18,58,66,0.12)"}`,
-              background: allesOpen ? "rgba(20,153,176,0.10)" : "#fff", padding: "9px", textAlign: "center",
-              fontSize: 14, fontWeight: 800, color: "#0f7488", cursor: "pointer", fontFamily: "inherit" }}>
-            {allesOpen ? `${L.foldAgain} \u25b4` : `${L.showThose(afgewerkt.length)} \u25be`}
-          </button>
-        )}
-      </div>
+      <button onClick={() => { setAllesOpen((v) => !v); setNetId(null) }}
+        style={{ width: "100%", boxSizing: "border-box", border: "1px solid rgba(18,58,66,0.14)", borderRadius: 12,
+          background: "#fff", padding: "9px", marginBottom: 11, textAlign: "center",
+          fontSize: 14, fontWeight: 800, color: "#0f7488", cursor: "pointer", fontFamily: "inherit" }}>
+        {allesOpen ? `${L.hideAssigned} \u25b4` : `${L.showAllItems} \u25be`}
+      </button>
     )
   }
 
@@ -8402,7 +8427,7 @@ function ClaimScreen(props: {
             ? <div style={{ fontSize: 16, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
-                {klaarBlok(true)}
+                {klaarBlok()}
                 {items.map((it) => {
                   // Volledig toegewezen gewone items zitten achter de knop bovenaan. Een
                   // gedeelde fles blijft altijd staan: verdween ze, dan kon niemand er nog
@@ -8421,7 +8446,7 @@ function ClaimScreen(props: {
                     // voorbijlezen dat hier iets anders geldt. Zit jij er zelf in, dan
                     // wint het gouden vlak — dat zegt iets over jou, niet over het item.
                     return (
-                      <div key={it.id} id={`item-${it.id}`} style={{ padding: "10px 8px", marginBottom: 4, ...DEEL_STREEP }}>
+                      <div key={it.id} id={`item-${it.id}`} data-rij={it.id} style={{ padding: "10px 8px", marginBottom: 4, ...DEEL_STREEP }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             {/* Zelfde plaats en zelfde grootte als bij een gewoon item: het
@@ -8567,7 +8592,10 @@ function ClaimScreen(props: {
                   // vooraan, samen met de gouden pil en het gouden aantal; dat alles verdeeld
                   // is, zeggen de groene woorden.
                   return (
-                    <div key={it.id} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", ...(highlight ? JOUW_STREEP : null) }}>
+                    // Elke tik ergens in deze rij markeert hem als "waar je net aan zat".
+                    // Zo hoeft niet elke knop apart te melden dat je hier bezig was.
+                    <div key={it.id} data-rij={it.id} onClickCapture={() => setNetId(it.id)}
+                      style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", ...(highlight ? JOUW_STREEP : null) }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -8870,7 +8898,7 @@ function ClaimScreen(props: {
         )}
         {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsWaitScan}</div>}
         {/* Hetzelfde blok als bij de beheerder, maar zonder de voortgangsbalk. */}
-        {items.length > 0 && !vast && klaarBlok(false)}
+        {items.length > 0 && !vast && klaarBlok()}
         <div style={vast ? { pointerEvents: "none", opacity: 0.55 } : undefined}>
 
         {items.map((it) => {
@@ -9024,7 +9052,7 @@ function ClaimScreen(props: {
           return (
             // Geen gekleurd vlak meer: een goud balkje vooraan zodra jij erin zit, en verder
             // zeggen de gouden pil, het gouden aantal en de groene of rode woorden de rest.
-            <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", ...(mine > 0 ? JOUW_STREEP : null) }}>
+            <div key={it.id} data-rij={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", ...(mine > 0 ? JOUW_STREEP : null) }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}><span style={{ color: "#0f7d90" }}>{total}×</span> {it.name}</span>
