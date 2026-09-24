@@ -1819,10 +1819,10 @@ const STRINGS = {
     assignOwnTitle: (name: string | undefined) => `Tu attribues pour ${name}`,
     assignOwnBody: (name: string | undefined) => `${name} n'est pas arrivé via le QR, c'est donc toi qui coches ce qu'il a pris. C'est le fonctionnement normal ici.\n\nOn ne te le demande qu'une seule fois — ensuite ça passe directement.`,
     assignOwnYes: "Oui, continuer",
-    unitsProgress: (n: number, t: number) => `${n} articles sur ${t} attribués`,
-    doneItems: (n: number) => `${n} article${n === 1 ? "" : "s"} enti\u00e8rement attribu\u00e9${n === 1 ? "" : "s"}`,
-    showThem: "afficher",
-    hideThem: "masquer",
+    doneProgress: (n: number, t: number) => `${n} sur ${t} articles attribués`,
+    sharedExtra: (n: number) => `+ ${n} partagé${n === 1 ? "" : "s"}`,
+    showThose: (n: number) => `afficher ces ${n}`,
+    foldAgain: "replier",
     unitsClaimed: "Unités attribuées",
     sharedItemsHandled: "Articles partagés réglés",
     billTotalLabel: "Total de l'addition",
@@ -8164,27 +8164,51 @@ function ClaimScreen(props: {
   // niet meer te roepen: enkel het teken blijft over, zonder woord, op de achtergrond. Hij
   // verdwijnt niet helemaal, want dit is de énige plek in de app waar een item nog op
   // gedeeld gezet kan worden — en dat is net wat je ontdekt wanneer alles al verdeeld is.
-  // De samengeklapte regel. Half zo hoog als een open rij, met alles wat je nog wil weten:
-  // dat het af is, wat het was, en wie het nam.
-  // Let op het verschil met de balk erboven: die telt stúks (een item van 3× telt voor
-  // drie), dit telt ítems. Alleen gewone items tellen mee: een gedeeld item heeft geen
-  // aantal en blijft altijd staan — daar valt ook na een eerste naam nog iets te beslissen.
-  const afgewerkt = items.filter((it) => !it.is_shared && it.quantity - claimedQty(it.id) <= 0)
+  // Wat volledig toegewezen is, verdwijnt uit de lijst en zit achter één knop. Er is maar
+  // één stand die telt: verborgen of getoond.
+  // Alles telt in ITEMS, ook de balk — zo slaat het getal in de zin op precies hetzelfde
+  // als het getal op de knop, en zie je na een tik even veel regels verschijnen als er
+  // aangekondigd waren. Gedeelde items tellen niet mee en verdwijnen nooit: die hebben geen
+  // aantal om vol te maken, er kan altijd nog iemand bij delen. Ze worden apart vermeld.
+  const normaalItems = items.filter((it) => !it.is_shared)
+  const gedeeldeItems = items.filter((it) => it.is_shared)
+  const afgewerkt = normaalItems.filter((it) => it.quantity - claimedQty(it.id) <= 0)
   const verborgen = (it: BillItem) => !allesOpen && !it.is_shared && it.quantity - claimedQty(it.id) <= 0
 
-  // De knop staat onder de voortgangsbalk en zegt twee dingen: hoeveel er af is, en wat een
-  // tik doet. Dezelfde zin in beide standen, alleen het werkwoord rechts verandert.
-  const klaarBlok = () => {
-    if (afgewerkt.length === 0) return null
+  // Eigen kader rond de voortgang, want los boven de lijst leek de zin bij het eerste item
+  // te horen. Bovenin waar je staat, onderin — over de volle breedte, met een scheidingslijn
+  // ertussen — de knop. Die volle balk is met de duim niet te missen.
+  // `metBalk` staat alleen bij de beheerder aan: hoever de hele tafel staat is zijn werk.
+  const klaarBlok = (metBalk: boolean) => {
+    if (normaalItems.length === 0) return null
+    const af = afgewerkt.length >= normaalItems.length
+    const rand = allesOpen ? "rgba(20,153,176,0.35)" : "rgba(18,58,66,0.14)"
     return (
-      <button onClick={() => setAllesOpen((v) => !v)}
-        style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 9, textAlign: "left",
-          border: "1.5px dashed rgba(18,58,66,0.22)", background: "rgba(18,58,66,0.025)", borderRadius: 11,
-          padding: "9px 11px", marginBottom: 8, cursor: "pointer", fontFamily: "inherit" }}>
-        <span style={{ flexShrink: 0, color: "#1f8a4c", fontSize: 15, fontWeight: 800 }}>✓</span>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 800, color: "#4a6e73" }}>{L.doneItems(afgewerkt.length)}</span>
-        <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#0f7488" }}>{allesOpen ? `${L.hideThem} ▴` : `${L.showThem} ▾`}</span>
-      </button>
+      <div style={{ border: `1px solid ${rand}`, borderRadius: 13, overflow: "hidden", marginBottom: 11 }}>
+        <div style={{ padding: metBalk ? "10px 11px 11px" : "10px 11px", background: allesOpen ? "rgba(20,153,176,0.06)" : "rgba(18,58,66,0.035)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", fontSize: 14.5, fontWeight: 800, color: af ? "#1f8a4c" : "#2b4f56" }}>
+            <span>{L.doneProgress(afgewerkt.length, normaalItems.length)}</span>
+            {gedeeldeItems.length > 0 && (
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: INDIGO.tekst, background: INDIGO.vlak, borderRadius: 8, padding: "2px 8px" }}>
+                {L.sharedExtra(gedeeldeItems.length)}
+              </span>
+            )}
+          </div>
+          {metBalk && (
+            <div style={{ height: 7, borderRadius: 4, background: "rgba(18,58,66,0.10)", overflow: "hidden", marginTop: 7 }}>
+              <div style={{ height: "100%", width: `${Math.round((afgewerkt.length / normaalItems.length) * 100)}%`, borderRadius: 4, background: "linear-gradient(90deg,#1f8a4c,#27ae60)", transition: "width 220ms ease-out" }} />
+            </div>
+          )}
+        </div>
+        {afgewerkt.length > 0 && (
+          <button onClick={() => setAllesOpen((v) => !v)}
+            style={{ width: "100%", boxSizing: "border-box", border: "none", borderTop: `1px solid ${allesOpen ? "rgba(20,153,176,0.3)" : "rgba(18,58,66,0.12)"}`,
+              background: allesOpen ? "rgba(20,153,176,0.10)" : "#fff", padding: "9px", textAlign: "center",
+              fontSize: 14, fontWeight: 800, color: "#0f7488", cursor: "pointer", fontFamily: "inherit" }}>
+            {allesOpen ? `${L.foldAgain} \u25b4` : `${L.showThose(afgewerkt.length)} \u25be`}
+          </button>
+        )}
+      </div>
     )
   }
 
@@ -8317,19 +8341,7 @@ function ClaimScreen(props: {
             ? <div style={{ fontSize: 16, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
-                {/* Eerst hoever je staat, dan de knop voor wat af is. Twee regels, elk met
-                    één taak — de voortgangsregel is informatie, de knop is een knop. */}
-                {totalUnits > 0 && (
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 14.5, fontWeight: 800, color: claimedUnits >= totalUnits ? "#1f8a4c" : "#4a6e73" }}>
-                      {L.unitsProgress(claimedUnits, totalUnits)}
-                    </div>
-                    <div style={{ height: 7, borderRadius: 4, background: "rgba(18,58,66,0.08)", overflow: "hidden", marginTop: 6 }}>
-                      <div style={{ height: "100%", width: `${Math.round((claimedUnits / totalUnits) * 100)}%`, borderRadius: 4, background: "linear-gradient(90deg,#1f8a4c,#27ae60)", transition: "width 220ms ease-out" }} />
-                    </div>
-                  </div>
-                )}
-                {klaarBlok()}
+                {klaarBlok(true)}
                 {items.map((it) => {
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
@@ -8777,7 +8789,7 @@ function ClaimScreen(props: {
         )}
         {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsWaitScan}</div>}
         {/* Hetzelfde blok als bij de beheerder, maar zonder de voortgangsbalk. */}
-        {items.length > 0 && !vast && klaarBlok()}
+        {items.length > 0 && !vast && klaarBlok(false)}
         <div style={vast ? { pointerEvents: "none", opacity: 0.55 } : undefined}>
 
         {items.map((it) => {
