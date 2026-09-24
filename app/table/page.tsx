@@ -1186,6 +1186,7 @@ const STRINGS = {
     noItemsScanFirst: "Nog geen items — scan eerst de bon.",
     addGuestsInTab1: 'Voeg eerst gasten toe in de tab "Gasten & delen".',
     totalLower: "totaal",
+    sharedWord: "gedeeld",
     notSelectedShare: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch laten meedelen?`,
     openAssign: "open — wijs toe ▾",
     fullyClaimed: "volledig",
@@ -1892,6 +1893,7 @@ const STRINGS = {
     noItemsScanFirst: "Aucun article — scanne d'abord l'addition.",
     addGuestsInTab1: "Ajoute d'abord des invités dans l'onglet « Invités et partage ».",
     totalLower: "total",
+    sharedWord: "partagé",
     notSelectedShare: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. Le faire participer quand même ?`,
     openAssign: "à prendre — attribuer ▾",
     fullyClaimed: "complet",
@@ -8568,7 +8570,6 @@ function ClaimScreen(props: {
                     return (
                       <div key={it.id} id={`item-${it.id}`} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: mine ? "rgba(233,196,95,0.16)" : INDIGO.vlak, borderRadius: 10 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             {/* Zelfde plaats en zelfde grootte als bij een gewoon item: het
                                 bedrag naast de naam, niet klein op de regel eronder. */}
@@ -8576,9 +8577,13 @@ function ClaimScreen(props: {
                               <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
                               <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7d90", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
                               <span style={{ fontSize: 14.5, color: "#999", flexShrink: 0 }}>{L.totalLower}</span>
-                              {/* De gele pil "gedeeld" is weg: het icoontje links, het blauwe
-                                  vlak en de vraag "Wie nam hiervan?" zeggen het samen al drie
-                                  keer. Eén teken is genoeg. */}
+                              {/* Dezelfde pil als op de bon: het deelteken mét het woord erbij.
+                                  Hiervoor stonden er twee verschillende tekens op twee schermen —
+                                  links een los icoontje hier, een blauwe pil daar. Nu één blokje,
+                                  overal hetzelfde, en dus ook maar één keer per item. */}
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13.5, fontWeight: 700, color: INDIGO.tekst, background: "#fff", border: `1px solid ${INDIGO.rand}`, borderRadius: 8, padding: "3px 8px", flexShrink: 0 }}>
+                                <ShareIcon on size={13} />{L.sharedWord}
+                              </span>
                             </div>
                           </div>
                           {/* De telbadge zei "3 personen" zonder te zeggen wélke, en de knop
@@ -8592,7 +8597,7 @@ function ClaimScreen(props: {
                             uitzetten — je las dus twee keer hetzelfde en kon maar op één
                             plaats iets veranderen. Het telwerk hoort bij de vraag, dus staat
                             het nu achter "Wie nam hiervan?". */}
-                        <div style={{ marginTop: 10, marginLeft: 25, fontSize: 15.5, lineHeight: 1.4 }}>
+                        <div style={{ marginTop: 10, fontSize: 15.5, lineHeight: 1.4 }}>
                           <span style={{ fontWeight: 800, color: "#2b4f56" }}>{L.whoSharedHead}</span>
                           {heads > 0
                             ? <span style={{ color: INDIGO.tekst, fontWeight: 700 }}> ({L.nSharers(heads)} · {L.eachAmount(perHead)})</span>
@@ -8601,7 +8606,7 @@ function ClaimScreen(props: {
                         {/* Alle namen staan open, en elke persoon is één pil — ook de twee
                             helften van een koppel. Zo zet je Jan af zonder Lore aan te raken,
                             en hoef je geen venster te openen om één naam recht te zetten. */}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8, marginLeft: 25, alignItems: "center" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8, alignItems: "center" }}>
                           {named.length === 0
                             ? <span style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</span>
                             : toewijsbaar.flatMap((p, i) => {
