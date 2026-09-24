@@ -23,7 +23,6 @@ type BillItem = {
   quantity: number
   is_shared: boolean
   share_fixed?: boolean
-  share_expected?: number | null
   shared_by?: string | null
   distribute?: string | null
   tax_rate?: number | null
@@ -910,7 +909,6 @@ const STRINGS = {
     noItemsScan: "Nog geen items — scan de bon",
     justAddedEdit: "✨ Net toegevoegd — pas de naam aan met ✏️",
     scanDoubtTitle: "De scan twijfelde hier — tik voor details",
-    sharedForN: (n: number) => `bestemd voor ${n} ${n === 1 ? "persoon" : "personen"}`,
     shareToggleOn: "gedeeld item — klik om uit te zetten",
     shareToggleOff: "maak hier een gedeeld item van (bv. water, wijn)",
     scanDoubtPre: "⚠️ De scan twijfelde hier",
@@ -1048,7 +1046,6 @@ const STRINGS = {
     allAssignedSharedBody: "Het laatste was een gedeeld item. Staat iedereen erbij die ervan nam?",
     allAssignedSharedYes: "Ja, dat klopt",
     addSharerBtn: "Nog iemand toevoegen",
-    sharedMissingN: (n: number) => n === 1 ? "Er ontbreekt er nog \u00e9\u00e9n." : `Er ontbreken er nog ${n}.`,
     stickyCheckFirst: "Nog iets na te kijken",
     showDetailsBtn: "Toon details",
     closedBarTitle: "Rekening afgesloten",
@@ -1627,7 +1624,6 @@ const STRINGS = {
     noItemsScan: "Aucun article — scanne l'addition",
     justAddedEdit: "✨ Vient d'être ajouté — modifie le nom avec ✏️",
     scanDoubtTitle: "Le scan a hésité ici — touche pour les détails",
-    sharedForN: (n: number) => `destiné à ${n} ${n === 1 ? "personne" : "personnes"}`,
     shareToggleOn: "article partagé — clique pour désactiver",
     shareToggleOff: "en faire un article partagé (ex. eau, vin)",
     scanDoubtPre: "⚠️ Le scan a hésité ici",
@@ -1762,7 +1758,6 @@ const STRINGS = {
     allAssignedSharedBody: "Le dernier \u00e9tait un article partag\u00e9. Tous ceux qui en ont pris sont-ils l\u00e0\u00a0?",
     allAssignedSharedYes: "Oui, c'est juste",
     addSharerBtn: "Ajouter quelqu'un",
-    sharedMissingN: (n: number) => n === 1 ? "Il en manque encore un." : `Il en manque encore ${n}.`,
     stickyCheckFirst: "Encore quelque chose à vérifier",
     showDetailsBtn: "Afficher les détails",
     closedBarTitle: "Addition clôturée",
@@ -7005,7 +7000,6 @@ export default function RundoTable() {
                 return [p.name]
               })
               const weinig = st.heads <= 1
-              const tekort = g.share_expected && st.heads < g.share_expected ? g.share_expected - st.heads : 0
               return (
                 <>
                   <p style={{ fontSize: 16.5, color: "#4a6e73", lineHeight: 1.5, margin: "0 0 10px" }}>{L.allAssignedSharedBody}</p>
@@ -7023,7 +7017,6 @@ export default function RundoTable() {
                     </div>
                     <div style={{ fontSize: 15, color: weinig ? "#b5591a" : "#2b4f56", lineHeight: 1.4 }}>
                       <b>{L.nSharers(st.heads)}</b> · {L.eachAmount(st.heads > 0 ? itemTotal(g) / st.heads : itemTotal(g))}
-                      {tekort > 0 && <span style={{ display: "block", fontWeight: 700, color: "#b5591a", marginTop: 2 }}>{L.sharedMissingN(tekort)}</span>}
                     </div>
                   </div>
                 </>
@@ -8276,7 +8269,10 @@ function ClaimScreen(props: {
   const [lang] = useLang()
   const L = STRINGS[lang]
   const { items, meId, isAdmin, participants, magOntdelen, vrijFn, naamVan, claimedQty, myQty, sharerIds, shareHeads, myShareHeads, seatsOf, setSeats, setClaim, toggleShareClaim, toggleShareMember, onToggleShared, claimMembers, sharedStatus, warnCount, onAllAssigned, klapSignaal, onDeleteItem, onRename, onEditMe, itemTotal, personTotal, personItems, sharedRevealed, allConfirmed, isConfirmed, explicitConfirmed, iConfirmed, confirmMe, onPickMe, finalized, verrekend, iDispute, iResolved, iComment, onToggleDispute, askConfirm, onNaarGasten } = props
-  const adminPid = props.claimPid
+  // Dit was `props.claimPid`, en dat blijft altijd null — het wordt nergens gezet. Gevolg:
+  // "dit staat op jouw naam" werd nooit herkend, dus geen gouden rij en geen eigen teller.
+  // De beheerder is gewoon de persoon die hier zit: meId.
+  const adminPid = props.meId
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
   // een volgend gezelschap krijg je ze opnieuw — dan zit er ook een ander gezelschap.
@@ -8860,7 +8856,7 @@ function ClaimScreen(props: {
                       <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
                       <span style={{ fontSize: 18, fontWeight: 800, flexShrink: 0, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
                     </div>
-                    <div style={{ fontSize: 15.5, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : `${L.totalSharedByDrinkers.trim()}${it.share_expected ? ` · ${L.sharedForN(it.share_expected)}` : ""}`}</div>
+                    <div style={{ fontSize: 15.5, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : L.totalSharedByDrinkers.trim()}</div>
                   </div>
                 </div>
                 {/* Ook de gast moet terug kunnen: hij mag een item op gedeeld zetten, dus ook
