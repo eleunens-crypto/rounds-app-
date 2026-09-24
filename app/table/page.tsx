@@ -910,7 +910,6 @@ const STRINGS = {
     noItemsScan: "Nog geen items — scan de bon",
     justAddedEdit: "✨ Net toegevoegd — pas de naam aan met ✏️",
     scanDoubtTitle: "De scan twijfelde hier — tik voor details",
-    sharedWord: "gedeeld",
     sharedForN: (n: number) => `bestemd voor ${n} ${n === 1 ? "persoon" : "personen"}`,
     shareToggleOn: "gedeeld item — klik om uit te zetten",
     shareToggleOff: "maak hier een gedeeld item van (bv. water, wijn)",
@@ -1627,7 +1626,6 @@ const STRINGS = {
     noItemsScan: "Aucun article — scanne l'addition",
     justAddedEdit: "✨ Vient d'être ajouté — modifie le nom avec ✏️",
     scanDoubtTitle: "Le scan a hésité ici — touche pour les détails",
-    sharedWord: "partagé",
     sharedForN: (n: number) => `destiné à ${n} ${n === 1 ? "personne" : "personnes"}`,
     shareToggleOn: "article partagé — clique pour désactiver",
     shareToggleOff: "en faire un article partagé (ex. eau, vin)",
@@ -7977,19 +7975,23 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
         const zeroPrice = it.unit_price <= 0.0001
         const druk = ingedrukt === it.id
 
-        // De rijkleur zegt iets over de bon, niet over het item: rood bij een
-        // ontbrekende prijs, amber bij net toegevoegd, groen als het totaal klopt.
-        // is_shared kleurt de rij niet — dat doet het indigo label.
+        // De rijkleur zegt iets over de bon: rood bij een ontbrekende prijs, amber bij net
+        // toegevoegd, groen als het totaal klopt. Een gedeeld item kreeg alleen een label,
+        // en in een lange lijst las je daar zo overheen. Het ligt nu op een blauw vlak, en
+        // dat gaat vóór het groen: klopt de bon, dan is dat voor élke regel waar — maar
+        // gedeeld is maar één regel, en net die moet je eruit kunnen pikken.
         const vlak = zeroPrice ? "rgba(192,57,43,0.06)"
           : isNew ? "rgba(233,196,95,0.16)"
+          : it.is_shared ? INDIGO.vlak
           : billOk ? "rgba(39,174,96,0.06)"
           : druk ? "rgba(18,58,66,0.05)"
           : "transparent"
         const rand = zeroPrice ? "1.5px solid rgba(192,57,43,0.5)"
           : isNew ? "1.5px solid #ecc85a"
+          : it.is_shared ? `1.5px solid ${INDIGO.rand}`
           : billOk ? "1.5px solid rgba(39,174,96,0.55)"
           : "1px solid transparent"
-        const omkaderd = zeroPrice || isNew || billOk || druk
+        const omkaderd = zeroPrice || isNew || billOk || druk || it.is_shared
 
         return (
           <div key={it.id}
@@ -8029,12 +8031,13 @@ function ItemList({ items, claimedQty, participants, claimsForItem, sharerIds, s
 
             {/* Bij aantal 1 valt "per stuk" weg: dat zei hetzelfde als het bedrag
                 ernaast en verdubbelde de hoogte van elke rij. */}
+            {/* Naast de pil stond "verdeeld over de delers". Dat is wat "gedeeld" betekent,
+                dus zei de regel niets nieuws en werd elke gedeelde rij een stuk hoger. */}
             {it.is_shared ? (
               <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 6, flexWrap: "wrap" }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13.5, fontWeight: 700, color: INDIGO.tekst, background: "#fff", border: `1px solid ${INDIGO.rand}`, borderRadius: 8, padding: "3px 8px" }}>
                   <ShareIcon on size={13} />{B.sharedLabel}
                 </span>
-                <span style={{ fontSize: 14.5, color: "#8aa3a6" }}>{B.sharedNote}</span>
               </div>
             ) : it.quantity > 1 ? (
               <div style={{ fontSize: 14, color: zeroPrice ? "#c0392b" : "#8aa3a6", marginTop: 2 }}>
@@ -8557,13 +8560,12 @@ function ClaimScreen(props: {
                     const sh = sharerIds(it.id)
                     const heads = shareHeads(it.id)
                     const perHead = heads > 0 ? itemTotal(it) / heads : 0
-                    const fixed = !!it.share_fixed
                     const mine = adminPid ? sh.includes(adminPid) : false
+                    // Een gedeeld item ligt nu op een lichtblauw vlak. Het staat tussen
+                    // gewone items in, en enkel een icoontje links liet je te makkelijk
+                    // voorbijlezen dat hier iets anders geldt. Zit jij er zelf in, dan
+                    // wint het gouden vlak — dat zegt iets over jou, niet over het item.
                     return (
-                      {/* Een gedeeld item ligt nu op een lichtblauw vlak. Het staat tussen
-                          gewone items in, en enkel een icoontje links liet je te makkelijk
-                          voorbijlezen dat hier iets anders geldt. Zit jij er zelf in, dan
-                          wint het gouden vlak — dat zegt iets over jou, niet over het item. */}
                       <div key={it.id} id={`item-${it.id}`} style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: mine ? "rgba(233,196,95,0.16)" : INDIGO.vlak, borderRadius: 10 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><ShareIcon on size={18} /></span>
