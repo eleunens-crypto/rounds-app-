@@ -39,7 +39,6 @@ type Claim = {
   created_by?: string | null
   created_at?: string
 }
-type SeatRequest = { id: string; group_id: string; name: string; seats: number; status: string; created_at?: string }
 type Confirmation = { id: string; group_id: string; participant_id: string; confirmed_at?: string }
 
 type ParsedItem = { name: string; unit_price: number; quantity: number; is_shared: boolean; distribute?: string; tax_rate?: number; _isNew?: boolean; uncertain?: boolean; note?: string }
@@ -66,23 +65,6 @@ function getMeId(groupId: string): string | null {
 function setMeIdStored(groupId: string, participantId: string | null) {
   if (participantId) localStorage.setItem(`rundo_table_me_${groupId}`, participantId)
   else localStorage.removeItem(`rundo_table_me_${groupId}`)
-}
-
-// Je openstaande plaatsverzoek overleeft een verversing. Zonder dit viel de melding
-// "Het is in orde" weg zodra de gast zijn pagina herlaadde, en sprong hij alsnog
-// zonder waarschuwing door naar het toewijzen.
-type BewaardVerzoek = { id: string; seats: number; vrij: number }
-function getVerzoekStored(groupId: string): BewaardVerzoek | null {
-  if (typeof window === "undefined") return null
-  try {
-    const raw = localStorage.getItem(`rundo_table_seatreq_${groupId}`)
-    return raw ? JSON.parse(raw) as BewaardVerzoek : null
-  } catch { return null }
-}
-function setVerzoekStored(groupId: string, v: BewaardVerzoek | null) {
-  if (typeof window === "undefined") return
-  if (v) localStorage.setItem(`rundo_table_seatreq_${groupId}`, JSON.stringify(v))
-  else localStorage.removeItem(`rundo_table_seatreq_${groupId}`)
 }
 
 const LAST_GROUP_KEY = "rundo_table_last_group"
@@ -625,7 +607,6 @@ const STRINGS = {
     removeGuestYes: "Verwijderen",
     confirmRemoveGuest: (naam: string, van: number, naar: number) => `${naam} verdwijnt van de tafel en het aantal personen gaat van ${van} naar ${naar}. Wat voor deze persoon aangeduid was, gaat mee weg.`,
     guestRemoved: (naam: string) => `${naam} staat niet meer aan tafel.`,
-    seatAsks: (n: number) => n === 1 ? "1 gast vraagt een plaats — zie bovenaan" : `${n} gasten vragen een plaats — zie bovenaan`,
     seatsCapped: (n: number) => n === 1
       ? "Er is nog één vrije plaats, dus dit kan alleen voor één persoon. Verhoog eerst het aantal personen bovenaan."
       : `Er zijn nog ${n} plaatsen vrij op deze plek. Verhoog eerst het aantal personen bovenaan als je er meer nodig hebt.`,
@@ -725,31 +706,8 @@ const STRINGS = {
     seatFreedUp: "Die plaats telt nu voor 2 — er is één vrije plaats minder.",
     howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
     personsWord: "Aantal personen",
-    waitSeatBack: "← Terug, ik kies opnieuw",
-    sendReminder: "🔔 Herinnering sturen",
-    reminderSent: "✓ Herinnering verstuurd",
-    reminderIn: (s: number) => `kan over ${s}s`,
-    reminderAgainIn: (s: number) => `opnieuw over ${s}s`,
-    seatAddedTitle: "Het is in orde",
-    seatAddedBody: (n: number, admin: string, totaal: number) => `${admin || "De beheerder"} zette ${n === 1 ? "1 plaats" : `${n} plaatsen`} bij. Jullie plaats telt nu voor ${totaal} personen.`,
-    seatAddedGo: "Naar toewijzen",
-    waitSeatTitle: "Even wachten",
-    waitSeatBody: (vrij: number, n: number, admin: string) => `Er ${vrij === 1 ? "was nog maar 1 vrije plaats" : `waren nog maar ${vrij} vrije plaatsen`}. We stuurden ${admin || "de beheerder"} de vraag om er ${n === 1 ? "1" : n} bij te zetten. Zodra dat gebeurt, ga je vanzelf verder.`,
-    notOnListBtn: "✋ Ik zit er niet bij",
-    seatRequestSent: (n: number) => `⏳ Je vraag voor ${n === 1 ? "een plaats" : `${n} plaatsen`} is verstuurd. Zodra de beheerder ze bijzet, sta je erbij.`,
-    askSeatTitle: "Een plaats vragen",
-    askSeatSub: "De beheerder krijgt je vraag en kan ze met één tik toekennen.",
-    askSeatSend: "Vraag versturen",
-    askSeatSendN: (n: number) => `${n} plaatsen vragen`,
-    seatRequestTitle: (naam: string) => `${naam} vraagt een plaats`,
-    seatRequestTitleN: (naam: string, n: number) => `${naam} ${n > 1 ? "vragen" : "vraagt"} ${n} plaatsen`,
-    seatRequestEffect: (van: number, naar: number) => `Je gaat van ${van} naar ${naar} personen`,
-    seatRequestGrant: "✓ Plaats bijzetten",
-    seatRequestGrantN: (n: number) => `✓ ${n} plaatsen bijzetten`,
-    seatRequestLater: "Nu niet",
+    imJoiningToo: "➕ Ik kom er nog bij",
     busyWord: "Bezig…",
-    seatRequestFailed: "Je vraag kon niet verstuurd worden. Probeer het opnieuw.",
-    seatRequestGranted: (naam: string) => `Plaats bijgezet voor ${naam}.`,
     shareStepTitle: "📱 Laat je gasten de QR scannen",
     orSendLinkShort: "Of stuur de link",
     copyWord: "Kopieer",
@@ -857,6 +815,7 @@ const STRINGS = {
     goGuestsBtn: "Naar Gasten & QR",
     seatsFreeWarn: (n: number) => n === 1 ? "Nog 1 plaats vrij" : `Nog ${n} plaatsen vrij`,
     seatsFreeWarnHow: "Laat ze scannen of verwijder ze.",
+    selfJoinedToast: (naam: string, n: number) => `\u2713 ${naam} zette zichzelf erbij \u2014 jullie zijn nu met ${n}`,
     groupFullToast: (n: number) => `\u2713 Iedereen is er \u2014 alle ${n} plaatsen ingevuld`,
     scanModalTitle: "🧾 Rekening scannen",
     scanModalTitleAdded: "🧾 Foto toegevoegd",
@@ -1351,7 +1310,6 @@ const STRINGS = {
     removeGuestYes: "Retirer",
     confirmRemoveGuest: (naam: string, van: number, naar: number) => `${naam} quitte la table et le nombre de personnes passe de ${van} à ${naar}. Ce qui était coché pour cette personne disparaît aussi.`,
     guestRemoved: (naam: string) => `${naam} n'est plus à table.`,
-    seatAsks: (n: number) => n === 1 ? "1 invité demande une place — voir en haut" : `${n} invités demandent une place — voir en haut`,
     seatsCapped: (n: number) => n === 1
       ? "Il ne reste qu’une place libre, donc ceci ne vaut que pour une personne. Augmente d’abord le nombre de personnes en haut."
       : `Il reste ${n} places disponibles ici. Augmente d’abord le nombre de personnes en haut s’il t’en faut plus.`,
@@ -1446,31 +1404,8 @@ const STRINGS = {
     seatFreedUp: "Cette place compte maintenant pour 2 — il y a une place libre en moins.",
     howManyGroupSub: "Tout le monde à table — toi compris.",
     personsWord: "Nombre de personnes",
-    waitSeatBack: "← Retour, je choisis à nouveau",
-    sendReminder: "🔔 Envoyer un rappel",
-    reminderSent: "✓ Rappel envoyé",
-    reminderIn: (s: number) => `possible dans ${s}s`,
-    reminderAgainIn: (s: number) => `à nouveau dans ${s}s`,
-    seatAddedTitle: "C'est réglé",
-    seatAddedBody: (n: number, admin: string, totaal: number) => `${admin || "L'organisateur"} a ajouté ${n === 1 ? "1 place" : `${n} places`}. Votre place compte maintenant pour ${totaal} personnes.`,
-    seatAddedGo: "Vers l'attribution",
-    waitSeatTitle: "Un instant",
-    waitSeatBody: (vrij: number, n: number, admin: string) => `Il ${vrij === 1 ? "ne restait qu'une place libre" : `ne restait que ${vrij} places libres`}. Nous avons demandé à ${admin || "l'organisateur"} d'en ajouter ${n}. Dès que c'est fait, tu continues automatiquement.`,
-    notOnListBtn: "✋ Je n'y suis pas",
-    seatRequestSent: (n: number) => `⏳ Ta demande pour ${n === 1 ? "une place" : `${n} places`} est envoyée. Dès que l'organisateur l'ajoute, tu y es.`,
-    askSeatTitle: "Demander une place",
-    askSeatSub: "L'organisateur reçoit ta demande et peut l'accorder d'un seul geste.",
-    askSeatSend: "Envoyer la demande",
-    askSeatSendN: (n: number) => `Demander ${n} places`,
-    seatRequestTitle: (naam: string) => `${naam} demande une place`,
-    seatRequestTitleN: (naam: string, n: number) => `${naam} ${n > 1 ? "demandent" : "demande"} ${n} places`,
-    seatRequestEffect: (van: number, naar: number) => `Tu passes de ${van} à ${naar} personnes`,
-    seatRequestGrant: "✓ Ajouter la place",
-    seatRequestGrantN: (n: number) => `✓ Ajouter ${n} places`,
-    seatRequestLater: "Pas maintenant",
+    imJoiningToo: "➕ Je me joins à vous",
     busyWord: "En cours…",
-    seatRequestFailed: "Ta demande n'a pas pu être envoyée. Réessaie.",
-    seatRequestGranted: (naam: string) => `Place ajoutée pour ${naam}.`,
     shareStepTitle: "📱 Fais scanner le QR à tes invités",
     orSendLinkShort: "Ou envoie le lien",
     copyWord: "Copier",
@@ -1578,6 +1513,7 @@ const STRINGS = {
     goGuestsBtn: "Vers Invités & QR",
     seatsFreeWarn: (n: number) => n === 1 ? "Encore 1 place libre" : `Encore ${n} places libres`,
     seatsFreeWarnHow: "Fais-les scanner ou retire-les.",
+    selfJoinedToast: (naam: string, n: number) => `\u2713 ${naam} s\u2019est ajout\u00e9 \u2014 vous \u00eates maintenant ${n}`,
     groupFullToast: (n: number) => `\u2713 Tout le monde est l\u00e0 \u2014 les ${n} places sont prises`,
     scanModalTitle: "🧾 Scanner l'addition",
     scanModalTitleAdded: "🧾 Photo ajoutée",
@@ -2369,16 +2305,9 @@ export default function RundoTable() {
   const [showTodo, setShowTodo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
   const [taxConfig, setTaxConfig] = useState<string | null>(null)
-  const [seatRequests, setSeatRequests] = useState<SeatRequest[]>([])
   const [bezetOpen, setBezetOpen] = useState(false)  // ingenomen plaatsen uitgeklapt
-  const [verzoekBezig, setVerzoekBezig] = useState(false)  // voorkomt een dubbele tik
   const [herinnerd, setHerinnerd] = useState(0)  // tijdstip van de laatste herinnering
-  const [plaatsToegekend, setPlaatsToegekend] = useState<null | number>(null)
-  const [vrijeBijAanmelding, setVrijeBijAanmelding] = useState(1)
-  const [nuTik, setNuTik] = useState(() => Date.now())
   // Het verzoekvenster van de gast: null = dicht.
-  const [vraagPopup, setVraagPopup] = useState<null | { seats: number; namen: string[] }>(null)
-  const [mijnVraag, setMijnVraag] = useState<null | { naam: string; seats: number }>(null)
   const [editItem, setEditItem] = useState<BillItem | null>(null)
   // Het item zoals het was bij het openen. Zonder dit kan je niet zien of een tik
   // naast het venster iets weggooit of niets.
@@ -2395,7 +2324,7 @@ export default function RundoTable() {
   const [asleep, setAsleep] = useState(false)
 
   const loadAll = useCallback(async (groupId: string) => {
-    const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: sr }, { data: g }] = await Promise.all([
+    const [{ data: p }, { data: it }, { data: cl }, { data: cf }, { data: g }] = await Promise.all([
       // Bewust een sterretje. Ik heb hier ooit de kolommen benoemd om bandbreedte te sparen
       // en daarbij twee fouten gemaakt: een kolom die niet bestaat (confirmed i.p.v.
       // confirmed_at) waardoor bevestigen stilviel, en vier vergeten kolommen op items
@@ -2406,7 +2335,6 @@ export default function RundoTable() {
       supabase.from("table_items").select("*").eq("group_id", groupId),
       supabase.from("table_claims").select("*").eq("group_id", groupId),
       supabase.from("table_confirmations").select("*").eq("group_id", groupId),
-      supabase.from("table_seat_requests").select("*").eq("group_id", groupId).eq("status", "open"),
       supabase.from("table_groups").select("*").eq("id", groupId).single(),
     ])
     if (!mounted.current) return
@@ -2420,7 +2348,6 @@ export default function RundoTable() {
     setItems(order(it as BillItem[] || []))
     setClaims((cl as Claim[]) || [])
     setConfirmations((cf as Confirmation[]) || [])
-    setSeatRequests((sr as SeatRequest[]) || [])
     if (g) setGroup((cur) => cur ? { ...cur, ...(g as Group) } : cur)
   }, [])
 
@@ -2455,7 +2382,7 @@ export default function RundoTable() {
     const connect = () => {
       if (!active) return
       ch = supabase.channel(`table-${groupId}`)
-      ;["table_participants", "table_items", "table_claims", "table_confirmations", "table_seat_requests", "table_groups"].forEach((table) => {
+      ;["table_participants", "table_items", "table_claims", "table_confirmations", "table_groups"].forEach((table) => {
         const filter = table === "table_groups" ? `id=eq.${groupId}` : `group_id=eq.${groupId}`
         ch!.on("postgres_changes", { event: "*", schema: "public", table, filter }, reload)
       })
@@ -2921,6 +2848,21 @@ export default function RundoTable() {
   // state: dit stuurt alleen de slaapcontrole aan en hoeft zelf niets te hertekenen.
   wachtOpGasten.current = isAdmin && adminTab === "guests" && participants.some(isFreeSpot)
 
+  // Tafel vol en jij staat er niet bij? Vroeger kon je alleen een plaats vrágen: een venster,
+  // een verzoek naar de beheerder, en wachten tot hij het zag. Maar wie de QR scant zit mee
+  // aan tafel — daar hoeft niemand toestemming voor te geven. Deze knop maakt gewoon een
+  // plaats bij en opent er meteen het gewone naamscherm op, precies zoals bij een vrije plaats.
+  const [eigenPlaatsBezig, setEigenPlaatsBezig] = useState(false)
+  const maakEigenPlaats = async () => {
+    if (!group || eigenPlaatsBezig) return
+    setEigenPlaatsBezig(true)
+    try {
+      const p = await addGuest(L.guestWord, false, 1)
+      if (!p) return
+      setClaimSpot(p.id); setClaimSeats(1); setClaimNames([""])
+    } finally { setEigenPlaatsBezig(false) }
+  }
+
   // Neemt de gekozen plaats over: zet de naam (of namen, bij een koppel) en het aantal personen.
   const confirmClaimSpot = async () => {
     if (!group || !claimSpot) return
@@ -2937,16 +2879,9 @@ export default function RundoTable() {
     const before = participants.find((p) => p.id === claimSpot)
     const oldSeats = Math.max(1, before?.seats ?? 1)
     const vrij = participants.filter((p) => p.id !== claimSpot && isFreeSpot(p) && !p.self_joined)
-    // Het aantal personen aan tafel bepaalt de beheerder. Een gast die met meerderen is,
-    // neemt dus vrije plaatsen in — hij maakt er geen bij. Zonder deze controle stond er
-    // achteraf plots één gast meer in de afrekening.
-    // Te weinig vrije plaatsen? Vroeger werd je geblokkeerd en kon je geen kant op.
-    // Nu neem je wat er is en vraagt de app de rest aan de beheerder — zo sta je
-    // meteen in de app en telt je plaats voor meer zodra hij toekent.
-    let tekort = 0
-    if (claimSeats > oldSeats && claimSeats - oldSeats > vrij.length) {
-      tekort = claimSeats - oldSeats - vrij.length
-    }
+    // Zijn jullie met meer dan er vrije plaatsen zijn? Dan neem je eerst wat er vrij is en
+    // groeit de tafel voor de rest gewoon mee. Vroeger ging daar een verzoek naar de
+    // beheerder en stond je te wachten tot hij het zag — terwijl jullie er al zaten.
     // Minder personen? Dan komen de vrijgekomen plaatsen weer beschikbaar.
     if (claimSeats < oldSeats) {
       for (let i = 0; i < oldSeats - claimSeats; i++) await addGuest(L.guestWord, false, 1)
@@ -2956,18 +2891,9 @@ export default function RundoTable() {
     for (let i = 0; i < teNemen; i++) {
       await supabase.from("table_participants").delete().eq("id", vrij[i].id)
     }
-    const nuSeats = claimSeats - tekort
-    await supabase.from("table_participants").update({ name: finalName, seats: nuSeats, self_joined: true }).eq("id", claimSpot)
+    await supabase.from("table_participants").update({ name: finalName, seats: claimSeats, self_joined: true }).eq("id", claimSpot)
     pickMe(claimSpot, false)
     setClaimSpot(null); setClaimSeats(1); setClaimNames([""])
-    if (tekort > 0) {
-      // Geen apart venster meer: je komt meteen op het wachtscherm terecht, dat
-      // hetzelfde zegt én je tegenhoudt tot de beheerder toekent.
-      const req = await vraagPlaatsen(finalName, tekort)
-      setMijnVraag({ naam: finalName, seats: tekort })
-      setVrijeBijAanmelding(nuSeats)
-      if (req) setVerzoekStored(group.id, { id: req.id, seats: tekort, vrij: nuSeats })
-    }
     await loadAll(group.id)
   }
 
@@ -3166,6 +3092,22 @@ export default function RundoTable() {
     setToast(L.groupFullToast(totalPersons))
   }, [zitKlaar, isAdmin, group?.finalized])
 
+  // Een gast die de QR scant terwijl de tafel vol zit, zet zichzelf er gewoon bij. Hij hoeft
+  // niets te vragen, maar de beheerder moet het wél weten: anders verandert het aantal
+  // personen achter zijn rug en merkt hij het pas als de rekening niet uitkomt.
+  const bekendeGasten = useRef<Set<string> | null>(null)
+  useEffect(() => {
+    if (!isAdmin) { bekendeGasten.current = null; return }
+    const nu = new Set(participants.map((p) => p.id))
+    // Eerste keer: alleen onthouden. Anders meldt hij bij het openen de hele tafel.
+    if (bekendeGasten.current === null) { bekendeGasten.current = nu; return }
+    const nieuw = participants.filter((p) => !bekendeGasten.current!.has(p.id) && p.self_joined && !isFreeSpot(p))
+    bekendeGasten.current = nu
+    if (nieuw.length === 0) return
+    setToastMs(5000)
+    setToast(L.selfJoinedToast(nieuw.map((p) => p.name).join(" & "), totalPersons))
+  }, [participants, isAdmin])
+
   const requirePersons = (): boolean => {
     if (personsSet) return true
     setToast(L.personsFirst)
@@ -3209,126 +3151,7 @@ export default function RundoTable() {
   // De toewijsschermen moeten daarop kijken, anders blokkeert de beheerder op een gast
   // die er wel degelijk zit.
   const echtVrij = (p: Participant) => isFreeSpot(p) && !p.self_joined
-  // Een gast zonder plaats kan er een vragen. De beheerder houdt de controle, want
-  // het aantal personen bepaalt mee hoe gedeelde items verdeeld worden.
-  // Deze twee moeten bóven elke vroege return staan: hooks mogen niet overgeslagen
-  // worden bij het eerste laden en daarna plots wel uitgevoerd.
-  useEffect(() => {
-    if (!mijnVraag || !group) return
-    const nogOpen = seatRequests.some((r) => r.name.trim() === mijnVraag.naam.trim())
-    if (!nogOpen) {
-      setPlaatsToegekend(mijnVraag.seats)
-      setMijnVraag(null)
-      setVerzoekStored(group.id, null)
-    }
-  }, [seatRequests, mijnVraag, group])
-
-  // Na een verversing is het geheugen leeg. Niet afgaan op "het verzoek staat niet meer
-  // in de open lijst" — genegeerd en toegekend zien er dan hetzelfde uit. We halen de
-  // status van dat ene verzoek op en beslissen daarop.
-  useEffect(() => {
-    if (!group || isAdmin || mijnVraag) return
-    const bewaard = getVerzoekStored(group.id)
-    if (!bewaard) return
-    let weg = false
-    void (async () => {
-      const { data } = await supabase.from("table_seat_requests").select("*").eq("id", bewaard.id).single()
-      if (weg) return
-      const status = (data as SeatRequest | null)?.status
-      if (status === "open") {
-        setMijnVraag({ naam: (data as SeatRequest).name, seats: bewaard.seats })
-        if (bewaard.vrij > 0) setVrijeBijAanmelding(bewaard.vrij)
-      } else if (status === "granted") {
-        setPlaatsToegekend(bewaard.seats)
-        setVerzoekStored(group.id, null)
-      } else {
-        setVerzoekStored(group.id, null)
-      }
-    })()
-    return () => { weg = true }
-  }, [group?.id, isAdmin])
-
-  useEffect(() => {
-    // Alleen laten lopen wanneer er iets af te tellen valt.
-    if (seatRequests.length === 0) return
-    const t = window.setInterval(() => setNuTik(Date.now()), 1000)
-    return () => window.clearInterval(t)
-  }, [seatRequests.length])
-
   const naamVanOwner = () => (participants.find((q) => q.id === ownerPid)?.name || "").trim()
-
-  // Terug naar de plaatskeuze: je geeft je plaats af en je verzoek vervalt. Geen
-  // sluipweg om alleen verder te gaan terwijl jullie met meer zijn — die keuze maak
-  // je dan opnieuw en bewust.
-  const terugNaarKeuze = async (req: SeatRequest) => {
-    if (!group || !meId) return
-    await supabase.from("table_seat_requests").update({ status: "ignored" }).eq("id", req.id)
-    // Nam je meerdere plaatsen in, dan komen ze allemaal weer vrij — anders verdwijnen
-    // ze uit de tafel zodra je je aanmelding ongedaan maakt.
-    const ik = participants.find((p) => p.id === meId)
-    const zit = Math.max(1, ik?.seats ?? 1)
-    await supabase.from("table_participants").update({ name: L.guestWord, seats: 1, self_joined: false }).eq("id", meId)
-    for (let i = 1; i < zit; i++) await addGuest(L.guestWord, false, 1)
-    setMijnVraag(null)
-    setVerzoekStored(group.id, null)
-    setMeIdStored(group.id, null); setMeId(null)
-    await loadAll(group.id)
-  }
-
-  // Een herinnering zet het verzoek terug op "open", zodat het venster bij de beheerder
-  // opnieuw verschijnt als hij het met "nu niet" had weggetikt.
-  const stuurHerinnering = async (req: SeatRequest) => {
-    if (!group) return
-    await supabase.from("table_seat_requests").update({ status: "open", created_at: new Date().toISOString() }).eq("id", req.id)
-    setHerinnerd(Date.now())
-    await loadAll(group.id)
-  }
-
-  const vraagPlaatsen = async (naam: string, seats: number): Promise<SeatRequest | null> => {
-    if (!group) return null
-    const { data, error } = await supabase.from("table_seat_requests")
-      .insert([{ group_id: group.id, name: naam.trim(), seats: Math.max(1, seats) }]).select().single()
-    if (error || !data) { setToast(L.seatRequestFailed); return null }
-    await loadAll(group.id)
-    return data as SeatRequest
-  }
-
-  const kenPlaatsenToe = async (req: SeatRequest) => {
-    if (!group || verzoekBezig) return
-    setVerzoekBezig(true)
-    try {
-      // Eerst het verzoek op "granted" zetten, en alleen als het nog op "open" stond.
-      // Zo levert een tweede tik nul rijen op en worden de plaatsen niet dubbel
-      // aangemaakt — de plaatsen bijzetten duurt even, en in die tijd bleef het
-      // venster staan en kon je er opnieuw op tikken.
-      const { data: gepakt } = await supabase.from("table_seat_requests")
-        .update({ status: "granted" }).eq("id", req.id).eq("status", "open").select()
-      if (!gepakt || gepakt.length === 0) return
-      const n = Math.max(1, req.seats)
-      // Zit de aanvrager al in de app? Dan gaan de plaatsen naar zijn eigen plek, zodat
-      // een koppel ook echt voor twee telt. Vroeger kwamen er losse vrije plaatsen bij
-      // en bleef het koppel op één plaats staan — dan verscheen de vraag "wie van jullie
-      // deelde mee?" niet, en klopte de verdeling van gedeelde items niet.
-      const aanvrager = participants.find((p) => (p.name || "").trim() === req.name.trim())
-      if (aanvrager) {
-        await supabase.from("table_participants")
-          .update({ seats: Math.max(1, aanvrager.seats ?? 1) + n }).eq("id", aanvrager.id)
-      } else {
-        for (let i = 0; i < n; i++) await addGuest(L.guestWord, false, 1)
-      }
-      await loadAll(group.id)
-      setToast(L.seatRequestGranted(req.name))
-    } finally {
-      setVerzoekBezig(false)
-    }
-  }
-
-  const negeerVerzoek = async (req: SeatRequest) => {
-    if (!group) return
-    // "ignored" en niet wissen: zo kan de beheerder later alsnog toekennen.
-    await supabase.from("table_seat_requests").update({ status: "ignored" }).eq("id", req.id)
-    await loadAll(group.id)
-  }
 
   const setGuestCount = async (target: number) => {
     setPersonsTouched(true)
@@ -4678,82 +4501,9 @@ export default function RundoTable() {
   // ═══════════════════════════════════════════════════════════════════════════
   // Ook zichtbaar wanneer een gast zijn naam of aantal personen komt bijwerken.
   const needIdentity = !meId || (!isAdmin && claimSpot !== null && claimSpot === meId)
-  // De gast kiest met hoeveel hij is; zijn er te weinig vrije plaatsen, dan neemt hij
-  // wat er is en vraagt de app de rest aan de beheerder.
-  // Wacht je nog op een plaats die de beheerder moet toekennen, dan kan je niet verder.
-  // Je telt op dat moment voor minder personen dan jullie zijn, en alles wat je aanduidt
-  // zou verkeerd verdeeld worden.
-  const ikNu = participants.find((p) => p.id === meId)
-  const mijnOpenVraag = !isAdmin && ikNu
-    ? seatRequests.find((r) => r.name.trim() === (ikNu.name || "").trim()) ?? null
-    : null
-  // Verdwijnt je verzoek terwijl je erop wacht, dan heeft de beheerder toegekend.
-  // Zonder deze melding sprong je scherm zomaar door naar het toewijzen.
-  if (plaatsToegekend != null && group) {
-    return (
-      <div style={S.page}>
-        {renderVensters()}
-        <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={totalPersons} />
-        <div style={{ maxWidth: 440, margin: "0 auto" }}>
-          <div style={{ ...S.card, textAlign: "center" }}>
-            <div style={{ fontSize: 34 }}>✅</div>
-            <h3 style={{ margin: "6px 0 0", fontSize: 20, fontWeight: 800, color: "#1f8a4c" }}>{L.seatAddedTitle}</h3>
-            <div style={{ fontSize: 14.5, color: "#8aa3a6", lineHeight: 1.5, marginTop: 6 }}>
-              {L.seatAddedBody(plaatsToegekend, naamVanOwner(), Math.max(1, participants.find((p) => p.id === meId)?.seats ?? 1))}
-            </div>
-            <button onClick={() => setPlaatsToegekend(null)}
-              style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 16.5, fontWeight: 800, marginTop: 14 }}>
-              {L.seatAddedGo}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (mijnOpenVraag && group) {
-    return (
-      <div style={S.page}>
-        {renderVensters()}
-        <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} signedUp={totalPersons} totalPersons={totalPersons} />
-        <div style={{ maxWidth: 440, margin: "0 auto" }}>
-          <div style={{ ...S.card, textAlign: "center" }}>
-            <div style={{ fontSize: 34 }}>⏳</div>
-            <h3 style={{ margin: "6px 0 0", fontSize: 20, fontWeight: 800, color: "#123a42" }}>{L.waitSeatTitle}</h3>
-            <div style={{ fontSize: 14.5, color: "#8aa3a6", lineHeight: 1.5, marginTop: 6 }}>
-              {L.waitSeatBody(vrijeBijAanmelding, mijnOpenVraag.seats, naamVanOwner())}
-            </div>
-            {(() => {
-              // Pas na een minuut mag je porren: in die tijd staat het venster bij de
-              // beheerder nog open, en twee meldingen voor dezelfde vraag helpen niemand.
-              const sinds = Math.max(herinnerd, new Date(mijnOpenVraag.created_at ?? 0).getTime())
-              const over = Math.ceil((sinds + 60000 - nuTik) / 1000)
-              const netGestuurd = herinnerd > 0 && nuTik - herinnerd < 60000
-              return (
-                <>
-                  {netGestuurd ? (
-                    <div style={{ background: "rgba(39,174,96,0.08)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 12, padding: "10px 12px", fontSize: 14, color: "#1f8a4c", marginTop: 14, fontWeight: 700 }}>{L.reminderSent}</div>
-                  ) : (
-                    <button onClick={() => void stuurHerinnering(mijnOpenVraag)} disabled={over > 0}
-                      style={{ width: "100%", boxSizing: "border-box", marginTop: 14, borderRadius: 12, padding: "11px 0", fontSize: 15, fontWeight: 800, cursor: over > 0 ? "default" : "pointer",
-                        border: `1.5px solid ${over > 0 ? "rgba(18,58,66,0.12)" : "rgba(20,153,176,0.45)"}`,
-                        background: "#fff", color: over > 0 ? "#b3bac6" : "#0f7d90" }}>
-                      {L.sendReminder}
-                    </button>
-                  )}
-                  {over > 0 && <div style={{ fontSize: 12.5, color: "#b3bac6", marginTop: 8 }}>{netGestuurd ? L.reminderAgainIn(over) : L.reminderIn(over)}</div>}
-                </>
-              )
-            })()}
-            <button onClick={() => void terugNaarKeuze(mijnOpenVraag)}
-              style={{ width: "100%", background: "none", border: "none", cursor: "pointer", textAlign: "center", fontSize: 14, fontWeight: 700, color: "#4a6e73", textDecoration: "underline", marginTop: 12, padding: 0 }}>
-              {L.waitSeatBack}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Hier stonden twee volledige schermen: "wacht tot de beheerder je plaats toekent" en
+  // "je plaats is toegekend". Allebei overbodig sinds een gast zichzelf gewoon bijzet —
+  // er valt niets meer te wachten en niets meer toe te kennen.
 
   if (needIdentity && !isAdmin) {
     return (
@@ -4863,20 +4613,17 @@ export default function RundoTable() {
                   )
                 })()}
 
-                {/* Vroeger stond hier "+ Extra plaats toevoegen". Daarmee kon een gast het
-                    aantal personen aan tafel verhogen, en dat hoort alleen de beheerder te
-                    kunnen. Nu een regel die zegt bij wie je moet zijn. */}
+                {/* Alle plaatsen bezet? Dan komt er onderaan een extra rij bij, met dezelfde
+                    stippellijn als een vrije plaats — want dat is wat ze wordt zodra je erop
+                    tikt. Zo is het dezelfde handeling als voor iedereen: rij aantikken, naam
+                    invullen. Geen verzoek, geen wachten: wie de QR scant zit mee aan tafel. */}
                 {participants.filter((q) => q.id !== ownerPid && isFreeSpot(q)).length === 0 && (
-                  mijnVraag ? (
-                    <div style={{ marginTop: 10, background: "rgba(243,156,18,0.1)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 12, padding: 12, fontSize: 14, color: "#b5591a", lineHeight: 1.5, textAlign: "center" }}>
-                      {L.seatRequestSent(mijnVraag.seats)}
-                    </div>
-                  ) : (
-                    <button onClick={() => setVraagPopup({ seats: 1, namen: [""] })}
-                      style={{ width: "100%", boxSizing: "border-box", marginTop: 11, border: "1.5px solid rgba(20,153,176,0.45)", background: "#fff", color: "#0f7d90", borderRadius: 12, padding: "12px 0", fontSize: 15.5, fontWeight: 800, cursor: "pointer" }}>
-                      {L.notOnListBtn}
-                    </button>
-                  )
+                  <button onClick={() => void maakEigenPlaats()} disabled={eigenPlaatsBezig}
+                    style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", marginTop: 9, cursor: eigenPlaatsBezig ? "default" : "pointer", borderRadius: 11, padding: "12px",
+                      border: "1.5px dashed rgba(20,153,176,0.6)", background: "rgba(20,153,176,0.05)", opacity: eigenPlaatsBezig ? 0.6 : 1 }}>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: "#0f7d90" }}>{eigenPlaatsBezig ? L.busyWord : L.imJoiningToo}</span>
+                    <span style={{ fontSize: 20, fontWeight: 800, color: "#0f7488", flexShrink: 0 }}>›</span>
+                  </button>
                 )}
               </>
             ) : (
@@ -4978,91 +4725,6 @@ export default function RundoTable() {
         }`}</style>
       {/* Over elk scherm heen: de beheerder zit meestal op een andere tab, en er staat
           iemand te wachten. Alleen weg met toekennen of "nu niet". */}
-      {isAdmin && seatRequests.length > 0 && (() => {
-        const req = seatRequests[0]
-        const naar = totalPersons + Math.max(1, req.seats)
-        return (
-          <div style={{ ...S.overlay, zIndex: 3000 }}>
-            <div style={{ ...S.modal, width: "min(300px, 90vw)", textAlign: "center" }}>
-              <div style={{ fontSize: 28 }}>✋</div>
-              <div style={{ fontSize: 17.5, fontWeight: 800, color: "#123a42", marginTop: 4, lineHeight: 1.3 }}>
-                {req.seats > 1 ? L.seatRequestTitleN(req.name, req.seats) : L.seatRequestTitle(req.name)}
-              </div>
-              <div style={{ background: "rgba(20,153,176,0.08)", border: "1px solid rgba(20,153,176,0.28)", borderRadius: 11, padding: "10px 11px", fontSize: 14, color: "#0f6d7e", marginTop: 11, fontWeight: 700 }}>
-                {L.seatRequestEffect(totalPersons, naar)}
-              </div>
-              <button onClick={() => void kenPlaatsenToe(req)} disabled={verzoekBezig}
-                style={{ width: "100%", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 16.5, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", marginTop: 11, cursor: verzoekBezig ? "default" : "pointer", opacity: verzoekBezig ? 0.6 : 1, boxShadow: "0 6px 16px -8px rgba(31,138,76,0.85)" }}>
-                {verzoekBezig ? L.busyWord : req.seats > 1 ? L.seatRequestGrantN(req.seats) : L.seatRequestGrant}
-              </button>
-              <button onClick={() => void negeerVerzoek(req)}
-                style={{ width: "100%", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#8aa3a6", marginTop: 10 }}>
-                {L.seatRequestLater}
-              </button>
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* Zelfde onderdelen als het gewone aanmelden: keuzeknoppen voor het aantal en
-          één naamveld per persoon, samengevoegd met een & zoals overal elders. */}
-      {vraagPopup && (
-        <div style={{ ...S.overlay, alignItems: "flex-start", paddingTop: "8vh" }}>
-          <div style={{ ...S.modal, width: "min(320px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#2b4f56" }}>{L.askSeatTitle}</h3>
-            <div style={{ fontSize: 13.5, color: "#8aa3a6", lineHeight: 1.45, marginTop: 4 }}>{L.askSeatSub}</div>
-
-            <div style={{ fontSize: 13.5, color: "#8aa3a6", fontWeight: 700, margin: "13px 0 6px" }}>{L.howManyPersons}</div>
-            <div style={{ display: "flex", gap: 7 }}>
-              {[1, 2, 3].map((n) => {
-                const aan = vraagPopup.seats === n
-                return (
-                  <button key={n} onClick={() => setVraagPopup((c) => c ? { seats: n, namen: Array.from({ length: n }, (_, i) => c.namen[i] ?? "") } : c)}
-                    style={{ flex: 1, borderRadius: 11, padding: "9px 4px", cursor: "pointer", textAlign: "center",
-                      border: aan ? "1.5px solid rgba(196,152,32,0.5)" : "1.5px solid rgba(18,58,66,0.12)",
-                      background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
-                      color: aan ? "#6b5a2a" : "#123a42", fontSize: 14, fontWeight: 800 }}>
-                    {n === 3 ? "3+" : n}
-                    <span style={{ display: "block", fontSize: 11, fontWeight: 600, marginTop: 2, color: aan ? "#6b5a2a" : "#4a6e73" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div style={{ fontSize: 13.5, color: "#8aa3a6", fontWeight: 700, margin: "13px 0 6px" }}>{vraagPopup.seats > 1 ? L.yourNamesQ : L.yourNameQ}</div>
-            {Array.from({ length: vraagPopup.seats }, (_, i) => (
-              <input key={i} value={vraagPopup.namen[i] ?? ""} autoFocus={i === 0}
-                onChange={(e) => setVraagPopup((c) => { if (!c) return c; const n = [...c.namen]; n[i] = e.target.value; return { ...c, namen: n } })}
-                placeholder={vraagPopup.seats === 1 ? L.namePlaceholder : i === 0 ? L.firstName : i === 1 ? L.secondName : L.extraName(i + 1)}
-                style={{ ...S.input, width: "100%", boxSizing: "border-box", marginBottom: 6 }} />
-            ))}
-            {vraagPopup.seats > 1 && vraagPopup.namen.some((n) => n.trim()) && (
-              <div style={{ fontSize: 13, color: "#8aa3a6", marginTop: 2 }}>{L.showsAsOne} <b style={{ color: "#123a42" }}>{vraagPopup.namen.filter((n) => n.trim()).join(" & ")}</b></div>
-            )}
-
-            <button onMouseDown={(e) => e.preventDefault()} disabled={verzoekBezig}
-              onClick={async () => {
-                const naam = vraagPopup.namen.filter((n) => n.trim()).join(" & ").trim()
-                if (!naam || verzoekBezig) return
-                // Zelfde bescherming als bij de beheerder: versturen duurt even, en zonder
-                // deze vlag maakt een tweede tik een tweede verzoek aan.
-                setVerzoekBezig(true)
-                try {
-                  const req = await vraagPlaatsen(naam, vraagPopup.seats)
-                  if (req) {
-                    setMijnVraag({ naam, seats: vraagPopup.seats })
-                    if (group) setVerzoekStored(group.id, { id: req.id, seats: vraagPopup.seats, vrij: 0 })
-                    setVraagPopup(null)
-                  }
-                } finally { setVerzoekBezig(false) }
-              }}
-              style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontSize: 15.5, fontWeight: 800, marginTop: 11, opacity: verzoekBezig ? 0.6 : 1 }}>
-              {verzoekBezig ? L.busyWord : vraagPopup.seats > 1 ? L.askSeatSendN(vraagPopup.seats) : L.askSeatSend}
-            </button>
-          </div>
-        </div>
-      )}
-
       {error && (
         <div style={S.errorBanner}>⚠️ {error}
           <button onClick={() => setError(null)} style={{ marginLeft: 12, background: "none", border: "none", cursor: "pointer", color: "#c0392b", fontWeight: 700 }}>✕</button>
@@ -5801,12 +5463,6 @@ export default function RundoTable() {
                   {showNamesBlock ? L.hideSeatsLong : L.showSeatsLong}
                   <span style={{ fontSize: 15, lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
                 </button>
-
-                {seatRequests.length > 0 && (
-                  <div style={{ marginTop: 10, fontSize: 13.5, fontWeight: 800, color: "#8a4514", background: "rgba(243,156,18,0.12)", border: "1px solid rgba(243,156,18,0.45)", borderRadius: 9, padding: "7px 9px" }}>
-                    {L.seatAsks(seatRequests.length)}
-                  </div>
-                )}
 
                 {showNamesBlock && (
                   <>
