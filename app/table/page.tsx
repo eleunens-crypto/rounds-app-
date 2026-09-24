@@ -1126,7 +1126,6 @@ const STRINGS = {
     confirmDeleteItem: "Dit item van de bon verwijderen? Wat er al aan toegewezen werd, verdwijnt mee.",
     collapseOpen: "▶ openen",
     collapseClose: "▼ inklappen",
-    reviewAgain: "Opnieuw bekijken",
     noItemsScanFirst: "Nog geen items — scan eerst de bon.",
     addGuestsInTab1: 'Voeg eerst gasten toe in de tab "Gasten & delen".',
     totalLower: "totaal",
@@ -1140,7 +1139,10 @@ const STRINGS = {
     assignOwnTitle: (name: string | undefined) => `Jij duidt aan voor ${name}`,
     assignOwnBody: (name: string | undefined) => `${name} kwam niet via de QR binnen, dus jij tikt aan wat hij nam. Dat is hier de gewone gang van zaken.\n\nDit vragen we maar één keer — daarna gaat het meteen door.`,
     assignOwnYes: "Ja, doorgaan",
-    unitsProgress: (n: number, t: number) => `${n} van ${t} stuks verdeeld`,
+    doneProgress: (n: number, t: number) => `${n} van ${t} items toegewezen`,
+    sharedExtra: (n: number) => `+ ${n} gedeeld`,
+    showThose: (n: number) => `die ${n} tonen`,
+    foldAgain: "weer inklappen",
     unitsClaimed: "Stuks geclaimd",
     sharedItemsHandled: "Gedeelde items geregeld",
     billTotalLabel: "Totaal rekening",
@@ -1804,7 +1806,6 @@ const STRINGS = {
     confirmDeleteItem: "Supprimer cet article de l'addition ? Ce qui y était attribué disparaît aussi.",
     collapseOpen: "▶ ouvrir",
     collapseClose: "▼ réduire",
-    reviewAgain: "Revoir",
     noItemsScanFirst: "Aucun article — scanne d'abord l'addition.",
     addGuestsInTab1: "Ajoute d'abord des invités dans l'onglet « Invités et partage ».",
     totalLower: "total",
@@ -1819,6 +1820,9 @@ const STRINGS = {
     assignOwnBody: (name: string | undefined) => `${name} n'est pas arrivé via le QR, c'est donc toi qui coches ce qu'il a pris. C'est le fonctionnement normal ici.\n\nOn ne te le demande qu'une seule fois — ensuite ça passe directement.`,
     assignOwnYes: "Oui, continuer",
     unitsProgress: (n: number, t: number) => `${n} articles sur ${t} attribués`,
+    doneItems: (n: number) => `${n} article${n === 1 ? "" : "s"} enti\u00e8rement attribu\u00e9${n === 1 ? "" : "s"}`,
+    showThem: "afficher",
+    hideThem: "masquer",
     unitsClaimed: "Unités attribuées",
     sharedItemsHandled: "Articles partagés réglés",
     billTotalLabel: "Total de l'addition",
@@ -8007,16 +8011,12 @@ function ClaimScreen(props: {
   const adminPid = props.meId
   const [assignItem, setAssignItem] = useState<string | null>(null)
   // Bij veertien items zijn er meestal elf af, en die elf namen evenveel plaats in als de
-  // drie die nog moeten. Een afgewerkt item klapt daarom samen tot één regel: vinkje, naam,
-  // wie het nam. Tik erop en hij gaat weer helemaal open — de knoppen blijven dus allemaal
-  // bereikbaar, ze staan alleen niet meer allemaal tegelijk open. De volgorde van de bon
-  // verandert niet: een item blijft staan waar je het verwacht.
-  const [opengeklapt, setOpengeklapt] = useState<Set<string>>(new Set())
-  const klapOm = (id: string) => setOpengeklapt((cur) => {
-    const n = new Set(cur)
-    if (n.has(id)) n.delete(id); else n.add(id)
-    return n
-  })
+  // drie die nog moeten. Een item dat helemaal verdeeld is, verdwijnt daarom uit de lijst;
+  // één knop bovenaan zegt hoeveel er zo staan en haalt ze in één tik allemaal terug. Eerst
+  // liet ik ze als korte regel staan, maar dan stonden er afgewerkte items tussen de open
+  // items door terwijl de knop erboven beweerde dat ze samengeklapt waren — twee dingen die
+  // elkaar tegenspraken. Nu is het één ding: verborgen of getoond.
+  const [allesOpen, setAllesOpen] = useState(false)
   // Het eigen overzicht van de beheerder staat open zolang hij verdeelt; dichtklappen mag.
   const [eigenOpen, setEigenOpen] = useState(true)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
@@ -8134,7 +8134,6 @@ function ClaimScreen(props: {
   const _claimedU = _normal.reduce((s, i) => s + Math.min(i.quantity, claimedQty(i.id)), 0)
   const _sharedDone = _shared.filter((i) => sharerIds(i.id).length > 0).length
   const allDone = (_totalU > 0 || _shared.length > 0) && _claimedU >= _totalU && _sharedDone === _shared.length
-  const [claimCollapsed, setClaimCollapsed] = useState(false)
   // Welke namen zet je op de deel-chips van één plaats? Bij een plaats met twee personen
   // stond er altijd "Lore & Jan", ook als enkel Lore van de fles dronk — de anderen aan
   // tafel konden dus niet zien wie het écht nam. Deelden ze allebei mee, dan klopt de
@@ -8167,19 +8166,27 @@ function ClaimScreen(props: {
   // gedeeld gezet kan worden — en dat is net wat je ontdekt wanneer alles al verdeeld is.
   // De samengeklapte regel. Half zo hoog als een open rij, met alles wat je nog wil weten:
   // dat het af is, wat het was, en wie het nam.
-  const klaarRegel = (it: BillItem, namen: string, mijn: boolean) => (
-    <button key={it.id} onClick={() => klapOm(it.id)}
-      style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 9, textAlign: "left",
-        padding: "8px", borderBottom: "1px solid rgba(0,0,0,0.05)", border: "none", background: "none",
-        cursor: "pointer", fontFamily: "inherit", ...(mijn ? JOUW_STREEP : null) }}>
-      <span style={{ flexShrink: 0, color: "#1f8a4c", fontSize: 15, fontWeight: 800 }}>✓</span>
-      <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 700, color: "#4a6e73", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {it.quantity > 1 ? `${it.quantity}× ` : ""}{showTip(it.name, L)}
-      </span>
-      <span style={{ flexShrink: 0, fontSize: 14, color: "#8aa3a6", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{namen}</span>
-      <span style={{ flexShrink: 0, fontSize: 16, color: "#b3bac6", fontWeight: 800 }}>›</span>
-    </button>
-  )
+  // Let op het verschil met de balk erboven: die telt stúks (een item van 3× telt voor
+  // drie), dit telt ítems. Alleen gewone items tellen mee: een gedeeld item heeft geen
+  // aantal en blijft altijd staan — daar valt ook na een eerste naam nog iets te beslissen.
+  const afgewerkt = items.filter((it) => !it.is_shared && it.quantity - claimedQty(it.id) <= 0)
+  const verborgen = (it: BillItem) => !allesOpen && !it.is_shared && it.quantity - claimedQty(it.id) <= 0
+
+  // De knop staat onder de voortgangsbalk en zegt twee dingen: hoeveel er af is, en wat een
+  // tik doet. Dezelfde zin in beide standen, alleen het werkwoord rechts verandert.
+  const klaarBlok = () => {
+    if (afgewerkt.length === 0) return null
+    return (
+      <button onClick={() => setAllesOpen((v) => !v)}
+        style={{ width: "100%", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 9, textAlign: "left",
+          border: "1.5px dashed rgba(18,58,66,0.22)", background: "rgba(18,58,66,0.025)", borderRadius: 11,
+          padding: "9px 11px", marginBottom: 8, cursor: "pointer", fontFamily: "inherit" }}>
+        <span style={{ flexShrink: 0, color: "#1f8a4c", fontSize: 15, fontWeight: 800 }}>✓</span>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 800, color: "#4a6e73" }}>{L.doneItems(afgewerkt.length)}</span>
+        <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, color: "#0f7488" }}>{allesOpen ? `${L.hideThem} ▴` : `${L.showThem} ▾`}</span>
+      </button>
+    )
+  }
 
   const shareBtn = (it: BillItem, stil = false) => !magOntdelen(it) ? (
     <span title={L.sharedByOther}
@@ -8243,7 +8250,10 @@ function ClaimScreen(props: {
     return () => { if (typeof window !== "undefined" && wachtRef.current !== null) { window.clearTimeout(wachtRef.current); wachtRef.current = null } }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allDone, delersHandtekening, isAdmin])
-  useEffect(() => { if (klapSignaal && klapSignaal > 0) setClaimCollapsed(true) }, [klapSignaal])
+  // Dit signaal klapte de hele toewijslijst dicht nadat je het bericht "alles toegewezen"
+  // volgde. Die inklapper bestaat niet meer — de afgewerkte items staan vanzelf al kort —
+  // dus zetten we in plaats daarvan alles kort, ook wat je met de hand had opengezet.
+  useEffect(() => { if (klapSignaal && klapSignaal > 0) setAllesOpen(false) }, [klapSignaal])
 
   // Afgesloten, en jij bent de beheerder: dan is dit geen werkblad meer maar een
   // eindafrekening. De knoppen zagen er tot nu toe uit als altijd, maar konden enkel nog
@@ -8294,37 +8304,23 @@ function ClaimScreen(props: {
     return (
       <div id="wie-nam-wat">
         <div style={S.card}>
-          <div onClick={isAdmin && !(warnCount && warnCount > 0) ? () => setClaimCollapsed((v) => !v) : undefined} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: isAdmin ? "pointer" : "default", marginBottom: (isAdmin && claimCollapsed) ? 0 : 10 }}>
-            {/* Dezelfde titel als de gast ziet, want het is dezelfde handeling: eerst jouw
-                eigen consumpties, en daarna vul je aan voor wie het zelf niet deed. */}
-            <div style={{ minWidth: 0 }}>
-              <h3 style={{ ...S.h3, marginBottom: 2 }}>{meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</h3>
-              <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.claimSubAdmin}</div>
-            </div>
-            {isAdmin && !(warnCount && warnCount > 0) && <span style={{ fontSize: 16, color: "#8aa3a6", fontWeight: 700, flexShrink: 0 }}>{claimCollapsed ? L.collapseOpen : L.collapseClose}</span>}
+          {/* Rechtsboven stond "▼ inklappen", dat de hele kaart wegklapte. Die was er om een
+              lange lijst kwijt te raken — en dat doen de afgewerkte items nu zelf. Twee soorten
+              inklappen naast elkaar, allebei met een pijltje, was vooral verwarrend. */}
+          <div style={{ minWidth: 0, marginBottom: 10 }}>
+            <h3 style={{ ...S.h3, marginBottom: 2 }}>{meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</h3>
+            <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.claimSubAdmin}</div>
           </div>
-          {isAdmin && claimCollapsed && !(warnCount && warnCount > 0)
-            ? (
-              // Melding links, knop rechts: één groene regel die tegelijk mededeling
-              // en knop wil zijn, leest als geen van beide.
-              <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "4px 2px" }}>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#1f8a4c" }}>{L.allAssigned}</span>
-                <button onClick={() => setClaimCollapsed(false)}
-                  style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 15.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.12)", border: "1.5px solid rgba(39,174,96,0.45)", borderRadius: 11, padding: "9px 13px", cursor: "pointer" }}>
-                  {L.reviewAgain} ▾
-                </button>
-              </div>
-            )
-            : items.length === 0
+          {items.length === 0
             ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsScanFirst}</div>
             : named.length === 0
             ? <div style={{ fontSize: 16, color: "#aaa", padding: 10 }}>{L.addGuestsInTab1}</div>
             : (
               <>
-                {/* Eén regel die zegt hoever je staat. Nodig sinds de afgewerkte items
-                    samenklappen: anders zie je wel een korte lijst, maar niet waaróm. */}
+                {/* Eerst hoever je staat, dan de knop voor wat af is. Twee regels, elk met
+                    één taak — de voortgangsregel is informatie, de knop is een knop. */}
                 {totalUnits > 0 && (
-                  <div style={{ marginBottom: 11 }}>
+                  <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 14.5, fontWeight: 800, color: claimedUnits >= totalUnits ? "#1f8a4c" : "#4a6e73" }}>
                       {L.unitsProgress(claimedUnits, totalUnits)}
                     </div>
@@ -8333,6 +8329,7 @@ function ClaimScreen(props: {
                     </div>
                   </div>
                 )}
+                {klaarBlok()}
                 {items.map((it) => {
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
@@ -8481,10 +8478,8 @@ function ClaimScreen(props: {
                   // Jouw eigen stuks staan in de teller rechts, dus hier alleen de anderen.
                   const anderen = who.filter((x) => x.p.id !== adminPid)
                   const highlight = adminPid && mineQ > 0
-                  // Af en niet met de hand opengezet? Dan volstaat één regel.
-                  if (open <= 0 && !opengeklapt.has(it.id)) {
-                    return klaarRegel(it, who.map(({ p, q }) => `${naamVan(p)}${q > 1 ? ` ×${q}` : ""}`).join(", "), !!highlight)
-                  }
+                  // Helemaal verdeeld? Dan staat hij achter de knop bovenaan.
+                  if (verborgen(it)) return null
                   // Het gouden en het groene vlak zijn weg: drie gekleurde vlakken onder
                   // elkaar maakten van elke rij een mededeling. Wat jij nam zegt het balkje
                   // vooraan, samen met de gouden pil en het gouden aantal; dat alles verdeeld
@@ -8781,6 +8776,8 @@ function ClaimScreen(props: {
           </div>
         )}
         {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsWaitScan}</div>}
+        {/* Hetzelfde blok als bij de beheerder, maar zonder de voortgangsbalk. */}
+        {items.length > 0 && !vast && klaarBlok()}
         <div style={vast ? { pointerEvents: "none", opacity: 0.55 } : undefined}>
 
         {items.map((it) => {
@@ -8933,11 +8930,8 @@ function ClaimScreen(props: {
               </div>
             )
           }
-          // Af en niet met de hand opengezet? Dan volstaat één regel — ook hier.
-          if (open <= 0 && !opengeklapt.has(it.id)) {
-            return klaarRegel(it, participants.map((p) => ({ p, q: myQty(it.id, p.id) })).filter((x) => x.q > 0)
-              .map(({ p, q }) => `${naamVan(p)}${q > 1 ? ` ×${q}` : ""}`).join(", "), mine > 0)
-          }
+          // Helemaal verdeeld? Dan staat hij achter de knop bovenaan — ook hier.
+          if (verborgen(it)) return null
           return (
             // Geen gekleurd vlak meer: een goud balkje vooraan zodra jij erin zit, en verder
             // zeggen de gouden pil, het gouden aantal en de groene of rode woorden de rest.
