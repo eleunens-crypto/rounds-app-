@@ -1211,7 +1211,6 @@ const STRINGS = {
     finalPopupTitle: "✅ De rekening is afgesloten",
     finalPopupSub: "Dit is je definitieve bedrag, inclusief btw en eventuele kosten.",
     sharingPendingNote: "ℹ️ Je deelt mee in gedeelde items (wijn/water). Het exacte deel kan nog wijzigen tot iedereen heeft aangetikt en bevestigd.",
-    fullBillInfo: "De volledige rekening ter info — tik een naam aan voor het detail:",
     nothingTapped2: "Niets aangetikt.",
     youSuffix: " (jij)",
     confirmedWord: "Bestelling bevestigd",
@@ -1889,7 +1888,6 @@ const STRINGS = {
     finalPopupTitle: "✅ L’addition est clôturée",
     finalPopupSub: "Voici ton montant définitif, TVA et frais éventuels compris.",
     sharingPendingNote: "ℹ️ Tu participes à des articles partagés (vin/eau). La part exacte peut encore changer jusqu'à ce que tout le monde ait coché et confirmé.",
-    fullBillInfo: "L'addition complète pour info — touche un nom pour le détail :",
     nothingTapped2: "Rien coché.",
     youSuffix: " (toi)",
     confirmedWord: "Commande confirm\u00e9e",
@@ -8057,6 +8055,10 @@ function ClaimScreen(props: {
   // items door terwijl de knop erboven beweerde dat ze samengeklapt waren — twee dingen die
   // elkaar tegenspraken. Nu is het één ding: verborgen of getoond.
   const [allesOpen, setAllesOpen] = useState(false)
+  // Na het afsluiten is de regel-per-regel-verdeling naslagwerk: je kijkt hem één keer na
+  // en daarna wil je "Per persoon" zien, want dat is wat er betaald moet worden. Hij staat
+  // dus dicht, met zijn titel als knop.
+  const [slotOpen, setSlotOpen] = useState(false)
   // Het eigen overzicht van de beheerder staat open zolang hij verdeelt; dichtklappen mag.
   const [eigenOpen, setEigenOpen] = useState(true)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
@@ -8082,6 +8084,9 @@ function ClaimScreen(props: {
   // Wat je bevestigde blijft raadpleegbaar, maar hoeft na het afsluiten niet meer open:
   // dan telt alleen nog de definitieve verdeling.
   const [gastBevestigdOpen, setGastBevestigdOpen] = useState(true)
+  // De verdeling van de hele tafel is naslagwerk: jouw eigen bedrag staat in de groene balk
+  // bovenaan. Dit blok staat dus dicht, met zijn titel als knop.
+  const [gastVerdelingOpen, setGastVerdelingOpen] = useState(false)
   // Eén vorm voor de vier blokken. Het bolletje vertelt de stand: groen met een vinkje als
   // die stap gedaan is, grijs met zijn cijfer als hij nog moet of enkel naslagwerk is.
   const blokBol = (nr: number, klaar: boolean) => (
@@ -8337,12 +8342,18 @@ function ClaimScreen(props: {
     return (
       <div id="wie-nam-wat">
         <div style={{ ...S.card, border: "1.5px solid rgba(39,174,96,0.3)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingBottom: 10, borderBottom: "1px solid rgba(39,174,96,0.2)" }}>
-            <span style={{ fontSize: 16.5, fontWeight: 800, color: "#1f6b3a" }}>{L.closedListTitle}</span>
-            <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#4e7a62", background: "rgba(39,174,96,0.12)", borderRadius: 8, padding: "4px 8px", whiteSpace: "nowrap" }}>{L.lockedWord}</span>
+          <div onClick={() => setSlotOpen((v) => !v)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingBottom: slotOpen ? 10 : 0, borderBottom: slotOpen ? "1px solid rgba(39,174,96,0.2)" : "none", cursor: "pointer" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+              <span style={{ fontSize: 16.5, fontWeight: 800, color: "#1f6b3a" }}>{L.closedListTitle}</span>
+              <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#4e7a62", background: "rgba(39,174,96,0.12)", borderRadius: 8, padding: "4px 8px", whiteSpace: "nowrap" }}>{L.lockedWord}</span>
+            </span>
+            <span style={{ flexShrink: 0, border: "1.5px solid rgba(39,174,96,0.4)", color: "#1f6b3a", borderRadius: 9, padding: "5px 10px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap" }}>
+              {slotOpen ? `${L.hideAll} \u25b4` : `${L.showAll} \u25be`}
+            </span>
           </div>
-          {items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsScanFirst}</div>}
-          {items.map((it, i) => {
+          {slotOpen && items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsScanFirst}</div>}
+          {slotOpen && items.map((it, i) => {
             const gedeeld = !!it.is_shared
             const wie = gedeeld
               ? sharerIds(it.id).map((pid) => { const q = participants.find((x) => x.id === pid); return q ? naamVan(q) : "" }).filter(Boolean)
@@ -9137,16 +9148,19 @@ function ClaimScreen(props: {
         {finalized && (
           <div id="gast-eindverdeling">
             <div>
-            {/* Bij een afgesloten rekening is dit de definitieve verdeling. Er stond een
-                knop "toon alles / verberg alles" bij die het hele blok dichtklapte — en dan
-                zag je niets meer, terwijl dit ná het afsluiten het enige is waarvoor je hier
-                bent. Die knop is weg; enkel "toon details" blijft, voor de regels per persoon. */}
-            <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-              {blokBol(3, true)}
-              <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1f8a4c", lineHeight: 1.25 }}>👥 {L.finalSplitTitle}</span>
+            {/* Wat de hele tafel betaalt is naslagwerk — jouw eigen bedrag staat in de
+                groene balk bovenaan. Dit blok begint dus dicht; de titel is de knop. De
+                ondertitel eronder legde uit dat je een naam kan aantikken, maar dat zien
+                mensen aan de driehoekjes zelf. */}
+            <div onClick={() => setGastVerdelingOpen((v) => !v)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, minWidth: 0, cursor: "pointer", marginBottom: gastVerdelingOpen ? 8 : 0 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                {blokBol(3, true)}
+                <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1f8a4c", lineHeight: 1.25 }}>👥 {L.finalSplitTitle}</span>
+              </span>
+              {toonKnop(gastVerdelingOpen)}
             </div>
-            <div style={{ fontSize: 15.5, color: "#7d999d", marginTop: 4, marginBottom: 8 }}>{L.fullBillInfo}</div>
-            {participants.length > 0 && (
+            {gastVerdelingOpen && participants.length > 0 && (
               // Dezelfde knop als de beheerder heeft: alles in één keer open of dicht,
               // in plaats van rij per rij.
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
@@ -9156,7 +9170,7 @@ function ClaimScreen(props: {
                 </button>
               </div>
             )}
-            <>
+            {gastVerdelingOpen && (<>
             {participants.map((p) => {
               const pt = personTotal(p.id)
               const isMe = p.id === meId
@@ -9190,14 +9204,14 @@ function ClaimScreen(props: {
               <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.billTotalLabel}</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
-            {/* Vast onder het totaal, met een stippellijn ertussen: je twijfelt over je deel,
-                en de weg terug staat er meteen onder in plaats van een kaart verderop. */}
+            </>)}
+            {/* Buiten de inklap: twijfel je over je deel, dan moet die weg er altijd zijn,
+                ook als je de verdeling van de tafel niet openzet. */}
             {kloptIets && (
               <div style={{ marginTop: 13, paddingTop: 13, borderTop: "1.5px dashed rgba(18,58,66,0.2)" }}>
                 {kloptIetsBlok()}
               </div>
             )}
-            </>
             </div>
           </div>
         )}
