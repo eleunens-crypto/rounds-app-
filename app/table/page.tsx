@@ -764,6 +764,7 @@ const STRINGS = {
     eachAmount: (b: number) => `\u20ac${b.toFixed(2).replace(".", ",")} elk`,
     dropsIfMore: "\u2192 daalt als er meer meedelen",
     youWord: "jij",
+    youWordCap: "Jij",
     sharedProblemTitle: "Let op — gedeelde items kloppen mogelijk niet:",
     sharedProblemAsk: "Toch afsluiten?",
     tipInclLabel: (a: string) => `incl. €${a} fooi`,
@@ -1479,6 +1480,7 @@ const STRINGS = {
     eachAmount: (b: number) => `\u20ac${b.toFixed(2).replace(".", ",")} chacun`,
     dropsIfMore: "\u2192 baisse si d'autres partagent",
     youWord: "toi",
+    youWordCap: "Toi",
     sharedProblemTitle: "Attention — les articles partagés semblent incorrects :",
     sharedProblemAsk: "Clôturer quand même ?",
     tipInclLabel: (a: string) => `pourboire de €${a} inclus`,
@@ -8719,7 +8721,11 @@ function ClaimScreen(props: {
                               style={{ width: 40, height: 33, borderRadius: 8, fontSize: 21, fontWeight: 800, lineHeight: 1, fontFamily: "inherit",
                                 cursor: mineQ > 0 ? "pointer" : "default", background: "#fff",
                                 color: mineQ > 0 ? "#c0392b" : "#c9ced8", border: "2px solid " + (mineQ > 0 ? "#2b2f38" : "#e2e6ee") }}>−</button>
-                            <span style={{ fontSize: 19, fontWeight: 800, minWidth: 20, textAlign: "center" }}>{mineQ}</span>
+                            {/* Zelfde gouden telpil als op het gastenscherm: het cijfer zegt
+                                nu zelf dat het van jou is, niet alleen de rij eronder. */}
+                            {mineQ > 0
+                              ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#5a4a1a", borderRadius: 8, padding: "5px 10px", fontSize: 16.5, fontWeight: 800, lineHeight: 1 }}>✓ {mineQ}</span>
+                              : <span style={{ fontSize: 19, fontWeight: 800, minWidth: 20, textAlign: "center", color: "#c9ced8" }}>0</span>}
                             <button onClick={() => setClaim(it.id, adminPid, mineQ + 1)} disabled={open <= 0} title={L.iTakeOne} aria-label={L.iTakeOne}
                               style={{ ...S.iconBtn, width: 33, height: 33, fontSize: 19, fontWeight: 800, background: "rgba(27,42,74,0.12)", opacity: open <= 0 ? 0.35 : 1, cursor: open > 0 ? "pointer" : "default" }}>+</button>
                           </div>
@@ -8727,6 +8733,16 @@ function ClaimScreen(props: {
                       </div>
                       {/* De anderen, en daarachter het knopje dat de namenkiezer opent. */}
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 7, alignItems: "center" }}>
+                        {/* Jouw eigen pil hoort hier gewoon bij te staan, vooraan en in het goud.
+                            Ze was verdwenen toen de teller kwam, maar de teller zegt alleen hoevéél
+                            — niet dat jouw naam eraan hangt, en hij heeft ook geen kruisje. */}
+                        {adminPid && mineQ > 0 && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 15, fontWeight: 800, borderRadius: 10, padding: "3px 3px 3px 10px", color: "#5a4a1a", background: "rgba(233,196,95,0.5)" }}>
+                            {L.youWordCap} ×{mineQ}
+                            <button onClick={() => setClaim(it.id, adminPid, 0)} title={L.removeOne} aria-label={L.removeOne}
+                              style={{ border: "none", background: "rgba(90,58,0,0.16)", color: "#5a4a1a", borderRadius: 8, width: 26, height: 26, cursor: "pointer", fontSize: 14, fontWeight: 800, lineHeight: 1, fontFamily: "inherit" }}>✕</button>
+                          </span>
+                        )}
                         {anderen.map(({ p, q: pq }) => (
                           <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 15, fontWeight: 700, borderRadius: 10, padding: "3px 3px 3px 10px", color: "#4a6e73", background: "rgba(90,108,166,0.1)" }}>
                             {naamVan(p)} ×{pq}
@@ -9046,9 +9062,16 @@ function ClaimScreen(props: {
                             {nemers.map(({ p, n }) => {
                               const ikZelf = p.id === meId
                               return (
-                                <span key={p.id} style={{ fontSize: 13, fontWeight: ikZelf ? 800 : 700, borderRadius: 8, padding: "3px 8px",
-                                  background: ikZelf ? "rgba(20,153,176,0.14)" : "rgba(18,58,66,0.05)", color: ikZelf ? "#0f7488" : "#4a6e73" }}>
-                                  {naamVan(p)} {n}
+                                <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13.5, fontWeight: ikZelf ? 800 : 700, borderRadius: 9, padding: ikZelf ? "2px 2px 2px 8px" : "3px 8px",
+                                  background: ikZelf ? "rgba(233,196,95,0.5)" : "rgba(18,58,66,0.05)", color: ikZelf ? "#5a4a1a" : "#4a6e73" }}>
+                                  {naamVan(p)} ×{n}
+                                  {/* Met de min ga je één stuk per tik omlaag. Had je er drie, dan
+                                      tik je drie keer. Dit kruisje haalt je in één keer van het
+                                      item af — dezelfde handeling die de anderen al hadden. */}
+                                  {ikZelf && meId && (
+                                    <button onClick={() => setClaim(it.id, meId, 0)} title={L.removeOne} aria-label={L.removeOne}
+                                      style={{ border: "none", background: "rgba(90,58,0,0.16)", color: "#5a4a1a", borderRadius: 7, width: 22, height: 22, cursor: "pointer", fontSize: 12.5, fontWeight: 800, lineHeight: 1, fontFamily: "inherit" }}>✕</button>
+                                  )}
                                 </span>
                               )
                             })}
@@ -9059,7 +9082,12 @@ function ClaimScreen(props: {
                     </>}
               </div>
               <button style={{ width: 42, height: 34, fontSize: 22, fontWeight: 800, lineHeight: 1, borderRadius: 8, cursor: mine > 0 ? "pointer" : "default", color: mine > 0 ? "#c0392b" : "#c9ced8", background: "#fff", border: "2px solid " + (mine > 0 ? "#2b2f38" : "#e2e6ee") }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0} title={L.removeOne}>−</button>
-              <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center" }}>{mine}</span>
+              {/* Het cijfer was grijs, of je nu niets of drie stuks had. Zodra er iets op
+                  jouw naam staat wordt het een gouden pil met een vinkje — dezelfde kleur
+                  als de rij eromheen, zodat "dit is van mij" één taal spreekt. */}
+              {mine > 0
+                ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#5a4a1a", borderRadius: 8, padding: "5px 10px", fontSize: 17, fontWeight: 800, lineHeight: 1 }}>✓ {mine}</span>
+                : <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#c9ced8" }}>0</span>}
               <button style={{ ...S.iconBtn, width: 32, height: 32, fontSize: 19, background: "rgba(27,42,74,0.12)" }} onClick={() => setClaim(it.id, meId, mine + 1)} disabled={open <= 0}>+</button>
             </div>
           )
