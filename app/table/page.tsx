@@ -1234,7 +1234,8 @@ const STRINGS = {
     whatYouTook: "Wat jij zelf nam",
     adminNoConfirmNote: "Je bevestigt niets apart \u2014 als beheerder sluit je straks de hele rekening af. Dit is om te zien wat er op jouw naam staat.",
     nothingYoursYet: "Je hebt zelf nog niets aangeduid.",
-    otherQ: "iemand anders?",
+    otherQ: "+ iemand?",
+    perPieceSuffix: "/stuk",
     iTakeOne: "Ik neem er een",
     addSomeoneElse: "Iemand anders toevoegen",
     addedByYou: "door jou toegevoegd",
@@ -1909,7 +1910,8 @@ const STRINGS = {
     whatYouTook: "Ce que tu as pris toi-m\u00eame",
     adminNoConfirmNote: "Tu ne confirmes rien s\u00e9par\u00e9ment \u2014 en tant qu'organisateur, tu cl\u00f4tures ensuite toute l'addition. Ceci sert \u00e0 voir ce qui est \u00e0 ton nom.",
     nothingYoursYet: "Tu n'as encore rien coch\u00e9 pour toi.",
-    otherQ: "quelqu'un d'autre\u00a0?",
+    otherQ: "+ quelqu'un\u00a0?",
+    perPieceSuffix: "/pi\u00e8ce",
     iTakeOne: "J'en prends un",
     addSomeoneElse: "Ajouter quelqu'un d'autre",
     addedByYou: "ajout\u00e9s par toi",
@@ -7854,12 +7856,15 @@ function WieNogBtn({ onClick, open, title }: { onClick: () => void; open?: boole
   const [lang] = useLang()
   const L = STRINGS[lang]
   return (
+    // Neutraal grijs, niet turkoois: op dit scherm betekent elke kleur iets — goud is van
+    // jou, blauw is van de tafel — en "er komt een naam bij" is geen kleur, maar een
+    // handeling. Gestippeld, want het is een plek waar nog iets bij kan.
     <button onClick={onClick} title={title} aria-label={title} style={{
       display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0, cursor: "pointer", fontFamily: "inherit",
-      fontSize: 15, fontWeight: 800, borderRadius: 10, padding: "6px 11px",
-      background: open ? "rgba(20,153,176,0.16)" : "transparent",
-      border: `1.5px dashed ${open ? "rgba(20,153,176,0.7)" : "rgba(20,153,176,0.5)"}`,
-      color: "#0f7488",
+      fontSize: 13, fontWeight: 700, borderRadius: 10, padding: "5px 9px",
+      background: open ? "rgba(18,58,66,0.07)" : "#fff",
+      border: `1.5px dashed ${open ? "rgba(18,58,66,0.45)" : "rgba(18,58,66,0.3)"}`,
+      color: "#5d7478",
     }}>{L.otherQ}</button>
   )
 }
@@ -7985,6 +7990,14 @@ const DELER_PIL = {
   border: "none",
   fontFamily: "inherit",
 } as const
+
+// Elk item staat op zijn eigen witte kaartje, met de lijst op een licht grijze ondergrond
+// eromheen. Een dun lijntje tussen de rijen volstond niet: elke rij bestaat uit drie lagen
+// (wat het is, wie het nam, wat je ermee kan) die ongeveer even zwaar wegen, dus je zag
+// niet waar het één ophield.
+const ITEMBAK = { background: "rgba(18,58,66,0.045)", borderRadius: 12, padding: 7 } as const
+const ITEMKAART = { background: "#fff", border: "1px solid rgba(18,58,66,0.1)", borderRadius: 11,
+  padding: "11px 10px", marginBottom: 7, boxShadow: "0 1px 2px rgba(18,58,66,0.04)" } as const
 
 const JOUW_STREEP = {
   borderLeft: "5px solid #ecc564",
@@ -8309,10 +8322,10 @@ function ClaimScreen(props: {
         flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10,
         padding: "5px 9px", cursor: "pointer", fontFamily: "inherit", border: "none", background: "#4a5a9e",
       } : { flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "5px 9px", cursor: "pointer",
-        fontFamily: "inherit", border: "1.5px dashed rgba(90,108,166,0.6)", background: "#fff" }}>
+        fontFamily: "inherit", border: "1.5px dashed rgba(90,108,166,0.5)", background: "#fff" }}>
       <ShareIcon on={it.is_shared} size={13} kleur={!stil && it.is_shared ? "#fff" : INDIGO.tekst} />
       {!stil && (
-        <span style={{ fontSize: 13, fontWeight: 800, color: it.is_shared ? "#fff" : INDIGO.tekst }}>
+        <span style={{ fontSize: 13, fontWeight: it.is_shared ? 800 : 700, color: it.is_shared ? "#fff" : "#5a6ca6" }}>
           {it.is_shared ? `${L.sharedOnShort} ✓` : L.sharedQ}
         </span>
       )}
@@ -8428,6 +8441,7 @@ function ClaimScreen(props: {
             : (
               <>
                 {klaarBlok()}
+                <div style={ITEMBAK}>
                 {items.map((it) => {
                   // Volledig toegewezen gewone items zitten achter de knop bovenaan. Een
                   // gedeelde fles blijft altijd staan: verdween ze, dan kon niemand er nog
@@ -8446,14 +8460,19 @@ function ClaimScreen(props: {
                     // voorbijlezen dat hier iets anders geldt. Zit jij er zelf in, dan
                     // wint het gouden vlak — dat zegt iets over jou, niet over het item.
                     return (
-                      <div key={it.id} id={`item-${it.id}`} data-rij={it.id} style={{ padding: "10px 8px", marginBottom: 4, ...DEEL_STREEP }}>
+                      <div key={it.id} id={`item-${it.id}`} data-rij={it.id} style={{ ...ITEMKAART, ...DEEL_STREEP, paddingTop: 11, paddingBottom: 11, paddingRight: 10 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             {/* Zelfde plaats en zelfde grootte als bij een gewoon item: het
                                 bedrag naast de naam, niet klein op de regel eronder. */}
                             <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                              <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
-                              <span style={{ fontSize: 18, fontWeight: 800, color: "#0f7d90", flexShrink: 0 }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
+                              <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>
+                                {it.name}
+                                <span style={{ whiteSpace: "nowrap" }}>
+                                  <span style={{ fontSize: 15.5, color: "#b9c7ca", fontWeight: 400 }}>{" — "}</span>
+                                  <span style={{ fontSize: 15.5, fontWeight: 800, color: "#123a42" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
+                                </span>
+                              </span>
                               <span style={{ fontSize: 14.5, color: "#999", flexShrink: 0 }}>{L.totalLower}</span>
                               {/* Dezelfde pil als op de bon: het deelteken mét het woord erbij.
                                   Hiervoor stonden er twee verschillende tekens op twee schermen —
@@ -8595,22 +8614,29 @@ function ClaimScreen(props: {
                     // Elke tik ergens in deze rij markeert hem als "waar je net aan zat".
                     // Zo hoeft niet elke knop apart te melden dat je hier bezig was.
                     <div key={it.id} data-rij={it.id} onClickCapture={() => setNetId(it.id)}
-                      style={{ padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", ...(highlight ? JOUW_STREEP : null) }}>
+                      style={{ ...ITEMKAART, ...(highlight ? JOUW_STREEP : null) }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.quantity}× {it.name}</span>
-                            {/* Alles toegewezen: de vraag hoeft niet meer te roepen, maar ze
-                                blijft te stellen. Enkel het teken, op de plaats waar de volle
-                                pil anders stond — zo verspringt er niets. */}
-                            {open <= 0 && shareBtn(it, true)}
+                            {/* Prijs achter een liggend streepje, in het donker: turkoois trok
+                                de aandacht naar een cijfer dat je zelden nodig hebt. Hij stond
+                                ook nog eens op de regel eronder — nu maar één keer. */}
+                            <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>
+                              {it.quantity}× {it.name}
+                              <span style={{ whiteSpace: "nowrap" }}>
+                                <span style={{ fontSize: 15.5, color: "#b9c7ca", fontWeight: 400 }}>{" — "}</span>
+                                <span style={{ fontSize: 15.5, fontWeight: 800, color: "#123a42" }}>€{it.unit_price.toFixed(2).replace(".", ",")}{it.quantity > 1 ? L.perPieceSuffix : ""}</span>
+                              </span>
+                              {/* Alles toegewezen: de vraag hoeft niet meer te roepen, maar ze
+                                  blijft te stellen. Enkel het teken, vlak achter de prijs, zodat
+                                  het niet als los blokje op een eigen regel belandt. */}
+                              {open <= 0 && <span style={{ marginLeft: 7, verticalAlign: "middle", display: "inline-flex" }}>{shareBtn(it, true)}</span>}
+                            </span>
                           </div>
                           {/* Hier stond rechts een rode knop "2 open — wijs toe". Die deed twee
                               dingen tegelijk: melden hoeveel er nog vrij was, én de kiezer openen.
                               Het getal hoort bij de prijsregel, het openen bij het knopje onderaan. */}
                           <div style={{ fontSize: 15.5, color: "#999" }}>
-                            €{it.unit_price.toFixed(2).replace(".", ",")}/stuk
-                            {" · "}
                             <span style={{ fontWeight: 700, color: open > 0 ? "#c0392b" : "#1f8a4c" }}>{open > 0 ? L.stillFree(open) : L.allClaimedWord}</span>
                           </div>
                         </div>
@@ -8623,7 +8649,9 @@ function ClaimScreen(props: {
                             <button onClick={() => setClaim(it.id, adminPid, Math.max(0, mineQ - 1))} disabled={mineQ <= 0} title={L.removeOne} aria-label={L.removeOne}
                               style={{ width: 40, height: 33, borderRadius: 8, fontSize: 21, fontWeight: 800, lineHeight: 1, fontFamily: "inherit",
                                 cursor: mineQ > 0 ? "pointer" : "default", background: "#fff",
-                                color: mineQ > 0 ? "#c0392b" : "#c9ced8", border: "2px solid " + (mineQ > 0 ? "#2b2f38" : "#e2e6ee") }}>−</button>
+                                // Het minnetje stond in het rood, alsof je iets stukmaakte. Het
+                                // haalt er gewoon eentje af, net zoals de plus er eentje bij doet.
+                                color: mineQ > 0 ? "#2b3f44" : "#c9ced8", border: "2px solid " + (mineQ > 0 ? "#2b2f38" : "#e2e6ee") }}>−</button>
                             {/* Zelfde gouden telpil als op het gastenscherm: het cijfer zegt
                                 nu zelf dat het van jou is, niet alleen de rij eronder. */}
                             {mineQ > 0
@@ -8713,6 +8741,7 @@ function ClaimScreen(props: {
                     </div>
                   )
                 })}
+                </div>
               </>
             )}
 
@@ -8900,6 +8929,7 @@ function ClaimScreen(props: {
         {/* Hetzelfde blok als bij de beheerder, maar zonder de voortgangsbalk. */}
         {items.length > 0 && !vast && klaarBlok()}
         <div style={vast ? { pointerEvents: "none", opacity: 0.55 } : undefined}>
+        <div style={ITEMBAK}>
 
         {items.map((it) => {
           // Zelfde regel als bij de beheerder: wat toegewezen is, zit achter de knop bovenaan.
@@ -8922,7 +8952,7 @@ function ClaimScreen(props: {
               // Dezelfde vlakken als op het beheerdersscherm: blauw voor een gedeeld item,
               // goud zodra jij er zelf in zit. Een gast zag daarvoor alleen witte regels en
               // moest bij elk item opnieuw lezen wat hij al had aangeduid.
-              <div key={it.id} style={{ padding: "10px 8px", marginBottom: 4, ...DEEL_STREEP }}>
+              <div key={it.id} data-rij={it.id} style={{ ...ITEMKAART, ...DEEL_STREEP, paddingTop: 11, paddingBottom: 11, paddingRight: 10 }}>
                 {/* Naam en bedrag over de volle breedte, de standen op een eigen regel:
                     met alles op één lijn werd een lange itemnaam afgekapt op een telefoon. */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -8933,8 +8963,13 @@ function ClaimScreen(props: {
                         prijs, dus hoort ze op dezelfde plaats — de uitleg erover blijft
                         eronder staan. */}
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
-                      <span style={{ fontSize: 18, fontWeight: 800, flexShrink: 0, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
+                      <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>
+                        {it.name}
+                        <span style={{ whiteSpace: "nowrap" }}>
+                          <span style={{ fontSize: 15.5, color: "#b9c7ca", fontWeight: 400 }}>{" — "}</span>
+                          <span style={{ fontSize: 15.5, fontWeight: 800, color: it.unit_price <= 0.0001 ? "#c0392b" : "#123a42" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
+                        </span>
+                      </span>
                       {/* Deelde de gast het zelf, dan is de pil ook de knop om het terug te
                           draaien — één ding, net als bij de beheerder. Deelde iemand anders
                           het, dan is het enkel een label: hij leest het, hij beslist het niet. */}
@@ -9052,11 +9087,16 @@ function ClaimScreen(props: {
           return (
             // Geen gekleurd vlak meer: een goud balkje vooraan zodra jij erin zit, en verder
             // zeggen de gouden pil, het gouden aantal en de groene of rode woorden de rest.
-            <div key={it.id} data-rij={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 8px", borderBottom: "1px solid rgba(0,0,0,0.05)", ...(mine > 0 ? JOUW_STREEP : null) }}>
+            <div key={it.id} data-rij={it.id} style={{ display: "flex", alignItems: "center", gap: 8, ...ITEMKAART, ...(mine > 0 ? JOUW_STREEP : null) }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}><span style={{ color: "#0f7d90" }}>{total}×</span> {it.name}</span>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
+                  <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>
+                    {total}× {it.name}
+                    <span style={{ whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: 15.5, color: "#b9c7ca", fontWeight: 400 }}>{" — "}</span>
+                      <span style={{ fontSize: 15.5, fontWeight: 800, color: it.unit_price <= 0.0001 ? "#c0392b" : "#123a42" }}>€{it.unit_price.toFixed(2).replace(".", ",")}{total > 1 ? L.perPieceSuffix : ""}</span>
+                    </span>
+                  </span>
                   {/* Dezelfde regel als bij de beheerder: is alles toegewezen, dan blijft
                       alleen het teken over, hier bij de naam. Een gast die dit omzet terwijl
                       er al iemand anders op staat, krijgt het te horen — dat wist immers
@@ -9103,7 +9143,7 @@ function ClaimScreen(props: {
                       {open > 0 && <div style={{ marginTop: 7 }}>{shareBtn(it)}</div>}
                     </>}
               </div>
-              <button style={{ width: 42, height: 34, fontSize: 22, fontWeight: 800, lineHeight: 1, borderRadius: 8, cursor: mine > 0 ? "pointer" : "default", color: mine > 0 ? "#c0392b" : "#c9ced8", background: "#fff", border: "2px solid " + (mine > 0 ? "#2b2f38" : "#e2e6ee") }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0} title={L.removeOne}>−</button>
+              <button style={{ width: 42, height: 34, fontSize: 22, fontWeight: 800, lineHeight: 1, borderRadius: 8, cursor: mine > 0 ? "pointer" : "default", color: mine > 0 ? "#2b3f44" : "#c9ced8", background: "#fff", border: "2px solid " + (mine > 0 ? "#2b2f38" : "#e2e6ee") }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0} title={L.removeOne}>−</button>
               {/* Het cijfer was grijs, of je nu niets of drie stuks had. Zodra er iets op
                   jouw naam staat wordt het een gouden pil met een vinkje — dezelfde kleur
                   als de rij eromheen, zodat "dit is van mij" één taal spreekt. */}
@@ -9117,6 +9157,7 @@ function ClaimScreen(props: {
             </div>
           )
         })}
+        </div>
         </div>
         </>)}
         </div>
