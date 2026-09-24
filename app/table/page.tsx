@@ -1140,7 +1140,7 @@ const STRINGS = {
     assignOwnBody: (name: string | undefined) => `${name} kwam niet via de QR binnen, dus jij tikt aan wat hij nam. Dat is hier de gewone gang van zaken.\n\nDit vragen we maar één keer — daarna gaat het meteen door.`,
     assignOwnYes: "Ja, doorgaan",
     doneProgress: (n: number, t: number) => `${n} van ${t} items toegewezen`,
-    sharedExtra: (n: number) => `+ ${n} gedeeld`,
+    openToChange: "aanpassen",
     showThose: (n: number) => `die ${n} tonen`,
     foldAgain: "weer inklappen",
     unitsClaimed: "Stuks geclaimd",
@@ -1820,7 +1820,7 @@ const STRINGS = {
     assignOwnBody: (name: string | undefined) => `${name} n'est pas arrivé via le QR, c'est donc toi qui coches ce qu'il a pris. C'est le fonctionnement normal ici.\n\nOn ne te le demande qu'une seule fois — ensuite ça passe directement.`,
     assignOwnYes: "Oui, continuer",
     doneProgress: (n: number, t: number) => `${n} sur ${t} articles attribués`,
-    sharedExtra: (n: number) => `+ ${n} partagé${n === 1 ? "" : "s"}`,
+    openToChange: "modifier",
     showThose: (n: number) => `afficher ces ${n}`,
     foldAgain: "replier",
     unitsClaimed: "Unités attribuées",
@@ -8164,51 +8164,87 @@ function ClaimScreen(props: {
   // niet meer te roepen: enkel het teken blijft over, zonder woord, op de achtergrond. Hij
   // verdwijnt niet helemaal, want dit is de énige plek in de app waar een item nog op
   // gedeeld gezet kan worden — en dat is net wat je ontdekt wanneer alles al verdeeld is.
-  // Wat volledig toegewezen is, verdwijnt uit de lijst en zit achter één knop. Er is maar
-  // één stand die telt: verborgen of getoond.
-  // Alles telt in ITEMS, ook de balk — zo slaat het getal in de zin op precies hetzelfde
-  // als het getal op de knop, en zie je na een tik even veel regels verschijnen als er
-  // aangekondigd waren. Gedeelde items tellen niet mee en verdwijnen nooit: die hebben geen
-  // aantal om vol te maken, er kan altijd nog iemand bij delen. Ze worden apart vermeld.
-  const normaalItems = items.filter((it) => !it.is_shared)
-  const gedeeldeItems = items.filter((it) => it.is_shared)
-  const afgewerkt = normaalItems.filter((it) => it.quantity - claimedQty(it.id) <= 0)
-  const verborgen = (it: BillItem) => !allesOpen && !it.is_shared && it.quantity - claimedQty(it.id) <= 0
+  // Wat toegewezen is, verdwijnt uit de lijst en zit achter één knop. Er is maar één stand
+  // die telt: verborgen of getoond.
+  // Alles telt in ITEMS, ook de balk — zo slaat het getal in de zin op precies hetzelfde als
+  // het getal op de knop, en zie je na een tik even veel regels verschijnen als er
+  // aangekondigd waren. Gedeelde items tellen mee zodra er één deler is; zolang niemand ze
+  // nam, blijven ze gewoon in de lijst staan — een fles die van niemand is mag niet uit het
+  // zicht verdwijnen, want dan nodigt hij ook niemand meer uit.
+  const gereed = (it: BillItem) => it.is_shared ? sharerIds(it.id).length > 0 : it.quantity - claimedQty(it.id) <= 0
+  const afgewerkt = items.filter(gereed)
+  const verborgen = (it: BillItem) => !allesOpen && gereed(it)
+  // Ingeklapt zou een gedeelde fles helemaal uit beeld zijn en kon niemand er nog bij. Daarom
+  // blijft er per gedeelde fles één strookje vastgepind onder de knop: wie erop staat, wat
+  // het per persoon kost, en één tik om zelf mee te doen of eruit te stappen.
+  const kortGedeeld = allesOpen ? [] : items.filter((it) => it.is_shared && sharerIds(it.id).length > 0)
 
   // Eigen kader rond de voortgang, want los boven de lijst leek de zin bij het eerste item
   // te horen. Bovenin waar je staat, onderin — over de volle breedte, met een scheidingslijn
   // ertussen — de knop. Die volle balk is met de duim niet te missen.
   // `metBalk` staat alleen bij de beheerder aan: hoever de hele tafel staat is zijn werk.
   const klaarBlok = (metBalk: boolean) => {
-    if (normaalItems.length === 0) return null
-    const af = afgewerkt.length >= normaalItems.length
+    if (items.length === 0) return null
+    const af = afgewerkt.length >= items.length
     const rand = allesOpen ? "rgba(20,153,176,0.35)" : "rgba(18,58,66,0.14)"
+    const mijnZitjes = meId ? Math.max(1, seatsOf(meId)) : 1
     return (
-      <div style={{ border: `1px solid ${rand}`, borderRadius: 13, overflow: "hidden", marginBottom: 11 }}>
-        <div style={{ padding: metBalk ? "10px 11px 11px" : "10px 11px", background: allesOpen ? "rgba(20,153,176,0.06)" : "rgba(18,58,66,0.035)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", fontSize: 14.5, fontWeight: 800, color: af ? "#1f8a4c" : "#2b4f56" }}>
-            <span>{L.doneProgress(afgewerkt.length, normaalItems.length)}</span>
-            {gedeeldeItems.length > 0 && (
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: INDIGO.tekst, background: INDIGO.vlak, borderRadius: 8, padding: "2px 8px" }}>
-                {L.sharedExtra(gedeeldeItems.length)}
-              </span>
+      <>
+        <div style={{ border: `1px solid ${rand}`, borderRadius: 13, overflow: "hidden", marginBottom: kortGedeeld.length > 0 ? 6 : 11 }}>
+          <div style={{ padding: metBalk ? "10px 11px 11px" : "10px 11px", background: allesOpen ? "rgba(20,153,176,0.06)" : "rgba(18,58,66,0.035)" }}>
+            <div style={{ fontSize: 14.5, fontWeight: 800, color: af ? "#1f8a4c" : "#2b4f56" }}>
+              {L.doneProgress(afgewerkt.length, items.length)}
+            </div>
+            {metBalk && (
+              <div style={{ height: 7, borderRadius: 4, background: "rgba(18,58,66,0.10)", overflow: "hidden", marginTop: 7 }}>
+                <div style={{ height: "100%", width: `${Math.round((afgewerkt.length / items.length) * 100)}%`, borderRadius: 4, background: "linear-gradient(90deg,#1f8a4c,#27ae60)", transition: "width 220ms ease-out" }} />
+              </div>
             )}
           </div>
-          {metBalk && (
-            <div style={{ height: 7, borderRadius: 4, background: "rgba(18,58,66,0.10)", overflow: "hidden", marginTop: 7 }}>
-              <div style={{ height: "100%", width: `${Math.round((afgewerkt.length / normaalItems.length) * 100)}%`, borderRadius: 4, background: "linear-gradient(90deg,#1f8a4c,#27ae60)", transition: "width 220ms ease-out" }} />
-            </div>
+          {afgewerkt.length > 0 && (
+            <button onClick={() => setAllesOpen((v) => !v)}
+              style={{ width: "100%", boxSizing: "border-box", border: "none", borderTop: `1px solid ${allesOpen ? "rgba(20,153,176,0.3)" : "rgba(18,58,66,0.12)"}`,
+                background: allesOpen ? "rgba(20,153,176,0.10)" : "#fff", padding: "9px", textAlign: "center",
+                fontSize: 14, fontWeight: 800, color: "#0f7488", cursor: "pointer", fontFamily: "inherit" }}>
+              {allesOpen ? `${L.foldAgain} \u25b4` : `${L.showThose(afgewerkt.length)} \u25be`}
+            </button>
           )}
         </div>
-        {afgewerkt.length > 0 && (
-          <button onClick={() => setAllesOpen((v) => !v)}
-            style={{ width: "100%", boxSizing: "border-box", border: "none", borderTop: `1px solid ${allesOpen ? "rgba(20,153,176,0.3)" : "rgba(18,58,66,0.12)"}`,
-              background: allesOpen ? "rgba(20,153,176,0.10)" : "#fff", padding: "9px", textAlign: "center",
-              fontSize: 14, fontWeight: 800, color: "#0f7488", cursor: "pointer", fontFamily: "inherit" }}>
-            {allesOpen ? `${L.foldAgain} \u25b4` : `${L.showThose(afgewerkt.length)} \u25be`}
-          </button>
-        )}
-      </div>
+        {kortGedeeld.map((it, i) => {
+          const heads = shareHeads(it.id)
+          const perHead = heads > 0 ? itemTotal(it) / heads : 0
+          const ikDeel = !!meId && sharerIds(it.id).includes(meId)
+          // Met z'n tweeën op één plaats kan je niet in één tik "ik" zeggen — dan moet je per
+          // persoon kiezen, en dat kan alleen op de volledige regel. De knop opent hem.
+          const perPersoon = mijnZitjes > 1
+          return (
+            <div key={`kort-${it.id}`} style={{ display: "flex", alignItems: "center", gap: 8, background: INDIGO.vlak,
+              borderLeft: "5px solid #7b87c4", borderRadius: 10, padding: "7px 9px",
+              marginBottom: i === kortGedeeld.length - 1 ? 11 : 5 }}>
+              <span style={{ flexShrink: 0, display: "inline-flex" }}><ShareIcon on size={14} /></span>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 800, color: "#2b3f6b", overflowWrap: "anywhere" }}>
+                {it.name}<span style={{ fontWeight: 700, color: "#5a6ca6" }}> · {L.nSharers(heads)} · {L.eachAmount(perHead)}</span>
+              </span>
+              {meId && (perPersoon ? (
+                <button onClick={() => setAllesOpen(true)}
+                  style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", fontSize: 12.5, fontWeight: 800, borderRadius: 9,
+                    padding: "4px 9px", border: "1.5px dashed rgba(90,108,166,0.6)", background: "#fff", color: "#3f4a8a",
+                    cursor: "pointer", fontFamily: "inherit" }}>{L.openToChange}</button>
+              ) : (
+                <button onClick={() => toggleShareClaim(it.id, meId)}
+                  style={ikDeel
+                    ? { ...DELER_PIL, flexShrink: 0, fontSize: 12.5, padding: "3px 3px 3px 9px", cursor: "pointer" }
+                    : { flexShrink: 0, display: "inline-flex", alignItems: "center", fontSize: 12.5, fontWeight: 800, borderRadius: 9,
+                        padding: "4px 9px", border: "1.5px dashed rgba(90,108,166,0.6)", background: "#fff", color: "#3f4a8a",
+                        cursor: "pointer", fontFamily: "inherit" }}>
+                  {ikDeel ? L.iShareYes : L.iShareNo}
+                  {ikDeel && <span style={{ ...KRUISJE, width: 20, height: 20, borderRadius: 6, fontSize: 11 }}>✕</span>}
+                </button>
+              ))}
+            </div>
+          )
+        })}
+      </>
     )
   }
 
@@ -8343,6 +8379,10 @@ function ClaimScreen(props: {
               <>
                 {klaarBlok(true)}
                 {items.map((it) => {
+                  // Toegewezen — gewoon én gedeeld — zit achter de knop bovenaan. Voor een
+                  // gedeelde fles staat er dan een kort strookje onder die knop, zodat er
+                  // altijd nog iemand bij kan.
+                  if (verborgen(it)) return null
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
                   if (it.is_shared) {
@@ -8490,8 +8530,6 @@ function ClaimScreen(props: {
                   // Jouw eigen stuks staan in de teller rechts, dus hier alleen de anderen.
                   const anderen = who.filter((x) => x.p.id !== adminPid)
                   const highlight = adminPid && mineQ > 0
-                  // Helemaal verdeeld? Dan staat hij achter de knop bovenaan.
-                  if (verborgen(it)) return null
                   // Het gouden en het groene vlak zijn weg: drie gekleurde vlakken onder
                   // elkaar maakten van elke rij een mededeling. Wat jij nam zegt het balkje
                   // vooraan, samen met de gouden pil en het gouden aantal; dat alles verdeeld
@@ -8793,6 +8831,8 @@ function ClaimScreen(props: {
         <div style={vast ? { pointerEvents: "none", opacity: 0.55 } : undefined}>
 
         {items.map((it) => {
+          // Zelfde regel als bij de beheerder: wat toegewezen is, zit achter de knop bovenaan.
+          if (verborgen(it)) return null
           const total = it.quantity
           const claimed = claimedQty(it.id)
           const mine = myQty(it.id, meId)
@@ -8942,8 +8982,6 @@ function ClaimScreen(props: {
               </div>
             )
           }
-          // Helemaal verdeeld? Dan staat hij achter de knop bovenaan — ook hier.
-          if (verborgen(it)) return null
           return (
             // Geen gekleurd vlak meer: een goud balkje vooraan zodra jij erin zit, en verder
             // zeggen de gouden pil, het gouden aantal en de groene of rode woorden de rest.
