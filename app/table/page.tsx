@@ -1019,6 +1019,8 @@ const STRINGS = {
     settleDoneKeep: "Je groepje staat 7 dagen op het startscherm, onder \u201cJouw groepen\u201d. Daarna wordt het automatisch gewist.",
     keptShortPre: "\ud83d\udcc2 Nog 7 dagen bewaard op ",
     whatNowHead: "Nog iets samen met de groep?",
+    andWord: "en",
+    notConfirmedYet: (n: number, namen: string) => n === 1 ? `${namen} bevestigde zijn bestelling nog niet.` : `${n} gasten bevestigden hun bestelling nog niet: ${namen}.`,
     ideaBtnTitle: "Iemand een idee?",
     ideaBtnSub: "Wij wel!",
     // Kop van de tekst die je deelt, plus de regel per persoon en de sluitregel.
@@ -1187,7 +1189,7 @@ const STRINGS = {
     sharedByOther: "Alleen wie dit deelde of de beheerder kan het terugdraaien.",
     shareLocked: "Vastgezet door de beheerder",
     stillFree: (n: number) => `nog ${n} vrij`,
-    allClaimedWord: "alles genomen",
+    allClaimedWord: "alles toegewezen",
     aboutToConfirmTitle: "Dit ga ik bevestigen",
     whatIConfirmed: "Wat ik bevestigde",
     helloName: (naam: string) => `Hallo ${naam}`,
@@ -1705,6 +1707,8 @@ const STRINGS = {
     settleDoneKeep: "Ton groupe reste 7 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb. Ensuite il est effacé automatiquement.",
     keptShortPre: "📂 Encore 7 jours sur ",
     whatNowHead: "Encore un truc avec le groupe ?",
+    andWord: "et",
+    notConfirmedYet: (n: number, namen: string) => n === 1 ? `${namen} n\u2019a pas encore confirm\u00e9 sa commande.` : `${n} invit\u00e9s n\u2019ont pas encore confirm\u00e9 leur commande\u00a0: ${namen}.`,
     ideaBtnTitle: "Une idée, quelqu'un ?",
     ideaBtnSub: "Nous oui !",
     ideaListTitle: "Des id\u00e9es \u00e0 faire en groupe",
@@ -1868,7 +1872,7 @@ const STRINGS = {
     sharedByOther: "Seul celui qui l'a partagé ou l'organisateur peut l'annuler.",
     shareLocked: "Verrouillé par l'administrateur",
     stillFree: (n: number) => `encore ${n} de libre`,
-    allClaimedWord: "tout est pris",
+    allClaimedWord: "tout est attribué",
     aboutToConfirmTitle: "Ce que je vais confirmer",
     whatIConfirmed: "Ce que j’ai confirmé",
     helloName: (naam: string) => `Salut ${naam}`,
@@ -1959,7 +1963,6 @@ const WOORD_UNDO = "M105.38 44.98V74.9H97.76V71.12Q96.31 73.06 93.96 74.17Q91.61
 const WOORD_RESTO = "M249.48 74.9 241.16 60.21H237.6V74.9H230.04V37.21H244.19Q248.56 37.21 251.64 38.75Q254.72 40.29 256.26 42.91Q257.8 45.52 257.8 48.76Q257.8 52.49 255.64 55.49Q253.48 58.48 249.21 59.62L258.23 74.9ZM237.6 54.54H243.92Q247 54.54 248.51 53.06Q250.02 51.57 250.02 48.93Q250.02 46.33 248.51 44.9Q247 43.47 243.92 43.47H237.6ZM291.65 62.21H269.78Q270.05 65.45 272.05 67.29Q274.04 69.12 276.96 69.12Q281.17 69.12 282.95 65.5H291.11Q289.81 69.82 286.14 72.61Q282.47 75.39 277.12 75.39Q272.8 75.39 269.37 73.47Q265.94 71.55 264.03 68.04Q262.11 64.53 262.11 59.94Q262.11 55.3 264 51.79Q265.89 48.28 269.29 46.39Q272.69 44.5 277.12 44.5Q281.39 44.5 284.76 46.33Q288.14 48.17 290 51.55Q291.86 54.92 291.86 59.29Q291.86 60.91 291.65 62.21ZM284.03 57.13Q283.98 54.22 281.93 52.46Q279.88 50.71 276.91 50.71Q274.1 50.71 272.18 52.41Q270.26 54.11 269.83 57.13ZM295.15 65.45H302.77Q302.98 67.18 304.47 68.31Q305.95 69.45 308.17 69.45Q310.33 69.45 311.54 68.58Q312.76 67.72 312.76 66.37Q312.76 64.91 311.27 64.18Q309.79 63.45 306.55 62.59Q303.2 61.78 301.06 60.91Q298.93 60.05 297.39 58.27Q295.85 56.49 295.85 53.46Q295.85 50.98 297.28 48.93Q298.72 46.87 301.39 45.69Q304.06 44.5 307.68 44.5Q313.03 44.5 316.21 47.17Q319.4 49.84 319.72 54.38H312.49Q312.32 52.6 311 51.55Q309.68 50.49 307.46 50.49Q305.41 50.49 304.3 51.25Q303.2 52 303.2 53.35Q303.2 54.87 304.71 55.65Q306.22 56.43 309.41 57.24Q312.65 58.05 314.75 58.92Q316.86 59.78 318.4 61.59Q319.94 63.4 319.99 66.37Q319.99 68.96 318.56 71.01Q317.13 73.06 314.46 74.23Q311.78 75.39 308.22 75.39Q304.55 75.39 301.63 74.06Q298.72 72.74 297.01 70.47Q295.31 68.2 295.15 65.45ZM334.4 51.19V65.67Q334.4 67.18 335.13 67.85Q335.86 68.53 337.59 68.53H341.1V74.9H336.35Q326.79 74.9 326.79 65.61V51.19H323.23V44.98H326.79V37.59H334.4V44.98H341.1V51.19ZM344.06 59.94Q344.06 55.35 346.09 51.84Q348.11 48.33 351.62 46.42Q355.13 44.5 359.45 44.5Q363.77 44.5 367.28 46.42Q370.79 48.33 372.82 51.84Q374.84 55.35 374.84 59.94Q374.84 64.53 372.76 68.04Q370.69 71.55 367.15 73.47Q363.61 75.39 359.24 75.39Q354.92 75.39 351.46 73.47Q348.01 71.55 346.03 68.04Q344.06 64.53 344.06 59.94ZM367.07 59.94Q367.07 55.68 364.83 53.38Q362.59 51.09 359.35 51.09Q356.11 51.09 353.92 53.38Q351.73 55.68 351.73 59.94Q351.73 64.21 353.86 66.5Q356 68.8 359.24 68.8Q361.29 68.8 363.1 67.8Q364.91 66.8 365.99 64.8Q367.07 62.8 367.07 59.94Z"
 
 // Waar Rundo draait. Pas dit aan als het adres wijzigt.
-const PARTY_URL = "/party"
 // "Probeer het eens" gaat naar de kiespagina en niet rechtstreeks naar /party: daar zie
 // je Rundo Resto en Rundo naast elkaar staan, en kies je zelf waar je naartoe wil.
 const KIEZER_URL = "/"
@@ -2178,9 +2181,9 @@ export default function RundoTable() {
   // toont o.a. gast-opmerkingen bij de admin. Titel optioneel.
   const [centerNote, setCenterNote] = useState<{ title?: string; body: string; actionLabel?: string; onAction?: () => void; dismissLabel?: string } | null>(null)
   // In-app ja/nee-bevestiging — vervangt de browser-confirm die op een foutmelding lijkt.
-  const [confirmDlg, setConfirmDlg] = useState<{ title?: string; body: string; yes: string; danger?: boolean; onYes: () => void } | null>(null)
-  const askConfirm = (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean }) =>
-    setConfirmDlg({ body, yes, onYes, title: opts?.title, danger: opts?.danger })
+  const [confirmDlg, setConfirmDlg] = useState<{ title?: string; body: string; note?: string; yes: string; danger?: boolean; onYes: () => void } | null>(null)
+  const askConfirm = (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean; note?: string }) =>
+    setConfirmDlg({ body, yes, onYes, title: opts?.title, danger: opts?.danger, note: opts?.note })
   // Zolang het bontotaal niet nagekeken én bevestigd is, blijft de rest op slot: items,
   // btw, gasten en toewijzen. Anders bouw je de hele verdeling op een verkeerd bedrag.
   const requireTotal = () => {
@@ -2292,7 +2295,6 @@ export default function RundoTable() {
   const [showTaxInfo, setShowTaxInfo] = useState(false)
   const [taxConfig, setTaxConfig] = useState<string | null>(null)
   const [bezetOpen, setBezetOpen] = useState(false)  // ingenomen plaatsen uitgeklapt
-  const [herinnerd, setHerinnerd] = useState(0)  // tijdstip van de laatste herinnering
   // Het verzoekvenster van de gast: null = dicht.
   const [editItem, setEditItem] = useState<BillItem | null>(null)
   // Het item zoals het was bij het openen. Zonder dit kan je niet zien of een tik
@@ -4065,9 +4067,20 @@ export default function RundoTable() {
     // Dat kan kloppen, maar het is vaker een vergissing dan niet.
     const zonderItems = participants.filter((p) => !claims.some((c) => c.participant_id === p.id && c.quantity > 0))
       .map((p) => L.nothingForPerson(naamVan(p)))
+    // Bevestigen door de gasten houdt niets tegen — het zegt alleen of iemand zijn deel al
+    // nakeek, en de bedragen veranderen er niet door. Maar de beheerder zag nergens dat er
+    // nog iemand bezig was, net op het moment dat hij de rekening dichtdoet. Dus: melden,
+    // met de namen erbij, en gewoon door kunnen gaan.
+    const nogNiet = participants.filter((p) => !isFreeSpot(p) && !isConfirmed(p.id)).map((p) => naamVan(p))
     const naarTipOfAfsluiten = () => {
       if (!hasTip) { setShowTipReminder(true); return }
-      askConfirm(L.finalizeConfirm, L.finalizeBtn, () => finalizeBill(true))
+      // Alle namen voluit: wie ontbreekt is precies wat je wil weten, en "en 2 anderen"
+      // stuurt je alsnog de lijst in om te zoeken wie dat dan zijn.
+      const namen = nogNiet.length > 1
+        ? `${nogNiet.slice(0, -1).join(", ")} ${L.andWord} ${nogNiet[nogNiet.length - 1]}`
+        : nogNiet[0]
+      askConfirm(L.finalizeConfirm, L.finalizeBtn, () => finalizeBill(true),
+        nogNiet.length > 0 ? { note: L.notConfirmedYet(nogNiet.length, namen) } : undefined)
     }
     const alleProblemen = [...shareProblems, ...zonderItems]
     if (alleProblemen.length > 0) {
@@ -4297,7 +4310,15 @@ export default function RundoTable() {
           <div style={{ ...S.overlay, zIndex: 3200 }}>
             <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               {confirmDlg.title && <h3 style={{ marginTop: 0, marginBottom: 9, fontSize: 20, fontWeight: 800, color: confirmDlg.danger ? "#c0392b" : "#123a42" }}>{confirmDlg.title}</h3>}
-              <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body}</p>
+              <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: confirmDlg.note ? "0 0 11px" : "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body}</p>
+              {/* Een zachte regel, geen slot: ze houdt je nergens tegen, maar je weet het
+                  wel op het moment dat het ertoe doet. */}
+              {confirmDlg.note && (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 9, background: "rgba(233,196,95,0.16)", border: "1.5px solid rgba(196,152,32,0.45)", borderRadius: 12, padding: "11px 12px", marginBottom: 14 }}>
+                  <span style={{ flexShrink: 0, fontSize: 17, lineHeight: 1.3 }}>⏳</span>
+                  <span style={{ fontSize: 15.5, color: "#5a4a1a", lineHeight: 1.45, fontWeight: 700 }}>{confirmDlg.note}</span>
+                </div>
+              )}
               <button onClick={() => { const fn = confirmDlg.onYes; setConfirmDlg(null); fn() }} style={{ ...S.btn, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18, border: "none", color: "#fff", background: confirmDlg.danger ? "linear-gradient(135deg,#e74c3c,#c0392b)" : "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{confirmDlg.yes}</button>
               <button onClick={() => setConfirmDlg(null)} style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 17.5, fontWeight: 700, color: "#4a6e73", background: "transparent", border: "none" }}>{L.cancel}</button>
             </div>
@@ -5968,8 +5989,10 @@ export default function RundoTable() {
           de meesten de app al dicht hadden. Nu staat het er zodra de rekening afgesloten
           is en de avond nog loopt, bij gast én beheerder, onder de verdeling. Wie het
           venster later toch nog krijgt, ziet er hetzelfde staan. */}
+      {/* De rekening is rond; dit is wat er nog overblijft van de avond. Een groen kader
+          zet dat apart van de kaarten erboven, die over geld gaan. */}
       {group.finalized && (!isAdmin || adminTab === "overview") && (
-        <div id="en-nu-sectie" style={{ ...S.card }}>
+        <div id="en-nu-sectie" style={{ ...S.card, border: "2px solid rgba(39,174,96,0.45)", background: "linear-gradient(180deg,#f4fbf7,#ffffff)" }}>
           {renderEnNu()}
           {/* De laatste stap staat sinds kort hier, ónder de twee rijen. Hij stond in een
               eigen kaart met daarboven nog eens "Iets wijzigen? Heropenen" — precies wat
@@ -8080,13 +8103,10 @@ function ClaimScreen(props: {
           <span style={{ fontSize: 23, fontWeight: 800, whiteSpace: "nowrap", letterSpacing: -0.3 }}>€{mijn.settled.toFixed(2).replace(".", ",")}</span>
           <span style={{ fontSize: 14, opacity: 0.85 }}>›</span>
         </button>
-        {/* Zelfde lampje als bij de beheerder: naar de sectie onderaan, zonder te scrollen. */}
-        <button onClick={() => { if (typeof document !== "undefined") document.getElementById("en-nu-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }}
-          aria-label={L.whatNowHead} title={L.whatNowHead}
-          style={{ flexShrink: 0, display: "flex", alignItems: "center", cursor: "pointer", fontFamily: "inherit",
-            background: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.45)", borderRadius: 12, padding: "8px 9px" }}>
-          <IdeeIcoon kleur="#fff" />
-        </button>
+        {/* Hier stond een tweede knop met een lampje dat om de anderhalve seconde van vorm
+            wisselde, als snelkoppeling naar de sectie onderaan. Die sectie staat er toch al,
+            en een bewegend icoontje naast een bedrag trekt de aandacht weg van precies het
+            ding waarvoor je deze balk opendoet. Eén knop volstaat: jouw deel. */}
       </div>
     )
   }
@@ -8479,8 +8499,15 @@ function ClaimScreen(props: {
                             {mineQ > 0
                               ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#5a4a1a", borderRadius: 8, padding: "5px 10px", fontSize: 16.5, fontWeight: 800, lineHeight: 1 }}>✓ {mineQ}</span>
                               : <span style={{ fontSize: 19, fontWeight: 800, minWidth: 20, textAlign: "center", color: "#c9ced8" }}>0</span>}
-                            <button onClick={() => setClaim(it.id, adminPid, mineQ + 1)} disabled={open <= 0} title={L.iTakeOne} aria-label={L.iTakeOne}
-                              style={{ ...S.iconBtn, width: 33, height: 33, fontSize: 19, fontWeight: 800, background: "rgba(27,42,74,0.12)", opacity: open <= 0 ? 0.35 : 1, cursor: open > 0 ? "pointer" : "default" }}>+</button>
+                            {/* De plus stond hier grijs te wachten op een tik die toch niets
+                                deed: alles is verdeeld, er valt niets meer bij te nemen. Een
+                                groen vinkje of een kadertje in de plaats zou er weer uitzien
+                                als iets om aan te tikken, dus hij gaat gewoon weg. Een teller
+                                zonder plus is af. De min blijft, voor wie zich vergiste. */}
+                            {open > 0 && (
+                              <button onClick={() => setClaim(it.id, adminPid, mineQ + 1)} title={L.iTakeOne} aria-label={L.iTakeOne}
+                                style={{ ...S.iconBtn, width: 33, height: 33, fontSize: 19, fontWeight: 800, background: "rgba(27,42,74,0.12)", cursor: "pointer" }}>+</button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -8627,6 +8654,59 @@ function ClaimScreen(props: {
       </div>
     )
   }
+
+  // Zodra de beheerder de avond verrekende valt dit weg: een opmerking sturen naar iemand
+  // die de tafel al afsloot, komt nergens meer aan. Tot dan blijft het staan — daar is het
+  // net voor bedoeld. De stippellijn zegt dat het geen bedragregel is maar een uitweg.
+  const kloptIets = finalized && !isAdmin && !verrekend
+  const kloptIetsBlok = () => (
+    <>
+
+          {disputeOpen ? (
+            <div style={{ background: "rgba(90,108,166,0.06)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 12, padding: 12 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#4a6e73", marginBottom: 7 }}>{L.whatWrong}</div>
+              <textarea value={disputeText} onChange={(e) => setDisputeText(e.target.value)} placeholder={L.disputePlaceholder} rows={2} style={{ ...S.input, width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button onClick={() => { setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5 }}>{L.cancel}</button>
+                <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#0f7d90,#3ec9d8)", color: "#fff" }}>{L.send}</button>
+              </div>
+            </div>
+          ) : iResolved ? (
+            <div style={{ fontSize: 16, color: "#1f8a4c", background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center", fontWeight: 700 }}>
+              {L.remarkResolved}
+              {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#1f8a4c", opacity: 0.85 }}>{L.yourRemark}“{iComment}”</div>}
+              <div style={{ marginTop: 8 }}>
+                <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "8px 16px", fontSize: 16, fontWeight: 700, background: "#fff", border: "1px solid rgba(18,58,66,0.18)", color: "#4a6e73" }}>{L.addAnotherRemark}</button>
+              </div>
+            </div>
+          ) : iDispute ? (
+            <div style={{ fontSize: 16, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center" }}>
+              {L.remarkReceived}
+              {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#a06b00", opacity: 0.9 }}>{L.yourRemark}“{iComment}”</div>}
+              <div style={{ marginTop: 6 }}>
+                <button onClick={() => { onToggleDispute(false); setDisputeOpen(false); setDisputeText("") }} style={{ background: "none", border: "none", padding: 0, color: "#0f7d90", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>{L.withdraw}</button>
+              </div>
+            </div>
+          ) : (
+            // Dit was een bescheiden knopje tussen de rest — precies het ding dat een gast
+            // moet vinden wanneer er iets misloopt. Nu een kaart over de volle breedte: het
+            // icoon, de vraag, wat je ermee doet, en een pijl die zegt dat er iets opengaat.
+            <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }}
+              style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit",
+                // Rood leest als "er is iets fout gegaan", en er is niets fout: dit is
+                // gewoon de weg terug als je iets ziet dat niet klopt. Dus de rustige tint
+                // van de app, met een grote tikzone in plaats van een schreeuwende kleur.
+                background: "rgba(18,58,66,0.035)", border: "1.5px dashed rgba(18,58,66,0.28)", borderRadius: 14, padding: "15px 15px" }}>
+              <span style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "50%", background: "rgba(20,153,176,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤔</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#2b4f56", lineHeight: 1.25 }}>{L.disputeCtaTitle}</span>
+                <span style={{ display: "block", fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.35, marginTop: 2 }}>{L.disputeCtaSub}</span>
+              </span>
+              <span style={{ flexShrink: 0, fontSize: 22, fontWeight: 800, color: "#8aa3a6" }}>›</span>
+            </button>
+          )}
+    </>
+  )
 
   const t = personTotal(meId)
 
@@ -8890,7 +8970,10 @@ function ClaimScreen(props: {
               {mine > 0
                 ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "linear-gradient(135deg,#f3d27c,#ecc564)", color: "#5a4a1a", borderRadius: 8, padding: "5px 10px", fontSize: 17, fontWeight: 800, lineHeight: 1 }}>✓ {mine}</span>
                 : <span style={{ fontSize: 19, fontWeight: 800, minWidth: 22, textAlign: "center", color: "#c9ced8" }}>0</span>}
-              <button style={{ ...S.iconBtn, width: 32, height: 32, fontSize: 19, background: "rgba(27,42,74,0.12)" }} onClick={() => setClaim(it.id, meId, mine + 1)} disabled={open <= 0}>+</button>
+              {/* Zelfde als bij de beheerder: is alles verdeeld, dan verdwijnt de plus. */}
+              {open > 0 && (
+                <button style={{ ...S.iconBtn, width: 32, height: 32, fontSize: 19, background: "rgba(27,42,74,0.12)" }} onClick={() => setClaim(it.id, meId, mine + 1)}>+</button>
+              )}
             </div>
           )
         })}
@@ -9005,6 +9088,13 @@ function ClaimScreen(props: {
               <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.billTotalLabel}</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
+            {/* Vast onder het totaal, met een stippellijn ertussen: je twijfelt over je deel,
+                en de weg terug staat er meteen onder in plaats van een kaart verderop. */}
+            {kloptIets && (
+              <div style={{ marginTop: 13, paddingTop: 13, borderTop: "1.5px dashed rgba(18,58,66,0.2)" }}>
+                {kloptIetsBlok()}
+              </div>
+            )}
             </>
             </div>
           </div>
@@ -9137,56 +9227,9 @@ function ClaimScreen(props: {
           </div>
         )}
       </div>
-    {/* Zodra de beheerder de avond verrekende, valt dit blok weg: een opmerking sturen
-        naar iemand die de tafel al afsloot, komt nergens meer aan. Tot dan blijft het
-        staan — daar is het net voor bedoeld. */}
-    {finalized && !isAdmin && !verrekend && (
-      <div style={{ marginTop: 14 }}>
-          {disputeOpen ? (
-            <div style={{ background: "rgba(90,108,166,0.06)", border: "1px solid rgba(90,108,166,0.2)", borderRadius: 12, padding: 12 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#4a6e73", marginBottom: 7 }}>{L.whatWrong}</div>
-              <textarea value={disputeText} onChange={(e) => setDisputeText(e.target.value)} placeholder={L.disputePlaceholder} rows={2} style={{ ...S.input, width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <button onClick={() => { setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5 }}>{L.cancel}</button>
-                <button onClick={() => { onToggleDispute(true, disputeText); setDisputeOpen(false); setDisputeText("") }} style={{ ...S.btn, flex: 1, padding: "10px 0", fontSize: 16.5, fontWeight: 700, border: "none", background: "linear-gradient(135deg,#0f7d90,#3ec9d8)", color: "#fff" }}>{L.send}</button>
-              </div>
-            </div>
-          ) : iResolved ? (
-            <div style={{ fontSize: 16, color: "#1f8a4c", background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.4)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center", fontWeight: 700 }}>
-              {L.remarkResolved}
-              {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#1f8a4c", opacity: 0.85 }}>{L.yourRemark}“{iComment}”</div>}
-              <div style={{ marginTop: 8 }}>
-                <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }} style={{ ...S.btn, padding: "8px 16px", fontSize: 16, fontWeight: 700, background: "#fff", border: "1px solid rgba(18,58,66,0.18)", color: "#4a6e73" }}>{L.addAnotherRemark}</button>
-              </div>
-            </div>
-          ) : iDispute ? (
-            <div style={{ fontSize: 16, color: "#a06b00", background: "rgba(233,196,95,0.16)", border: "1px solid rgba(233,196,95,0.5)", borderRadius: 12, padding: "10px 12px", lineHeight: 1.45, textAlign: "center" }}>
-              {L.remarkReceived}
-              {iComment && <div style={{ marginTop: 6, fontWeight: 600, fontStyle: "italic", color: "#a06b00", opacity: 0.9 }}>{L.yourRemark}“{iComment}”</div>}
-              <div style={{ marginTop: 6 }}>
-                <button onClick={() => { onToggleDispute(false); setDisputeOpen(false); setDisputeText("") }} style={{ background: "none", border: "none", padding: 0, color: "#0f7d90", fontSize: 16, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>{L.withdraw}</button>
-              </div>
-            </div>
-          ) : (
-            // Dit was een bescheiden knopje tussen de rest — precies het ding dat een gast
-            // moet vinden wanneer er iets misloopt. Nu een kaart over de volle breedte: het
-            // icoon, de vraag, wat je ermee doet, en een pijl die zegt dat er iets opengaat.
-            <button onClick={() => { setDisputeText(""); setDisputeOpen(true) }}
-              style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit",
-                // Rood leest als "er is iets fout gegaan", en er is niets fout: dit is
-                // gewoon de weg terug als je iets ziet dat niet klopt. Dus de rustige tint
-                // van de app, met een grote tikzone in plaats van een schreeuwende kleur.
-                background: "rgba(18,58,66,0.035)", border: "1.5px solid rgba(18,58,66,0.14)", borderRadius: 14, padding: "15px 15px" }}>
-              <span style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "50%", background: "rgba(20,153,176,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤔</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 17.5, fontWeight: 800, color: "#2b4f56", lineHeight: 1.25 }}>{L.disputeCtaTitle}</span>
-                <span style={{ display: "block", fontSize: 15.5, color: "#8aa3a6", lineHeight: 1.35, marginTop: 2 }}>{L.disputeCtaSub}</span>
-              </span>
-              <span style={{ flexShrink: 0, fontSize: 22, fontWeight: 800, color: "#8aa3a6" }}>›</span>
-            </button>
-          )}
-        </div>
-      )}
+    {/* Het blok "Klopt er iets niet?" stond hier, als losse kaart onder de verdeling. Het
+        hoort bij het bedrag waarover je twijfelt, dus staat het nu vást onder "Totaal
+        rekening", in dezelfde kaart. Zie `kloptIetsBlok` hierboven. */}
     </div>
   )
 }
