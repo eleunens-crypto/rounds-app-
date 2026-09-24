@@ -835,8 +835,12 @@ const STRINGS = {
     quotaDayQuickScan: "⚡ Gebruik de snelle scan",
     retryIn: (s: number) => `🔄 Opnieuw over ${s}s`,
     photoLoading: "Foto wordt klaargezet\u2026",
-    photoFailTitle: "Het lukt even niet",
-    photoFailBody: "Dat kan aan de foto liggen, maar even goed aan de scandienst zelf. Ga terug en probeer het zo meteen nog eens \u2014 meestal lukt het dan wel.",
+    photoFailTitle: "Het lukte niet \u2014 nog \u00e9\u00e9n poging",
+    photoFailBody: "De leesdienst gaf geen antwoord. Je mag deze foto nog \u00e9\u00e9n keer laten lezen. Lukt het dan weer niet, dan beginnen we met een verse foto.",
+    tryOnceMore: "\ud83d\udd04 Nog \u00e9\u00e9n keer proberen",
+    freshPhotoTitle: "Deze foto raakt er niet door",
+    freshPhotoBody: "Twee keer geprobeerd, twee keer niets. We beginnen opnieuw met een verse foto \u2014 dat lukt bijna altijd wel, ook als er met deze foto niets te beginnen viel.",
+    freshPhotoBtn: "\ud83d\udcf7 Nieuwe foto nemen",
     photoTipsBody: "Leg de bon plat, zorg voor licht van opzij, en houd je gsm er recht boven. Is de bon lang? Neem hem in twee stukken.",
     backToBillBtn: "\u2190 Terug",
     scanFailEmptyTitle: "📷 Niets herkend op de foto",
@@ -1129,7 +1133,6 @@ const STRINGS = {
     noItemsScanFirst: "Nog geen items — scan eerst de bon.",
     addGuestsInTab1: 'Voeg eerst gasten toe in de tab "Gasten & delen".',
     totalLower: "totaal",
-    sharedWord: "gedeeld",
     notSelectedShare: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch laten meedelen?`,
     removeOne: "verwijder er één",
     notSelectedAdd: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch toevoegen?`,
@@ -1139,8 +1142,9 @@ const STRINGS = {
     assignOwnTitle: (name: string | undefined) => `Jij duidt aan voor ${name}`,
     assignOwnBody: (name: string | undefined) => `${name} kwam niet via de QR binnen, dus jij tikt aan wat hij nam. Dat is hier de gewone gang van zaken.\n\nDit vragen we maar één keer — daarna gaat het meteen door.`,
     assignOwnYes: "Ja, doorgaan",
-    doneProgress: (n: number, t: number) => `${n} van ${t} items toegewezen`,
-    openToChange: "aanpassen",
+    doneProgress: (n: number, t: number) => `${n} van ${t} items volledig toegewezen`,
+    sharedExtra: (n: number) => `+ ${n} gedeeld`,
+    sharedQ: "gedeeld item?",
     showThose: (n: number) => `die ${n} tonen`,
     foldAgain: "weer inklappen",
     unitsClaimed: "Stuks geclaimd",
@@ -1173,7 +1177,6 @@ const STRINGS = {
     makeUnsharedTitle: "Delen stopzetten?",
     makeUnsharedBody: "Dit item wordt dan weer per stuk toegewezen.",
     makeSharedCancel: "Annuleren",
-    makeSharedShort: "delen",
     sharedOnShort: "gedeeld",
     addItemBtn: "+ Item toevoegen",
     whatIsThis: "Wat is dit?",
@@ -1235,7 +1238,7 @@ const STRINGS = {
     whatYouTook: "Wat jij zelf nam",
     adminNoConfirmNote: "Je bevestigt niets apart \u2014 als beheerder sluit je straks de hele rekening af. Dit is om te zien wat er op jouw naam staat.",
     nothingYoursYet: "Je hebt zelf nog niets aangeduid.",
-    otherQ: "andere?",
+    otherQ: "iemand anders?",
     iTakeOne: "Ik neem er een",
     addSomeoneElse: "Iemand anders toevoegen",
     addedByYou: "door jou toegevoegd",
@@ -1525,8 +1528,12 @@ const STRINGS = {
     quotaDayQuickScan: "⚡ Utiliser le scan rapide",
     retryIn: (s: number) => `🔄 Réessayer dans ${s}s`,
     photoLoading: "Photo en pr\u00e9paration\u2026",
-    photoFailTitle: "\u00c7a ne marche pas pour le moment",
-    photoFailBody: "\u00c7a peut venir de la photo, mais tout autant du service de scan. Reviens en arri\u00e8re et r\u00e9essaie dans un instant \u2014 en g\u00e9n\u00e9ral, \u00e7a marche.",
+    photoFailTitle: "\u00c9chec \u2014 encore un essai",
+    photoFailBody: "Le service de lecture n'a pas r\u00e9pondu. Tu peux faire lire cette photo encore une fois. Si \u00e7a rate \u00e0 nouveau, on repart d'une photo toute fra\u00eeche.",
+    tryOnceMore: "\ud83d\udd04 Encore un essai",
+    freshPhotoTitle: "Cette photo ne passe pas",
+    freshPhotoBody: "Deux essais, deux \u00e9checs. On repart d'une photo toute fra\u00eeche \u2014 \u00e7a marche presque toujours, m\u00eame quand il n'y avait rien \u00e0 tirer de celle-ci.",
+    freshPhotoBtn: "\ud83d\udcf7 Prendre une nouvelle photo",
     photoTipsBody: "Pose l'addition à plat, éclaire-la de côté et tiens ton téléphone bien au-dessus. Addition longue ? Prends-la en deux morceaux.",
     backToBillBtn: "\u2190 Retour",
     scanFailEmptyTitle: "📷 Rien reconnu sur la photo",
@@ -1809,7 +1816,6 @@ const STRINGS = {
     noItemsScanFirst: "Aucun article — scanne d'abord l'addition.",
     addGuestsInTab1: "Ajoute d'abord des invités dans l'onglet « Invités et partage ».",
     totalLower: "total",
-    sharedWord: "partagé",
     notSelectedShare: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. Le faire participer quand même ?`,
     removeOne: "en retirer un",
     notSelectedAdd: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. L'ajouter quand même ?`,
@@ -1819,8 +1825,9 @@ const STRINGS = {
     assignOwnTitle: (name: string | undefined) => `Tu attribues pour ${name}`,
     assignOwnBody: (name: string | undefined) => `${name} n'est pas arrivé via le QR, c'est donc toi qui coches ce qu'il a pris. C'est le fonctionnement normal ici.\n\nOn ne te le demande qu'une seule fois — ensuite ça passe directement.`,
     assignOwnYes: "Oui, continuer",
-    doneProgress: (n: number, t: number) => `${n} sur ${t} articles attribués`,
-    openToChange: "modifier",
+    doneProgress: (n: number, t: number) => `${n} sur ${t} articles entièrement attribués`,
+    sharedExtra: (n: number) => `+ ${n} partag\u00e9${n === 1 ? "" : "s"}`,
+    sharedQ: "article partag\u00e9\u00a0?",
     showThose: (n: number) => `afficher ces ${n}`,
     foldAgain: "replier",
     unitsClaimed: "Unités attribuées",
@@ -1853,7 +1860,6 @@ const STRINGS = {
     makeUnsharedTitle: "Arrêter le partage ?",
     makeUnsharedBody: "Cet article sera de nouveau attribué à l'unité.",
     makeSharedCancel: "Annuler",
-    makeSharedShort: "partager",
     sharedOnShort: "partagé",
     addItemBtn: "+ Ajouter un article",
     whatIsThis: "Qu'est-ce que c'est ?",
@@ -1911,7 +1917,7 @@ const STRINGS = {
     whatYouTook: "Ce que tu as pris toi-m\u00eame",
     adminNoConfirmNote: "Tu ne confirmes rien s\u00e9par\u00e9ment \u2014 en tant qu'organisateur, tu cl\u00f4tures ensuite toute l'addition. Ceci sert \u00e0 voir ce qui est \u00e0 ton nom.",
     nothingYoursYet: "Tu n'as encore rien coch\u00e9 pour toi.",
-    otherQ: "autre\u00a0?",
+    otherQ: "quelqu'un d'autre\u00a0?",
     iTakeOne: "J'en prends un",
     addSomeoneElse: "Ajouter quelqu'un d'autre",
     addedByYou: "ajout\u00e9s par toi",
@@ -2221,7 +2227,9 @@ export default function RundoTable() {
   const [scanFlags, setScanFlags] = useState<Record<string, { note: string }>>({})
   const [scanning, setScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
-  const [scanFail, setScanFail] = useState<null | { reason: "unavailable" | "empty"; status?: number; detail?: string; quotaDay?: boolean }>(null)
+  // `verseFoto` = de tweede mislukking op rij met dezelfde foto. Dan is de foto al gewist en
+  // biedt het venster alleen nog een nieuwe aan.
+  const [scanFail, setScanFail] = useState<null | { reason: "unavailable" | "empty"; status?: number; detail?: string; quotaDay?: boolean; verseFoto?: boolean }>(null)
   const [cooldownUntil, setCooldownUntil] = useState(0)
   const [nowTs, setNowTs] = useState<number>(() => Date.now())
   const [scanPreview, setScanPreview] = useState<ParsedItem[]>([])
@@ -3297,16 +3305,24 @@ export default function RundoTable() {
       // te tikken, dan proberen ze anders allemaal op dezelfde seconde opnieuw.
       // Elke mislukte poging telt mee, ook die met een wachttijd van de dienst zelf —
       // anders bleef de teller op nul staan en kon je eindeloos blijven drukken.
+      const next = scanPogingen + 1
+      // Dezelfde foto een derde keer door dezelfde dienst halen heeft nog nooit iets
+      // opgeleverd. Eén herkansing dus, en daarna ruimen we zelf op: foto's weg, de
+      // bewaarde kopie weg, teller op nul. Er valt dan niets meer te herproberen, alleen
+      // een verse foto te nemen — en dat lukt bijna altijd wel.
+      const verseFoto = !res.quotaDay && reason === "unavailable" && next >= 2
       if (!res.quotaDay) {
-        setScanPogingen((n) => {
-          const next = n + 1
-          const lang = reason === "unavailable" && verdientWachttijd(res.status, res.retryAfter) ? cooldownMs(res.retryAfter) : 0
-          setCooldownUntil(Date.now() + Math.max(lang, korteAdem(next)))
-          return next
-        })
+        setScanPogingen(verseFoto ? 0 : next)
+        const lang = reason === "unavailable" && verdientWachttijd(res.status, res.retryAfter) ? cooldownMs(res.retryAfter) : 0
+        setCooldownUntil(verseFoto ? 0 : Date.now() + Math.max(lang, korteAdem(next)))
       }
-      if (photos.length > 1) setMultiFails((n) => n + 1)
-      setScanFail({ reason, status: res.status, detail: res.detail, quotaDay: res.quotaDay })
+      if (verseFoto) {
+        for (const ph of photos) URL.revokeObjectURL(ph.url)
+        setPhotos([]); setScanFile(null); setRetryFile(null); setMultiFails(0)
+        laatFotoUrlLos(scanPhotoUrl); setScanPhotoUrl(null)
+        setFotoBezig(false)
+      } else if (photos.length > 1) setMultiFails((n) => n + 1)
+      setScanFail({ reason, status: res.status, detail: res.detail, quotaDay: res.quotaDay, verseFoto })
       return
     }
     setMultiFails(0)
@@ -6907,22 +6923,48 @@ export default function RundoTable() {
                   </>
                 ) : scanFail.reason === "unavailable" ? (
                   <>
-                    {/* Dezelfde foto door dezelfde dienst halen geeft hetzelfde antwoord, en
-                        dat kwam binnen de seconde terug. Dus geen herprobeerknop meer hier —
-                        en ook geen "nieuwe foto nemen", want het ligt lang niet altijd aan de
-                        foto. Eén uitweg: terug, en zo meteen nog eens. Dat lukt meestal wel.
-                        De leesknop zelf staat een paar tellen op pauze, zodat "zo meteen" ook
-                        echt even later is. */}
-                    <div style={{ fontSize: 18, fontWeight: 800, color: "#b5591a", marginBottom: 4 }}>{L.photoFailTitle}</div>
-                    <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 11 }}>{L.photoFailBody}</div>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(255,255,255,0.7)", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-                      <span style={{ flexShrink: 0, fontSize: 15, lineHeight: 1.4 }}>💡</span>
-                      <span style={{ fontSize: 14.5, color: "#7a5a30", lineHeight: 1.5 }}>{L.photoTipsBody}</span>
+                    {/* Eén herkansing met dezelfde foto, meer niet. Die ene staat hier als
+                        knop, met de pauze erop — anders drukte je binnen de seconde opnieuw
+                        en kreeg je hetzelfde antwoord van dezelfde dienst. Lukt ook die niet,
+                        dan is de foto al gewist en blijft alleen een verse foto over. */}
+                    <div style={{ fontSize: 18, fontWeight: 800, color: scanFail.verseFoto ? "#c0392b" : "#b5591a", marginBottom: 4 }}>
+                      {scanFail.verseFoto ? L.freshPhotoTitle : L.photoFailTitle}
                     </div>
-                    <button onClick={() => { setScanFail(null); setShowScan(false); laatFotoUrlLos(scanPhotoUrl); setScanPhotoUrl(null) }}
-                      style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800 }}>
-                      {L.backToBillBtn}
-                    </button>
+                    <div style={{ fontSize: 16, color: "#8a4514", lineHeight: 1.5, marginBottom: 11 }}>
+                      {scanFail.verseFoto ? L.freshPhotoBody : L.photoFailBody}
+                    </div>
+                    {!scanFail.verseFoto && (
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "rgba(255,255,255,0.7)", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+                        <span style={{ flexShrink: 0, fontSize: 15, lineHeight: 1.4 }}>💡</span>
+                        <span style={{ fontSize: 14.5, color: "#7a5a30", lineHeight: 1.5 }}>{L.photoTipsBody}</span>
+                      </div>
+                    )}
+                    {scanFail.verseFoto ? (
+                      <>
+                        <label style={{ ...S.btn, ...S.btnPrimary, display: "block", width: "100%", boxSizing: "border-box", textAlign: "center", padding: "13px 0", fontSize: 18, fontWeight: 800, cursor: "pointer", marginBottom: 8 }}>
+                          {L.freshPhotoBtn}
+                          <input type="file" accept="image/*" capture="environment" style={{ display: "none" }}
+                            onChange={(e) => addPhoto(e.target.files?.[0])} />
+                        </label>
+                        <button onClick={() => { setScanFail(null); setShowScan(false) }}
+                          style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 17, fontWeight: 800 }}>
+                          {L.backToBillBtn}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button onMouseDown={(e) => e.preventDefault()} onClick={scanPhotos} disabled={cooldownLeft > 0 || fotoBezig || photos.length === 0}
+                          style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 18, fontWeight: 800,
+                            opacity: cooldownLeft > 0 || fotoBezig || photos.length === 0 ? 0.55 : 1,
+                            cursor: cooldownLeft > 0 || fotoBezig || photos.length === 0 ? "default" : "pointer" }}>
+                          {cooldownLeft > 0 ? L.retryIn(cooldownLeft) : L.tryOnceMore}
+                        </button>
+                        <button onClick={() => { setScanFail(null); setShowScan(false); laatFotoUrlLos(scanPhotoUrl); setScanPhotoUrl(null) }}
+                          style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 17, fontWeight: 800, marginTop: 8 }}>
+                          {L.backToBillBtn}
+                        </button>
+                      </>
+                    )}
                     {/* Klein en grijs, onderaan: het antwoord van de server zelf. Niemand
                         hoeft dit te lezen, maar wie meldt dat de scan blijft mislukken kan
                         nu zeggen wát er misging — anders is elke fout "het lukt even niet". */}
@@ -8164,87 +8206,52 @@ function ClaimScreen(props: {
   // niet meer te roepen: enkel het teken blijft over, zonder woord, op de achtergrond. Hij
   // verdwijnt niet helemaal, want dit is de énige plek in de app waar een item nog op
   // gedeeld gezet kan worden — en dat is net wat je ontdekt wanneer alles al verdeeld is.
-  // Wat toegewezen is, verdwijnt uit de lijst en zit achter één knop. Er is maar één stand
-  // die telt: verborgen of getoond.
-  // Alles telt in ITEMS, ook de balk — zo slaat het getal in de zin op precies hetzelfde als
-  // het getal op de knop, en zie je na een tik even veel regels verschijnen als er
-  // aangekondigd waren. Gedeelde items tellen mee zodra er één deler is; zolang niemand ze
-  // nam, blijven ze gewoon in de lijst staan — een fles die van niemand is mag niet uit het
-  // zicht verdwijnen, want dan nodigt hij ook niemand meer uit.
-  const gereed = (it: BillItem) => it.is_shared ? sharerIds(it.id).length > 0 : it.quantity - claimedQty(it.id) <= 0
-  const afgewerkt = items.filter(gereed)
-  const verborgen = (it: BillItem) => !allesOpen && gereed(it)
-  // Ingeklapt zou een gedeelde fles helemaal uit beeld zijn en kon niemand er nog bij. Daarom
-  // blijft er per gedeelde fles één strookje vastgepind onder de knop: wie erop staat, wat
-  // het per persoon kost, en één tik om zelf mee te doen of eruit te stappen.
-  const kortGedeeld = allesOpen ? [] : items.filter((it) => it.is_shared && sharerIds(it.id).length > 0)
+  // Wat volledig toegewezen is, verdwijnt uit de lijst en zit achter één knop. Er is maar
+  // één stand die telt: verborgen of getoond.
+  // Alles telt in ITEMS — zo slaat het getal in de zin op precies hetzelfde als het getal
+  // op de knop, en verschijnen er na een tik even veel regels als er aangekondigd waren.
+  // Gedeelde items blijven er buiten: die klappen nooit in, want een fles die uit beeld
+  // verdwijnt nodigt niemand meer uit om mee te delen. Ze staan apart vermeld in de kop.
+  const normaalItems = items.filter((it) => !it.is_shared)
+  const gedeeldeItems = items.filter((it) => it.is_shared)
+  const volGenomen = (it: BillItem) => it.quantity - claimedQty(it.id) <= 0
+  const afgewerkt = normaalItems.filter(volGenomen)
+  const verborgen = (it: BillItem) => !allesOpen && !it.is_shared && volGenomen(it)
 
   // Eigen kader rond de voortgang, want los boven de lijst leek de zin bij het eerste item
   // te horen. Bovenin waar je staat, onderin — over de volle breedte, met een scheidingslijn
   // ertussen — de knop. Die volle balk is met de duim niet te missen.
   // `metBalk` staat alleen bij de beheerder aan: hoever de hele tafel staat is zijn werk.
   const klaarBlok = (metBalk: boolean) => {
-    if (items.length === 0) return null
-    const af = afgewerkt.length >= items.length
+    if (normaalItems.length === 0) return null
+    const af = afgewerkt.length >= normaalItems.length
     const rand = allesOpen ? "rgba(20,153,176,0.35)" : "rgba(18,58,66,0.14)"
-    const mijnZitjes = meId ? Math.max(1, seatsOf(meId)) : 1
     return (
-      <>
-        <div style={{ border: `1px solid ${rand}`, borderRadius: 13, overflow: "hidden", marginBottom: kortGedeeld.length > 0 ? 6 : 11 }}>
-          <div style={{ padding: metBalk ? "10px 11px 11px" : "10px 11px", background: allesOpen ? "rgba(20,153,176,0.06)" : "rgba(18,58,66,0.035)" }}>
-            <div style={{ fontSize: 14.5, fontWeight: 800, color: af ? "#1f8a4c" : "#2b4f56" }}>
-              {L.doneProgress(afgewerkt.length, items.length)}
-            </div>
-            {metBalk && (
-              <div style={{ height: 7, borderRadius: 4, background: "rgba(18,58,66,0.10)", overflow: "hidden", marginTop: 7 }}>
-                <div style={{ height: "100%", width: `${Math.round((afgewerkt.length / items.length) * 100)}%`, borderRadius: 4, background: "linear-gradient(90deg,#1f8a4c,#27ae60)", transition: "width 220ms ease-out" }} />
-              </div>
+      <div style={{ border: `1px solid ${rand}`, borderRadius: 13, overflow: "hidden", marginBottom: 11 }}>
+        <div style={{ padding: metBalk ? "10px 11px 11px" : "10px 11px", background: allesOpen ? "rgba(20,153,176,0.06)" : "rgba(18,58,66,0.035)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", fontSize: 14.5, fontWeight: 800, color: af ? "#1f8a4c" : "#2b4f56" }}>
+            <span>{L.doneProgress(afgewerkt.length, normaalItems.length)}</span>
+            {gedeeldeItems.length > 0 && (
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: INDIGO.tekst, background: INDIGO.vlak, borderRadius: 8, padding: "2px 8px" }}>
+                {L.sharedExtra(gedeeldeItems.length)}
+              </span>
             )}
           </div>
-          {afgewerkt.length > 0 && (
-            <button onClick={() => setAllesOpen((v) => !v)}
-              style={{ width: "100%", boxSizing: "border-box", border: "none", borderTop: `1px solid ${allesOpen ? "rgba(20,153,176,0.3)" : "rgba(18,58,66,0.12)"}`,
-                background: allesOpen ? "rgba(20,153,176,0.10)" : "#fff", padding: "9px", textAlign: "center",
-                fontSize: 14, fontWeight: 800, color: "#0f7488", cursor: "pointer", fontFamily: "inherit" }}>
-              {allesOpen ? `${L.foldAgain} \u25b4` : `${L.showThose(afgewerkt.length)} \u25be`}
-            </button>
+          {metBalk && (
+            <div style={{ height: 7, borderRadius: 4, background: "rgba(18,58,66,0.10)", overflow: "hidden", marginTop: 7 }}>
+              <div style={{ height: "100%", width: `${Math.round((afgewerkt.length / normaalItems.length) * 100)}%`, borderRadius: 4, background: "linear-gradient(90deg,#1f8a4c,#27ae60)", transition: "width 220ms ease-out" }} />
+            </div>
           )}
         </div>
-        {kortGedeeld.map((it, i) => {
-          const heads = shareHeads(it.id)
-          const perHead = heads > 0 ? itemTotal(it) / heads : 0
-          const ikDeel = !!meId && sharerIds(it.id).includes(meId)
-          // Met z'n tweeën op één plaats kan je niet in één tik "ik" zeggen — dan moet je per
-          // persoon kiezen, en dat kan alleen op de volledige regel. De knop opent hem.
-          const perPersoon = mijnZitjes > 1
-          return (
-            <div key={`kort-${it.id}`} style={{ display: "flex", alignItems: "center", gap: 8, background: INDIGO.vlak,
-              borderLeft: "5px solid #7b87c4", borderRadius: 10, padding: "7px 9px",
-              marginBottom: i === kortGedeeld.length - 1 ? 11 : 5 }}>
-              <span style={{ flexShrink: 0, display: "inline-flex" }}><ShareIcon on size={14} /></span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 800, color: "#2b3f6b", overflowWrap: "anywhere" }}>
-                {it.name}<span style={{ fontWeight: 700, color: "#5a6ca6" }}> · {L.nSharers(heads)} · {L.eachAmount(perHead)}</span>
-              </span>
-              {meId && (perPersoon ? (
-                <button onClick={() => setAllesOpen(true)}
-                  style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", fontSize: 12.5, fontWeight: 800, borderRadius: 9,
-                    padding: "4px 9px", border: "1.5px dashed rgba(90,108,166,0.6)", background: "#fff", color: "#3f4a8a",
-                    cursor: "pointer", fontFamily: "inherit" }}>{L.openToChange}</button>
-              ) : (
-                <button onClick={() => toggleShareClaim(it.id, meId)}
-                  style={ikDeel
-                    ? { ...DELER_PIL, flexShrink: 0, fontSize: 12.5, padding: "3px 3px 3px 9px", cursor: "pointer" }
-                    : { flexShrink: 0, display: "inline-flex", alignItems: "center", fontSize: 12.5, fontWeight: 800, borderRadius: 9,
-                        padding: "4px 9px", border: "1.5px dashed rgba(90,108,166,0.6)", background: "#fff", color: "#3f4a8a",
-                        cursor: "pointer", fontFamily: "inherit" }}>
-                  {ikDeel ? L.iShareYes : L.iShareNo}
-                  {ikDeel && <span style={{ ...KRUISJE, width: 20, height: 20, borderRadius: 6, fontSize: 11 }}>✕</span>}
-                </button>
-              ))}
-            </div>
-          )
-        })}
-      </>
+        {afgewerkt.length > 0 && (
+          <button onClick={() => setAllesOpen((v) => !v)}
+            style={{ width: "100%", boxSizing: "border-box", border: "none", borderTop: `1px solid ${allesOpen ? "rgba(20,153,176,0.3)" : "rgba(18,58,66,0.12)"}`,
+              background: allesOpen ? "rgba(20,153,176,0.10)" : "#fff", padding: "9px", textAlign: "center",
+              fontSize: 14, fontWeight: 800, color: "#0f7488", cursor: "pointer", fontFamily: "inherit" }}>
+            {allesOpen ? `${L.foldAgain} \u25b4` : `${L.showThose(afgewerkt.length)} \u25be`}
+          </button>
+        )}
+      </div>
     )
   }
 
@@ -8259,17 +8266,26 @@ function ClaimScreen(props: {
       aria-label={it.is_shared ? L.makeUnsharedTitle : L.makeSharedTitle}
       // De knop toont de stand én zet hem om: nog eens tikken maakt het item weer gewoon.
       // Daarmee vervalt het aparte GEDEELD-label naast de naam, dat hetzelfde zei.
+      // Twee vormen. Voluit is het een gestippelde pil in dezelfde maat als "iemand
+      // anders?" ernaast — twee vragen die je over een item kan stellen, dus twee keer
+      // dezelfde vorm. Stil is enkel het vierkantje met het teken: dat blijft over zodra
+      // alles toegewezen is, wanneer de vraag nog wel te beantwoorden valt maar niet meer
+      // hoeft te roepen.
       style={stil ? {
         flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center",
-        width: 31, height: 31, borderRadius: 9, cursor: "pointer", opacity: 0.75,
+        width: 26, height: 26, borderRadius: 8, cursor: "pointer", opacity: 0.75,
         border: "1.5px solid rgba(90,108,166,0.28)", background: "#fff", padding: 0,
-      } : { flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px", cursor: "pointer",
-        border: `1.5px solid ${it.is_shared ? "rgba(90,108,166,0.55)" : INDIGO.rand}`,
-        background: it.is_shared ? INDIGO.vlak : "#fff" }}>
-      <ShareIcon on={it.is_shared} size={stil ? 14 : 13} kleur={INDIGO.tekst} />
+      } : it.is_shared ? {
+        // Aan: volle vulling met witte tekst. Met een lichte vulling viel hij samen met het
+        // blauwe vlak van de regel eromheen — je zag niet meer dát het een knop was.
+        flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10,
+        padding: "5px 9px", cursor: "pointer", fontFamily: "inherit", border: "none", background: "#4a5a9e",
+      } : { flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "5px 9px", cursor: "pointer",
+        fontFamily: "inherit", border: "1.5px dashed rgba(90,108,166,0.6)", background: "#fff" }}>
+      <ShareIcon on={it.is_shared} size={13} kleur={!stil && it.is_shared ? "#fff" : INDIGO.tekst} />
       {!stil && (
-        <span style={{ fontSize: 15.5, fontWeight: 800, color: INDIGO.tekst }}>
-          {it.is_shared ? `${L.sharedOnShort} ✓` : L.makeSharedShort}
+        <span style={{ fontSize: 13, fontWeight: 800, color: it.is_shared ? "#fff" : INDIGO.tekst }}>
+          {it.is_shared ? `${L.sharedOnShort} ✓` : L.sharedQ}
         </span>
       )}
     </button>
@@ -8379,9 +8395,9 @@ function ClaimScreen(props: {
               <>
                 {klaarBlok(true)}
                 {items.map((it) => {
-                  // Toegewezen — gewoon én gedeeld — zit achter de knop bovenaan. Voor een
-                  // gedeelde fles staat er dan een kort strookje onder die knop, zodat er
-                  // altijd nog iemand bij kan.
+                  // Volledig toegewezen gewone items zitten achter de knop bovenaan. Een
+                  // gedeelde fles blijft altijd staan: verdween ze, dan kon niemand er nog
+                  // bij delen.
                   if (verborgen(it)) return null
                   const claimed = claimedQty(it.id)
                   const open = it.quantity - claimed
@@ -8409,15 +8425,16 @@ function ClaimScreen(props: {
                                   Hiervoor stonden er twee verschillende tekens op twee schermen —
                                   links een los icoontje hier, een blauwe pil daar. Nu één blokje,
                                   overal hetzelfde, en dus ook maar één keer per item. */}
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13.5, fontWeight: 700, color: INDIGO.tekst, background: "#fff", border: `1px solid ${INDIGO.rand}`, borderRadius: 8, padding: "3px 8px", flexShrink: 0 }}>
-                                <ShareIcon on size={13} />{L.sharedWord}
-                              </span>
+                              {/* De pil die zegt dát het gedeeld is, is meteen de knop om het
+                                  terug te draaien — zelfde vorm als "gedeeld item?" op een
+                                  gewone regel. Daarnaast stond eerst nog een los tekentje dat
+                                  hetzelfde deed; twee dingen voor één handeling is er één te veel.
+                                  Rechts uitgelijnd, op de plek waar een gewoon item zijn teller
+                                  heeft — zo loopt er één rechte kolom door de lijst. */}
+                              <span style={{ flex: 1, minWidth: 0 }} />
+                              {shareBtn(it)}
                             </div>
                           </div>
-                          {/* De telbadge zei "3 personen" zonder te zeggen wélke, en de knop
-                              die hier stond opende een venster om dat te bekijken. Beide zijn
-                              overbodig: de namen staan nu gewoon open in het kader eronder. */}
-                          {isAdmin && shareBtn(it, true)}
                         </div>
                         {/* Hier stond een apart kader met de delers nog eens in grijze chips,
                             plus "x delers · €x elk → daalt als er meer meedelen". Diezelfde
@@ -8498,8 +8515,14 @@ function ClaimScreen(props: {
                               </span>
                             ))
                           })}
-                          {named.length > 0 && <WieNogBtn onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} open={assignItem === it.id} title={L.addSomeoneElse} />}
                         </div>
+                        {/* Ook hier de derde laag apart: namen boven, de vraag eronder, op
+                            dezelfde hoogte als bij een gewoon item. */}
+                        {named.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "center" }}>
+                            <WieNogBtn onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} open={assignItem === it.id} title={L.addSomeoneElse} />
+                          </div>
+                        )}
                         {assignItem === it.id && (
                           <AssignPicker participants={participants} itemId={it.id} isShared meId={meId}
                             qtyFn={(pid) => sh.includes(pid) ? 1 : 0}
@@ -8540,7 +8563,10 @@ function ClaimScreen(props: {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.quantity}× {it.name}</span>
-                            {isAdmin && shareBtn(it, true)}
+                            {/* Alles toegewezen: de vraag hoeft niet meer te roepen, maar ze
+                                blijft te stellen. Enkel het teken, op de plaats waar de volle
+                                pil anders stond — zo verspringt er niets. */}
+                            {open <= 0 && shareBtn(it, true)}
                           </div>
                           {/* Hier stond rechts een rode knop "2 open — wijs toe". Die deed twee
                               dingen tegelijk: melden hoeveel er nog vrij was, én de kiezer openen.
@@ -8600,11 +8626,19 @@ function ClaimScreen(props: {
                               style={KRUISJE}>✕</button>
                           </span>
                         ))}
-                        {open > 0 && participants.length > 0 && (
-                          <WieNogBtn onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} open={assignItem === it.id} title={L.addSomeoneElse} />
-                        )}
                         {anderen.length === 0 && open === 0 && mineQ === 0 && <span style={{ fontSize: 15.5, color: "#aaa" }}>—</span>}
                       </div>
+                      {/* Derde laag. Elke regel is nu hetzelfde opgebouwd — wát het is, wie het
+                          nam, wat je ermee kan — en de vragen staan dus altijd op dezelfde
+                          hoogte in plaats van achter een wisselend aantal naampillen aan. */}
+                      {open > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "center" }}>
+                          {participants.length > 0 && (
+                            <WieNogBtn onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} open={assignItem === it.id} title={L.addSomeoneElse} />
+                          )}
+                          {shareBtn(it)}
+                        </div>
+                      )}
                       {assignItem === it.id && open > 0 && (
                         <AssignPicker participants={participants} itemId={it.id} meId={meId} vol={open <= 0}
                           qtyFn={(pid) => myQty(it.id, pid)}
@@ -8864,11 +8898,15 @@ function ClaimScreen(props: {
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                       <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}>{it.name}</span>
                       <span style={{ fontSize: 18, fontWeight: 800, flexShrink: 0, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
-                      {/* Dezelfde pil als op de bon en bij de beheerder. Ze verving de deelknop
-                          die hier stond: een gast beslist niet wat gedeeld is, hij leest het. */}
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13.5, fontWeight: 700, color: INDIGO.tekst, background: "#fff", border: `1px solid ${INDIGO.rand}`, borderRadius: 8, padding: "3px 8px", flexShrink: 0 }}>
-                        <ShareIcon on size={13} />{L.sharedOnShort}
-                      </span>
+                      {/* Deelde de gast het zelf, dan is de pil ook de knop om het terug te
+                          draaien — één ding, net als bij de beheerder. Deelde iemand anders
+                          het, dan is het enkel een label: hij leest het, hij beslist het niet. */}
+                      <span style={{ flex: 1, minWidth: 0 }} />
+                      {magOntdelen(it)
+                        ? <span style={{ display: "inline-flex", alignSelf: "center" }}>{shareBtn(it)}</span>
+                        : <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13.5, fontWeight: 700, color: INDIGO.tekst, background: "#fff", border: `1px solid ${INDIGO.rand}`, borderRadius: 8, padding: "3px 8px", flexShrink: 0 }}>
+                            <ShareIcon on size={13} />{L.sharedOnShort}
+                          </span>}
                     </div>
                     <div style={{ fontSize: 15.5, color: it.unit_price <= 0.0001 ? "#c0392b" : "#999", fontWeight: it.unit_price <= 0.0001 ? 700 : 400 }}>{it.unit_price <= 0.0001 ? `⚠️ ${L.zeroPriceShort}` : L.totalSharedByDrinkers.trim()}</div>
                   </div>
@@ -8990,10 +9028,11 @@ function ClaimScreen(props: {
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 18, fontWeight: 700, overflowWrap: "anywhere", minWidth: 0 }}><span style={{ color: "#0f7d90" }}>{total}×</span> {it.name}</span>
                   <span style={{ fontSize: 18, fontWeight: 800, color: it.unit_price <= 0.0001 ? "#c0392b" : "#0f7d90", flexShrink: 0 }}>€{it.unit_price.toFixed(2).replace(".", ",")}</span>
-                  {/* De deelknop stond hier ook voor de gast. Maar op dit scherm verdeel je;
-                      wát een item is, is op de bon al beslist. Voor een gast is dat sowieso
-                      niet zijn beslissing, dus bij hem is de knop helemaal weg — bij een
-                      gedeeld item blijft "gedeeld" staan als label. */}
+                  {/* Dezelfde regel als bij de beheerder: is alles toegewezen, dan blijft
+                      alleen het teken over, hier bij de naam. Een gast die dit omzet terwijl
+                      er al iemand anders op staat, krijgt het te horen — dat wist immers
+                      andermans werk. */}
+                  {open <= 0 && <span style={{ display: "inline-flex", alignSelf: "center" }}>{shareBtn(it, true)}</span>}
                 </div>
                 {it.unit_price <= 0.0001
                   ? <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
@@ -9030,6 +9069,9 @@ function ClaimScreen(props: {
                         )
                       })()}
                       <div style={{ fontSize: 15.5, color: open > 0 ? "#e0685c" : "#1f8a4c", fontWeight: 600, marginTop: 4 }}>{open > 0 ? L.stillFree(open) : L.allClaimedWord}</div>
+                      {/* Zolang er nog iets vrij is staat de vraag voluit, net als bij de
+                          beheerder — daar naast "iemand anders?", hier alleen. */}
+                      {open > 0 && <div style={{ marginTop: 7 }}>{shareBtn(it)}</div>}
                     </>}
               </div>
               <button style={{ width: 42, height: 34, fontSize: 22, fontWeight: 800, lineHeight: 1, borderRadius: 8, cursor: mine > 0 ? "pointer" : "default", color: mine > 0 ? "#c0392b" : "#c9ced8", background: "#fff", border: "2px solid " + (mine > 0 ? "#2b2f38" : "#e2e6ee") }} onClick={() => setClaim(it.id, meId, Math.max(0, mine - 1))} disabled={mine <= 0} title={L.removeOne}>−</button>
