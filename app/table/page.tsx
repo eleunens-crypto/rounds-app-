@@ -607,9 +607,6 @@ const STRINGS = {
     removeGuestYes: "Verwijderen",
     confirmRemoveGuest: (naam: string, van: number, naar: number) => `${naam} verdwijnt van de tafel en het aantal personen gaat van ${van} naar ${naar}. Wat voor deze persoon aangeduid was, gaat mee weg.`,
     guestRemoved: (naam: string) => `${naam} staat niet meer aan tafel.`,
-    seatsCapped: (n: number) => n === 1
-      ? "Er is nog één vrije plaats, dus dit kan alleen voor één persoon. Verhoog eerst het aantal personen bovenaan."
-      : `Er zijn nog ${n} plaatsen vrij op deze plek. Verhoog eerst het aantal personen bovenaan als je er meer nodig hebt.`,
     addNameTitle: "Wie voeg je toe?",
     addNameSub: "Hij tikt deze naam aan na het scannen, of jij duidt zelf aan wat hij nam.",
     // Voor wie geen gsm heeft of niet scant: jij vult in en duidt voor hem aan.
@@ -699,9 +696,6 @@ const STRINGS = {
     // knop onder de QR. Daarom staat hier nog maar één ding.
     scannedBadge: "gescand",
     stillFreeTitle: (n: number) => n === 1 ? "Nog 1 vrij — wacht op een QR-scan" : `Nog ${n} vrij — wachten op een QR-scan`,
-    needMoreSpotsTitle: "Er is een plaats te weinig",
-    needMoreSpotsBody: (tekort: number, totaal: number) => `Dit vraagt ${tekort} plaats${tekort === 1 ? "" : "en"} meer dan er vrij ${tekort === 1 ? "is" : "zijn"}. Zal ik het aantal personen op ${totaal} zetten?`,
-    raiseTotalBtn: (totaal: number) => `Ja, personen op ${totaal} zetten`,
     addAnother: "Nog iemand toevoegen",
     seatFreedUp: "Die plaats telt nu voor 2 — er is één vrije plaats minder.",
     howManyGroupSub: "Iedereen aan tafel — jezelf inbegrepen.",
@@ -721,7 +715,6 @@ const STRINGS = {
     nSharers: (n: number) => n === 1 ? "1 deler" : `${n} delers`,
     eachAmount: (b: number) => `\u20ac${b.toFixed(2).replace(".", ",")} elk`,
     dropsIfMore: "\u2192 daalt als er meer meedelen",
-    youWord: "jij",
     youWordCap: "Jij",
     sharedProblemTitle: "Let op — gedeelde items kloppen mogelijk niet:",
     sharedProblemAsk: "Toch afsluiten?",
@@ -986,7 +979,7 @@ const STRINGS = {
     roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
     roundingSub: "Aanvaarden en verdergaan",
     roundingDone: (d: string) => `€${d} afronding aanvaard. Je kan verder naar Gasten & delen.`,
-    noFreeSpots: "Alle plaatsen zijn bezet. Verhoog eerst het aantal personen bovenaan.",
+    tableGrowsTo: (van: number, naar: number) => `Jullie gaan van ${van} naar ${naar} personen aan tafel.`,
     howManyAdminSub: "Een koppel dat samen betaalt? Kies 2.",
     noItemsYet: "Nog geen items op de bon.",
     kindCostName: "Kosten",
@@ -1310,9 +1303,6 @@ const STRINGS = {
     removeGuestYes: "Retirer",
     confirmRemoveGuest: (naam: string, van: number, naar: number) => `${naam} quitte la table et le nombre de personnes passe de ${van} à ${naar}. Ce qui était coché pour cette personne disparaît aussi.`,
     guestRemoved: (naam: string) => `${naam} n'est plus à table.`,
-    seatsCapped: (n: number) => n === 1
-      ? "Il ne reste qu’une place libre, donc ceci ne vaut que pour une personne. Augmente d’abord le nombre de personnes en haut."
-      : `Il reste ${n} places disponibles ici. Augmente d’abord le nombre de personnes en haut s’il t’en faut plus.`,
     addNameTitle: "Qui ajoutes-tu ?",
     addNameSub: "Cette personne touchera ce nom après le scan, ou tu indiques toi-même ce qu'elle a pris.",
     noScanBtn: "Quelqu'un qui ne scanne pas ?",
@@ -1397,9 +1387,6 @@ const STRINGS = {
     seatsByYou: (n: number) => `${n} par toi`,
     scannedBadge: "scann\u00e9",
     stillFreeTitle: (n: number) => n === 1 ? "Encore 1 libre — en attente d'un scan QR" : `Encore ${n} libres — en attente d'un scan QR`,
-    needMoreSpotsTitle: "Il manque une place",
-    needMoreSpotsBody: (tekort: number, totaal: number) => `Cela demande ${tekort} place${tekort === 1 ? "" : "s"} de plus qu’il n’y en a de libre. Je mets le nombre de personnes à ${totaal} ?`,
-    raiseTotalBtn: (totaal: number) => `Oui, mettre à ${totaal} personnes`,
     addAnother: "Ajouter quelqu\u2019un d\u2019autre",
     seatFreedUp: "Cette place compte maintenant pour 2 — il y a une place libre en moins.",
     howManyGroupSub: "Tout le monde à table — toi compris.",
@@ -1419,7 +1406,6 @@ const STRINGS = {
     nSharers: (n: number) => n === 1 ? "1 participant" : `${n} participants`,
     eachAmount: (b: number) => `\u20ac${b.toFixed(2).replace(".", ",")} chacun`,
     dropsIfMore: "\u2192 baisse si d'autres partagent",
-    youWord: "toi",
     youWordCap: "Toi",
     sharedProblemTitle: "Attention — les articles partagés semblent incorrects :",
     sharedProblemAsk: "Clôturer quand même ?",
@@ -1684,7 +1670,7 @@ const STRINGS = {
     roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
     roundingSub: "Accepter et continuer",
     roundingDone: (d: string) => `Écart d'arrondi de €${d} accepté. Tu peux continuer.`,
-    noFreeSpots: "Toutes les places sont prises. Augmente d'abord le nombre de personnes en haut.",
+    tableGrowsTo: (van: number, naar: number) => `Vous passez de ${van} \u00e0 ${naar} personnes \u00e0 table.`,
     howManyAdminSub: "Un couple qui paie ensemble ? Choisis 2.",
     noItemsYet: "Aucun article sur l'addition.",
     kindCostName: "Frais",
@@ -2717,9 +2703,7 @@ export default function RundoTable() {
       // Zo blijft de som van alle personen gelijk aan het getal in de teller.
       const delta = val - current
       if (delta > 0) {
-        const isFree = (p: Participant) => (new RegExp(`^${L.guestWord}(\\s*\\d+)?$`, "i").test(p.name.trim()) || p.name.trim() === L.adminName)
-          && p.id !== pid && p.id !== meId && !claims.some((c) => c.participant_id === p.id && c.quantity > 0)
-        const spare = participants.filter(isFree).slice(-delta)
+        const spare = participants.filter((p) => p.id !== pid && echtLeeg(p)).slice(-delta)
         for (const sp of spare) await supabase.from("table_participants").delete().eq("id", sp.id)
         if (spare.length > 0) setToast(L.seatFreedUp)
       }
@@ -2878,7 +2862,7 @@ export default function RundoTable() {
     // Verlaag je het aantal personen? Dan komen de vrijgekomen plaatsen weer beschikbaar.
     const before = participants.find((p) => p.id === claimSpot)
     const oldSeats = Math.max(1, before?.seats ?? 1)
-    const vrij = participants.filter((p) => p.id !== claimSpot && isFreeSpot(p) && !p.self_joined)
+    const vrij = participants.filter((p) => p.id !== claimSpot && echtLeeg(p))
     // Zijn jullie met meer dan er vrije plaatsen zijn? Dan neem je eerst wat er vrij is en
     // groeit de tafel voor de rest gewoon mee. Vroeger ging daar een verzoek naar de
     // beheerder en stond je te wachten tot hij het zag — terwijl jullie er al zaten.
@@ -3151,6 +3135,16 @@ export default function RundoTable() {
   // De toewijsschermen moeten daarop kijken, anders blokkeert de beheerder op een gast
   // die er wel degelijk zit.
   const echtVrij = (p: Participant) => isFreeSpot(p) && !p.self_joined
+  // Een plaats mag alleen zonder te vragen verdwijnen als er écht niemand op zit. Dat wil
+  // zeggen: nog de standaardnaam, niet zelf binnengekomen via de link of de QR, niet de
+  // beheerder, niet jijzelf, niets aangeduid en niets bevestigd. Op alle andere plaatsen
+  // zit een mens, en die halen we nooit stilletjes weg — dan laten we de tafel liever
+  // groeien. Dit ging eerder mis: wie via de QR binnenkwam en nog geen items had
+  // aangeduid, kon opgeslokt worden zodra iemand anders zijn plaats voor twee liet tellen.
+  const echtLeeg = (p: Participant) =>
+    isFreeSpot(p) && !p.self_joined && p.id !== ownerPid && p.id !== meId
+    && !claims.some((c) => c.participant_id === p.id && c.quantity > 0)
+    && !confirmations.some((c) => c.participant_id === p.id)
   const naamVanOwner = () => (participants.find((q) => q.id === ownerPid)?.name || "").trim()
 
   const setGuestCount = async (target: number) => {
@@ -4520,12 +4514,15 @@ export default function RundoTable() {
             return (
               // Wit met een blauwgroen streepje links: rustig genoeg om niet met de kaart
               // eronder te concurreren, maar duidelijk een mededeling en geen tweede kaart.
-              <div style={{ background: "#fff", border: "1px solid rgba(18,58,66,0.06)", borderLeft: "4px solid #3ec9d8", borderRadius: 14, padding: "12px 13px", marginBottom: 10 }}>
-                <div style={{ fontSize: 15.5, color: "#123a42", lineHeight: 1.4 }}>
-                  {L.youJoinPrefix} <b style={{ color: "#0f7488" }}>{groepNaam || beheerder?.name}</b>
+              // Dit is het eerste wat een gast leest nadat hij de QR scande, en het stond er
+              // in de kleine letter van een voetnoot. Nu even groot als de vraag eronder:
+              // eerst wéten waar je terechtkomt, dan pas kiezen wie je bent.
+              <div style={{ background: "#fff", border: "1px solid rgba(18,58,66,0.06)", borderLeft: "5px solid #3ec9d8", borderRadius: 14, padding: "14px 15px", marginBottom: 10 }}>
+                <div style={{ fontSize: 21, fontWeight: 800, color: "#123a42", lineHeight: 1.3, letterSpacing: -0.3 }}>
+                  {L.youJoinPrefix} <span style={{ color: "#0f7488" }}>{groepNaam || beheerder?.name}</span>
                 </div>
                 {beheerder?.name && groepNaam && (
-                  <div style={{ fontSize: 12.5, color: "#8aa3a6", marginTop: 2 }}>{L.sharedByName(beheerder.name)}</div>
+                  <div style={{ fontSize: 15.5, color: "#8aa3a6", marginTop: 4, lineHeight: 1.4 }}>{L.sharedByName(beheerder.name)}</div>
                 )}
               </div>
             )
@@ -6331,25 +6328,28 @@ export default function RundoTable() {
         // nog vrij is. De beheerder mag het totaal wel verhogen, maar dan vraagt de app het.
         const doelNu = guestTarget ? participants.find((p) => p.id === guestTarget) : null
         // In zitplaatsen tellen, niet in rijen: een plaats kan er al meer dan één bevatten.
-        const vrijNu = participants.filter((p) => p.id !== guestTarget && p.id !== meId && isFreeSpot(p) && !p.self_joined)
+        const vrijNu = participants.filter((p) => p.id !== guestTarget && echtLeeg(p))
           .reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
-        // Voeg je een nieuwe naam toe, dan is de doelplaats zélf al één van die vrije
-        // plaatsen — die mag je er niet nog eens bij optellen. Daardoor stond "Met 2" open
-        // terwijl er maar één plaats vrij was.
-        const maxZitplaatsen = doelNu ? Math.max(1, doelNu.seats ?? 1) + vrijNu : Math.max(1, vrijNu)
+        // Hier stond een bovengrens: meer personen kiezen dan er vrije plaatsen waren, kon
+        // niet. Je kreeg een melding "verhoog eerst het aantal personen bovenaan" en mocht
+        // dit venster sluiten, de teller gaan zoeken, en opnieuw beginnen. Terwijl jij als
+        // beheerder dat aantal net bepaalt. Nu mag je gewoon kiezen en groeit de tafel mee;
+        // hoeveel personen het worden staat eronder, vóór je opslaat.
+        const zitplaatsenNu = doelNu ? Math.max(1, doelNu.seats ?? 1) + vrijNu : vrijNu
+        const erbij = Math.max(0, guestSeats - zitplaatsenNu)
         const bewaar = async () => {
           const naam = guestNames.slice(0, guestSeats).map((x) => x.trim()).filter(Boolean).join(" & ")
           if (!naam) { setCenterNote({ body: L.enterGuestName }); return }
           // Bewerk je een bestaande plaats uit de namenlijst, of neem je er een nieuwe in?
-          const vrij = participants.filter((p) => p.id !== meId && isFreeSpot(p) && !p.self_joined)
-          const doel = guestTarget ? participants.find((p) => p.id === guestTarget) : vrij[0]
-          if (!doel) { setCenterNote({ body: L.noFreeSpots }); return }
+          const vrij = participants.filter(echtLeeg)
+          // Is er geen enkele vrije plaats, dan maken we er hier zelf een. Vroeger stopte
+          // het hier met "alle plaatsen zijn bezet" en moest je terug naar de teller.
+          let doel = guestTarget ? participants.find((p) => p.id === guestTarget) : vrij[0]
+          if (!doel) doel = await addGuest(L.guestWord, false, 1)
+          if (!doel) return
           const oud = Math.max(1, doel.seats ?? 1)
-          const anderen = participants.filter((p) => p.id !== doel.id && p.id !== meId && isFreeSpot(p) && !p.self_joined)
+          const anderen = participants.filter((p) => p.id !== doel!.id && echtLeeg(p))
           const nodig = guestSeats - oud
-          // Komen we plaatsen tekort? De beheerder mág het aantal aan tafel wijzigen, dus
-          // vragen we het — in tegenstelling tot een gast, die het gewoon niet kan.
-          const tekort = Math.max(0, nodig - anderen.length)
 
           const opslaan = async () => {
             setShowGuestModal(false); setGuestTarget(null)
@@ -6359,22 +6359,12 @@ export default function RundoTable() {
             }
             // Minder personen: de vrijgekomen plaatsen komen terug.
             for (let i = 0; i < Math.max(0, oud - guestSeats); i++) await addGuest(L.guestWord, false, 1)
-            await supabase.from("table_participants").update({ name: naam, seats: Math.max(1, guestSeats) }).eq("id", doel.id)
+            await supabase.from("table_participants").update({ name: naam, seats: Math.max(1, guestSeats) }).eq("id", doel!.id)
             if (group) await loadAll(group.id)
             // Geen bevestigingspopup: je staat weer in de namenlijst en kan meteen door.
             // Een venster dat je moet wegklikken voor elke naam is puur oponthoud.
           }
 
-          if (tekort > 0) {
-            setCenterNote({
-              title: L.needMoreSpotsTitle,
-              body: L.needMoreSpotsBody(tekort, totalPersons + tekort),
-              actionLabel: L.raiseTotalBtn(totalPersons + tekort),
-              onAction: () => { void opslaan() },
-              dismissLabel: L.cancel,
-            })
-            return
-          }
           await opslaan()
         }
         return (
@@ -6389,19 +6379,14 @@ export default function RundoTable() {
                 {[1, 2, 3].map((n) => {
                   const aan = n === 3 ? guestSeats >= 3 : guestSeats === n
                   const label = n === 1 ? L.onePerson : n === 2 ? L.twoPersons : L.threePlus
-                  // Meer personen dan er plaatsen vrij zijn kan niet. Vroeger merkte je dat
-                  // pas bij het opslaan; nu is de knop meteen zichtbaar geblokkeerd en zegt
-                  // een tik erop waarom — op het moment dat je hem probeert.
-                  const kan = n <= maxZitplaatsen
                   return (
                     <button key={n} onClick={() => {
-                      if (!kan) { setToast(L.seatsCapped(maxZitplaatsen)); return }
                       const v = n === 3 ? Math.max(3, guestSeats) : n
                       setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? ""))
                     }}
-                      style={{ flex: 1, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: kan ? "#123a42" : "#b9bfca", opacity: kan ? 1 : 0.6, background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.15)" }}>
+                      style={{ flex: 1, padding: "10px 4px", borderRadius: 10, cursor: "pointer", color: "#123a42", background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff", border: aan ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.15)" }}>
                       <span style={{ display: "block", fontSize: 15, fontWeight: 800 }}>{label}</span>
-                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: !kan ? "#b9bfca" : aan ? "#6b5a2a" : "#4a6e73" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
+                      <span style={{ display: "block", fontSize: 12, fontWeight: 600, marginTop: 2, color: aan ? "#6b5a2a" : "#4a6e73" }}>{n === 1 ? L.aloneSub : L.togetherSub}</span>
                     </button>
                   )
                 })}
@@ -6423,9 +6408,16 @@ export default function RundoTable() {
                   <button onClick={() => { const v = Math.max(3, guestSeats - 1); setGuestSeats(v); setGuestNames((c) => c.slice(0, v)) }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20 }}>−</button>
                   <b style={{ fontSize: 19, color: "#123a42" }}>{guestSeats}</b>
                   <button onClick={() => {
-                    if (guestSeats >= maxZitplaatsen) { setToast(L.seatsCapped(maxZitplaatsen)); return }
                     const v = Math.min(8, guestSeats + 1); setGuestSeats(v); setGuestNames((c) => Array.from({ length: v }, (_, i) => c[i] ?? ""))
-                  }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20, background: "rgba(27,42,74,0.12)", opacity: guestSeats >= maxZitplaatsen ? 0.45 : 1 }}>+</button>
+                  }} style={{ ...S.iconBtn, width: 34, height: 34, fontSize: 20, background: "rgba(27,42,74,0.12)" }}>+</button>
+                </div>
+              )}
+              {/* Wat het met de tafel doet, vóór je opslaat — in plaats van een melding
+                  achteraf die je terugstuurde naar de teller bovenaan. */}
+              {erbij > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(233,196,95,0.18)", border: "1.5px solid rgba(196,152,32,0.45)", borderRadius: 12, padding: "11px 12px", marginBottom: 14 }}>
+                  <span style={{ flexShrink: 0, fontSize: 19, fontWeight: 800, color: "#5a4a1a" }}>➕</span>
+                  <span style={{ minWidth: 0, fontSize: 15.5, color: "#5a4a1a", lineHeight: 1.45, fontWeight: 700 }}>{L.tableGrowsTo(totalPersons, totalPersons + erbij)}</span>
                 </div>
               )}
               <div style={{ fontSize: 18, fontWeight: 800, color: "#123a42", marginBottom: 8 }}>{guestSeats > 1 ? L.theirNamesQ : L.theirNameQ}</div>
@@ -7936,6 +7928,47 @@ function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confir
 // het vlak zijn eigen betekenis (blauw = gedeeld, groen = alles verdeeld, wit = te doen) en
 // krijgt "van jou" een eigen plek: een gouden streep langs de linkerkant. Alle rijen van
 // jou liggen daardoor op één lijn — je kan er met je duim langs scrollen.
+// Alle kruisjes zien er hetzelfde uit, op elke pil en op elk scherm. Ze stonden in drie
+// kleuren door elkaar: rood op de grijze chips, bruin op de gouden. Rood hoort bij wat fout
+// is — een ontbrekende prijs, een bon die niet klopt. Iemand van een item halen is geen
+// fout maar een correctie, en dan hoeft het kruisje niet harder te roepen dan de naam.
+const KRUISJE = {
+  border: "none",
+  background: "rgba(18,58,66,0.10)",
+  color: "#2b3f44",
+  borderRadius: 8,
+  width: 26,
+  height: 26,
+  cursor: "pointer",
+  fontSize: 14,
+  fontWeight: 800,
+  lineHeight: 1,
+  fontFamily: "inherit",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+} as const
+
+// Iedereen die meedeelt krijgt dezelfde pil, of hij nu door jou is toegevoegd, via de QR
+// binnenkwam of jijzelf bent. De kleur zei hiervoor hóé iemand aan tafel kwam — goud voor
+// jou, grijsblauw voor de rest — maar wat je op dit scherm zit na te kijken is wie meedeelt.
+// Vier delers horen er dus als vier gelijke pillen te staan. Wie jij bent staat vooraan met
+// een vinkje, en de gouden streep links zegt het al voor de hele rij.
+const DELER_PIL = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  fontSize: 15,
+  fontWeight: 800,
+  borderRadius: 10,
+  padding: "4px 4px 4px 11px",
+  background: "linear-gradient(135deg,#f3d27c,#ecc564)",
+  color: "#123a42",
+  border: "none",
+  fontFamily: "inherit",
+} as const
+
 const JOUW_STREEP = {
   borderLeft: "5px solid #ecc564",
   borderTopLeftRadius: 6,
@@ -8335,7 +8368,7 @@ function ClaimScreen(props: {
                                 <span onClick={(e) => { e.stopPropagation(); toggleShareClaim(it.id, meId) }} role="button" tabIndex={0}
                                   aria-label={L.removeOne} title={L.removeOne}
                                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggleShareClaim(it.id, meId) } }}
-                                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 7, background: "rgba(90,58,0,0.16)", color: "#5a4a1a", fontSize: 13, fontWeight: 800, lineHeight: 1, cursor: "pointer" }}>✕</span>
+                                  style={{ ...KRUISJE, width: 22, height: 22, borderRadius: 7, fontSize: 12.5 }}>✕</span>
                               )}
                             </button>
                           )}
@@ -8345,12 +8378,20 @@ function ClaimScreen(props: {
                             const on = claimMembers(it.id, meId).includes(k)
                             const delen = (participants.find((x) => x.id === meId)?.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
                             return (
-                              <button key={`ik:${k}`} onClick={() => toggleShareMember(it.id, meId, k)} style={{
-                                fontSize: 15, borderRadius: 11, padding: "8px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 800,
-                                border: on ? "none" : "1.5px solid rgba(18,58,66,0.18)",
-                                background: on ? "rgba(233,196,95,0.5)" : "#fff",
-                                color: on ? "#5a4a1a" : "#4a6e73",
-                              }}>{on ? "✓ " : ""}{delen[k] || `${L.personWord} ${k + 1}`}</button>
+                              <button key={`ik:${k}`} onClick={() => toggleShareMember(it.id, meId, k)} style={on ? { ...DELER_PIL, cursor: "pointer" } : {
+                                fontSize: 15, borderRadius: 10, padding: "8px 12px", cursor: "pointer", fontFamily: "inherit", fontWeight: 800,
+                                border: "1.5px solid rgba(18,58,66,0.18)", background: "#fff", color: "#4a6e73",
+                              }}>{on ? "✓ " : ""}{delen[k] || `${L.personWord} ${k + 1}`}
+                                {/* Ook op je eigen helft van een koppel hoort een kruisje: de
+                                    anderen hadden er een, jij niet — en een tweede tik op de
+                                    naam doet hetzelfde maar zegt het niet. */}
+                                {on && (
+                                  <span onClick={(e) => { e.stopPropagation(); toggleShareMember(it.id, meId, k) }} role="button" tabIndex={0}
+                                    aria-label={L.removeOne} title={L.removeOne}
+                                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggleShareMember(it.id, meId, k) } }}
+                                    style={{ ...KRUISJE, width: 22, height: 22, borderRadius: 7, fontSize: 12.5 }}>✕</span>
+                                )}
+                              </button>
                             )
                           })}
                           {/* De anderen die al meedelen. Een koppel dat maar met één persoon
@@ -8366,10 +8407,10 @@ function ClaimScreen(props: {
                               ? leden.map((k) => ({ nm: delen[k] || `${L.personWord} ${k + 1}`, af: () => toggleShareMember(it.id, p.id, k) }))
                               : [{ nm: naamVan(p), af: () => toggleShareClaim(it.id, p.id) }]
                             return stuks.map((d, k) => (
-                              <span key={`${pid}:${k}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 15, fontWeight: 700, borderRadius: 10, padding: "3px 3px 3px 10px", color: "#4a6e73", background: "rgba(90,108,166,0.1)" }}>
+                              <span key={`${pid}:${k}`} style={DELER_PIL}>
                                 {d.nm}
                                 <button onClick={d.af} title={L.removeOne} aria-label={L.removeOne}
-                                  style={{ border: "none", background: "rgba(224,107,94,0.16)", color: "#c0392b", borderRadius: 8, width: 26, height: 26, cursor: "pointer", fontSize: 14, fontWeight: 800, lineHeight: 1, fontFamily: "inherit" }}>✕</button>
+                                  style={{ ...KRUISJE, width: 23, height: 23, borderRadius: 7, fontSize: 12.5 }}>✕</button>
                               </span>
                             ))
                           })}
@@ -8452,7 +8493,7 @@ function ClaimScreen(props: {
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 15, fontWeight: 800, borderRadius: 10, padding: "3px 3px 3px 10px", color: "#5a4a1a", background: "rgba(233,196,95,0.5)" }}>
                             {L.youWordCap} ×{mineQ}
                             <button onClick={() => setClaim(it.id, adminPid, 0)} title={L.removeOne} aria-label={L.removeOne}
-                              style={{ border: "none", background: "rgba(90,58,0,0.16)", color: "#5a4a1a", borderRadius: 8, width: 26, height: 26, cursor: "pointer", fontSize: 14, fontWeight: 800, lineHeight: 1, fontFamily: "inherit" }}>✕</button>
+                              style={KRUISJE}>✕</button>
                           </span>
                         )}
                         {anderen.map(({ p, q: pq }) => (
@@ -8462,7 +8503,7 @@ function ClaimScreen(props: {
                                 ×1 is dat hetzelfde. Staan er meerdere, dan gaat er telkens één
                                 af; dat hoeft er niet bij te staan, je ziet het cijfer zakken. */}
                             <button onClick={() => setClaim(it.id, p.id, Math.max(0, pq - 1))} title={L.removeOne} aria-label={L.removeOne}
-                              style={{ border: "none", background: "rgba(224,107,94,0.16)", color: "#c0392b", borderRadius: 8, width: 26, height: 26, cursor: "pointer", fontSize: 14, fontWeight: 800, lineHeight: 1, fontFamily: "inherit" }}>✕</button>
+                              style={KRUISJE}>✕</button>
                           </span>
                         ))}
                         {open > 0 && participants.length > 0 && (
@@ -8763,13 +8804,19 @@ function ClaimScreen(props: {
                             {!isDone && <span style={{ color: "#8aa3a6" }}> {L.dropsIfMore}</span>}
                           </div>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                            {/* Dezelfde gouden pillen als op het beheerdersscherm: wie meedeelt
+                                ziet er hetzelfde uit, of hij nu via de QR kwam of erbij gezet is.
+                                Op je eigen pil staat een vinkje en een kruisje — de anderen mag
+                                je niet weghalen, dat is hun rekening. */}
                             {delers.flatMap((q) => {
                               const ikZelf = q.id === meId
                               return delerNamen(it.id, q).map((nm, k) => (
-                                <span key={`${q.id}:${k}`} style={{ fontSize: 14, fontWeight: ikZelf ? 800 : 700, borderRadius: 9, padding: "5px 9px",
-                                  background: ikZelf ? "rgba(20,153,176,0.14)" : "rgba(18,58,66,0.06)",
-                                  color: ikZelf ? "#0f7488" : "#4a6e73" }}>
-                                  {nm}{ikZelf ? ` · ${L.youWord}` : ""}
+                                <span key={`${q.id}:${k}`} style={{ ...DELER_PIL, fontSize: 14.5, paddingRight: ikZelf ? 4 : 11 }}>
+                                  {ikZelf ? "✓ " : ""}{nm}
+                                  {ikZelf && meId && !fixed && !finalized && (
+                                    <button onClick={() => toggleShareClaim(it.id, meId)} title={L.removeOne} aria-label={L.removeOne}
+                                      style={{ ...KRUISJE, width: 22, height: 22, borderRadius: 7, fontSize: 12.5 }}>✕</button>
+                                  )}
                                 </span>
                               ))
                             })}
@@ -8825,7 +8872,7 @@ function ClaimScreen(props: {
                                       item af — dezelfde handeling die de anderen al hadden. */}
                                   {ikZelf && meId && (
                                     <button onClick={() => setClaim(it.id, meId, 0)} title={L.removeOne} aria-label={L.removeOne}
-                                      style={{ border: "none", background: "rgba(90,58,0,0.16)", color: "#5a4a1a", borderRadius: 7, width: 22, height: 22, cursor: "pointer", fontSize: 12.5, fontWeight: 800, lineHeight: 1, fontFamily: "inherit" }}>✕</button>
+                                      style={{ ...KRUISJE, width: 22, height: 22, borderRadius: 7, fontSize: 12.5 }}>✕</button>
                                   )}
                                 </span>
                               )
