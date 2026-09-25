@@ -1006,7 +1006,7 @@ const STRINGS = {
     allAssignedSharedYes: "Ja, dat klopt",
     addSharerBtn: "Nog iemand toevoegen",
     stickyCheckFirst: "Nog iets na te kijken",
-    showDetailsBtn: "Toon details",
+    showDetailsBtn: "Toon de verdeling",
     closedBarTitle: "Rekening afgesloten",
     reopenWord: "Heropenen",
     closedListTitle: "De verdeling, zoals afgesloten",
@@ -1148,6 +1148,7 @@ const STRINGS = {
     sharedQ: "gedeeld item?",
     filterAll: "Alles",
     filterFree: "Nog vrij",
+    filterSharedLeft: "Gedeeld",
     filterMine: "Van mij",
     nothingFreeTitle: "Alles is toegewezen",
     nothingFreeSub: "Kijk nog even na bij \u201cVan mij\u201d.",
@@ -1841,6 +1842,7 @@ const STRINGS = {
     sharedQ: "article partag\u00e9\u00a0?",
     filterAll: "Tout",
     filterFree: "Libre",
+    filterSharedLeft: "Partag\u00e9",
     filterMine: "Moi",
     nothingFreeTitle: "Tout est attribu\u00e9",
     nothingFreeSub: "V\u00e9rifie encore une fois sous \u00ab\u00a0Moi\u00a0\u00bb.",
@@ -8400,8 +8402,15 @@ function ClaimScreen(props: {
   } as const
   const klaarBlok = () => {
     if (items.length === 0) return null
+    // Staat er onder "Nog vrij" enkel nog een gedeelde fles, dan is er niets meer "vrij":
+    // elk stuk is toegewezen en wat overblijft is een item dat gedeeld moet worden. De chip
+    // zegt dat dan ook, anders zoek je naar stuks die er niet meer zijn.
+    const vrijeItems = items.filter((it) => it.is_shared || !volGenomen(it))
+    const enkelGedeeld = vrijeItems.length > 0 && vrijeItems.every((it) => it.is_shared)
     const chips: { k: "alles" | "vrij" | "mij"; t: string }[] = [
-      { k: "alles", t: L.filterAll }, { k: "vrij", t: L.filterFree }, { k: "mij", t: L.filterMine },
+      { k: "alles", t: L.filterAll },
+      { k: "vrij", t: enkelGedeeld ? L.filterSharedLeft : L.filterFree },
+      { k: "mij", t: L.filterMine },
     ]
     return (
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
@@ -8411,10 +8420,10 @@ function ClaimScreen(props: {
             <button key={k} onClick={() => { negeerAnker.current = true; setFilter(k); setNetId(null); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" }) }} aria-pressed={aan}
               style={{ display: "inline-flex", alignItems: "center", gap: 7, minHeight: 42, cursor: "pointer",
                 fontFamily: "inherit", fontSize: 14, fontWeight: 800, borderRadius: 999, padding: "9px 13px",
-                border: "1.5px solid " + (aan ? CHIPAAN[k].borderColor : "rgba(18,58,66,0.18)"),
-                background: aan ? CHIPAAN[k].background : "#fff",
-                color: aan ? CHIPAAN[k].color : "#4a6e73" }}>
-              <span style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: CHIPKLEUR[k] }} />
+                border: "1.5px solid " + (aan ? (k === "vrij" && enkelGedeeld ? "#5a6ca6" : CHIPAAN[k].borderColor) : "rgba(18,58,66,0.18)"),
+                background: aan ? (k === "vrij" && enkelGedeeld ? "rgba(90,108,166,0.14)" : CHIPAAN[k].background) : "#fff",
+                color: aan ? (k === "vrij" && enkelGedeeld ? "#41508a" : CHIPAAN[k].color) : "#4a6e73" }}>
+              <span style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: k === "vrij" && enkelGedeeld ? "#5a6ca6" : CHIPKLEUR[k] }} />
               {t}<span style={{ fontSize: 12.5, fontWeight: 800, opacity: 0.75 }}>{tel(k)}</span>
             </button>
           )
@@ -9198,11 +9207,23 @@ function ClaimScreen(props: {
                       const on = sel.includes(i)
                       const label = parts[i] || `${L.personWord} ${i + 1}`
                       return (
+                        // Uit stond hij in een volle witte rand, net als de naampillen van de
+                        // anderen ernaast — dan lijkt het een label en niet iets om aan te tikken.
+                        // Nu stippellijn als hij uit staat, en goud mét kruisje als hij aan staat,
+                        // precies zoals overal elders op dit scherm.
                         <button key={i} onClick={() => toggleShareMember(it.id, meId, i)}
-                          style={{ flexShrink: 0, maxWidth: wide ? 104 : 132, fontSize: wide ? 13.5 : 14.5, fontWeight: 800, padding: "10px 13px", borderRadius: 999, cursor: "pointer", color: "#123a42",
-                            background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
-                            border: on ? "1.5px solid transparent" : "1.5px solid rgba(18,58,66,0.18)",
-                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{on ? "✓ " : ""}{label}</button>
+                          style={{ display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0, maxWidth: wide ? 118 : 150, fontSize: wide ? 13.5 : 14.5, fontWeight: 800, padding: on ? "7px 5px 7px 13px" : "10px 13px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", color: "#123a42",
+                            background: on ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "transparent",
+                            border: on ? "1.5px solid transparent" : "1.5px dashed rgba(18,58,66,0.32)",
+                            overflow: "hidden", whiteSpace: "nowrap" }}>
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{on ? "✓ " : "+ "}{label}</span>
+                          {on && (
+                            <span onClick={(e) => { e.stopPropagation(); toggleShareMember(it.id, meId, i) }} role="button" tabIndex={0}
+                              aria-label={L.removeOne} title={L.removeOne}
+                              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggleShareMember(it.id, meId, i) } }}
+                              style={{ ...KRUISJE, width: 22, height: 22, borderRadius: 7, fontSize: 12.5 }}>✕</span>
+                          )}
+                        </button>
                       )
                     })
                   })() : (
@@ -9572,9 +9593,13 @@ function ClaimScreen(props: {
               </div>
               {/* "Sluiten" zei wat de knop met het venster doet; dit zegt wat je erna ziet —
                   de definitieve verdeling van de hele tafel, open, op de pagina eronder. */}
+              {/* Dit zette hier ook meteen alle regels van iedereen open. Je landde dan
+                  midden in een lijst van vijf personen maal zes items, terwijl je alleen
+                  wou zien wie wat betaalt. De namen met hun bedragen staan er al; de
+                  details haal je erbij met de knop die daar staat. */}
               <button onClick={() => {
                 setShowFinalPopup(false)
-                setOpenGuestRows(new Set(participants.map((q) => q.id)))
+                setOpenGuestRows(new Set())
                 if (typeof document !== "undefined") setTimeout(() => document.getElementById("gast-eindverdeling")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80)
               }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, marginTop: 12 }}>{L.showDetailsBtn}</button>
             </div>
