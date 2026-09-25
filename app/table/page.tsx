@@ -980,6 +980,9 @@ const STRINGS = {
     itemsBelowLabel: "Items hieronder",
     tooMuchInList: "Te veel in de lijst",
     tooLittleInList: "Te weinig in de lijst",
+    cantFindDiffBtn: "Ik vind het verschil niet",
+    ackDiffTitle: (v: string) => `\u20ac${v} verschil \u2014 je gaat toch verder`,
+    ackDiffBody: "Je verdeelt de lijst hieronder, niet het bonbedrag. Een bon kan zelf ook fout zijn.",
     roundingTitle: "Niets gevonden? Mogelijk afrondingsverschil",
     roundingSub: "Aanvaarden en verdergaan",
     roundingDone: (d: string) => `€${d} afronding aanvaard. Je kan verder naar Gasten & delen.`,
@@ -1143,8 +1146,13 @@ const STRINGS = {
     assignOwnBody: (name: string | undefined) => `${name} kwam niet via de QR binnen, dus jij tikt aan wat hij nam. Dat is hier de gewone gang van zaken.\n\nDit vragen we maar één keer — daarna gaat het meteen door.`,
     assignOwnYes: "Ja, doorgaan",
     sharedQ: "gedeeld item?",
-    hideAssigned: "Verberg toegewezen items",
-    showAllItems: "Toon alle items",
+    filterAll: "Alles",
+    filterFree: "Nog vrij",
+    filterMine: "Van mij",
+    nothingFreeTitle: "Alles is toegewezen",
+    nothingFreeSub: "Kijk nog even na bij \u201cVan mij\u201d.",
+    nothingMineTitle: "Je duidde nog niets aan",
+    nothingMineSub: "Tik bij \u201cNog vrij\u201d aan wat jij nam.",
     unitsClaimed: "Stuks geclaimd",
     sharedItemsHandled: "Gedeelde items geregeld",
     billTotalLabel: "Totaal rekening",
@@ -1675,6 +1683,9 @@ const STRINGS = {
     itemsBelowLabel: "Articles ci-dessous",
     tooMuchInList: "En trop dans la liste",
     tooLittleInList: "Manque dans la liste",
+    cantFindDiffBtn: "Je ne trouve pas la diff\u00e9rence",
+    ackDiffTitle: (v: string) => `\u20ac${v} de diff\u00e9rence \u2014 tu continues quand m\u00eame`,
+    ackDiffBody: "Tu partages la liste ci-dessous, pas le montant du ticket. Un ticket peut lui aussi \u00eatre faux.",
     roundingTitle: "Rien trouvé ? Peut-être un écart d'arrondi",
     roundingSub: "Accepter et continuer",
     roundingDone: (d: string) => `Écart d'arrondi de €${d} accepté. Tu peux continuer.`,
@@ -1828,8 +1839,13 @@ const STRINGS = {
     assignOwnBody: (name: string | undefined) => `${name} n'est pas arrivé via le QR, c'est donc toi qui coches ce qu'il a pris. C'est le fonctionnement normal ici.\n\nOn ne te le demande qu'une seule fois — ensuite ça passe directement.`,
     assignOwnYes: "Oui, continuer",
     sharedQ: "article partag\u00e9\u00a0?",
-    hideAssigned: "Masquer les articles attribués",
-    showAllItems: "Afficher tous les articles",
+    filterAll: "Tout",
+    filterFree: "Libre",
+    filterMine: "Moi",
+    nothingFreeTitle: "Tout est attribu\u00e9",
+    nothingFreeSub: "V\u00e9rifie encore une fois sous \u00ab\u00a0Moi\u00a0\u00bb.",
+    nothingMineTitle: "Tu n\u2019as encore rien coch\u00e9",
+    nothingMineSub: "Sous \u00ab\u00a0Libre\u00a0\u00bb, coche ce que tu as pris.",
     unitsClaimed: "Unités attribuées",
     sharedItemsHandled: "Articles partagés réglés",
     billTotalLabel: "Total de l'addition",
@@ -3980,6 +3996,16 @@ export default function RundoTable() {
   const billDiffAbs = Math.abs((group?.receipt_total ?? 0) - billTotal)
   const billOk = (group?.receipt_total ?? null) != null
     && (billDiffAbs < 0.005 || (roundingOk && billDiffAbs <= 0.05))
+  // Ging je verder met €2 verschil en wordt dat daarna €40 omdat je nog iets aanpaste,
+  // dan mag dat niet stil doorlopen: bij een ander bedrag vervalt je akkoord en staat de
+  // vraag er opnieuw. Anders keurt één tik van daarnet ook een heel ander verschil goed.
+  const ackVerschil = useRef<number | null>(null)
+  useEffect(() => {
+    const nu = +billDiffAbs.toFixed(2)
+    if (!billMismatchAck) { ackVerschil.current = null; return }
+    if (ackVerschil.current != null && Math.abs(ackVerschil.current - nu) > 0.005) { setBillMismatchAck(false); return }
+    ackVerschil.current = nu
+  }, [billDiffAbs, billMismatchAck])
   // Bij elke tabwissel bovenaan beginnen, anders behoud je de scrollpositie van de vorige tab.
   const scrollTop = () => { if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" }) }
   // Detail per persoon: welke items, welk bedrag, en bij gedeelde items met hoeveel gedeeld.
@@ -5036,6 +5062,31 @@ export default function RundoTable() {
                   const diffTxt = diff.toFixed(2).replace(".", ",")
                   const higher = billTotal > (entered ?? 0)
                   // Alles gelijk, of een centenverschil dat je bewust aanvaardde: groen.
+                  // Vind je het verschil niet, dan mag je verder — maar dan blijft het hier
+                  // staan in plaats van groen te worden. Een bon is ook maar een bon: de
+                  // kassa kan een ronde geven, een korting vergeten of iets dubbel drukken.
+                  if (!match && !(rounding && roundingOk) && billMismatchAck) {
+                    return (
+                      <div style={{ marginTop: 8, background: "rgba(243,156,18,0.1)", border: "1.5px solid rgba(243,156,18,0.5)", borderRadius: 14, padding: "12px 13px" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
+                          <span style={{ flexShrink: 0, fontSize: 18, lineHeight: 1.3 }}>⚠️</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 16.5, fontWeight: 800, color: "#8a4514", lineHeight: 1.35 }}>{L.ackDiffTitle(diffTxt)}</div>
+                            <div style={{ fontSize: 14.5, color: "#a5713f", marginTop: 3 }}>
+                              {L.receiptConfirmedLabel} €{(entered ?? 0).toFixed(2).replace(".", ",")} · {L.itemsBelowLabel} €{billTotal.toFixed(2).replace(".", ",")}
+                            </div>
+                            <div style={{ fontSize: 14.5, color: "#8a6a45", marginTop: 7, lineHeight: 1.5 }}>{L.ackDiffBody}</div>
+                          </div>
+                        </div>
+                        {/* Hier stond "Toch nog nakijken". Wie hier komt heeft net gezegd dat
+                            hij niets meer vindt; terugsturen naar diezelfde lijst helpt niet.
+                            Dus de weg vooruit — naar de gasten en de QR. Pas je nadien nog
+                            iets aan de items aan, dan komt de vraag vanzelf terug. */}
+                        <button onClick={() => { setAdminTab("guests"); scrollTop() }}
+                          style={{ width: "100%", boxSizing: "border-box", marginTop: 11, background: "linear-gradient(135deg,#e8a33d,#d98324)", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 16, fontWeight: 800, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>{L.goGuestsBtn} →</button>
+                      </div>
+                    )
+                  }
                   if (match || (rounding && roundingOk)) {
                     return (
                       <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 9, background: "rgba(39,174,96,0.13)", border: "1px solid #27ae60", borderRadius: 10, padding: "10px 11px" }}>
@@ -5133,6 +5184,15 @@ export default function RundoTable() {
                         {BON_STRINGS[lang].checkList}{" "}
                         <span className={naarLijstGetikt ? undefined : "rundo-pijl-wip"}>↓</span>
                       </button>
+                      {/* Je kan hier vastzitten terwijl er niets meer te vinden valt: soms
+                          klopt de bon zelf niet. Dus een weg vooruit, stil maar zichtbaar —
+                          en het verschil blijft daarna in het geel staan. */}
+                      <div style={{ background: "#fff", borderTop: "1px solid rgba(18,58,66,0.10)", padding: "12px 13px" }}>
+                        <button onClick={() => setBillMismatchAck(true)}
+                          style={{ display: "block", width: "100%", boxSizing: "border-box", textAlign: "center", background: "#fff", border: "1.5px solid rgba(18,58,66,0.28)", borderRadius: 11, padding: "12px 10px", fontSize: 15.5, fontWeight: 800, color: "#2b4f56", cursor: "pointer", fontFamily: "inherit", lineHeight: 1.35 }}>
+                          {L.cantFindDiffBtn}
+                        </button>
+                      </div>
                     </div>
                   )
                 })()}
@@ -5272,7 +5332,11 @@ export default function RundoTable() {
       {isAdmin && !billOk && (adminTab === "guests" || adminTab === "overview") && (
         <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(243,156,18,0.12)", border: "1.5px solid rgba(243,156,18,0.55)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
           <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 700, color: "#8a4514", lineHeight: 1.45 }}>{L.mismatchBanner(billDiff)}</span>
-          <button onClick={() => { setAdminTab("scan"); scrollTop() }} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#e8a33d,#d98324)", border: "none", borderRadius: 8, padding: "9px 10px", cursor: "pointer", whiteSpace: "nowrap" }}>{L.mismatchFix}</button>
+          {/* Zei je al dat je het verschil niet vindt, dan is "naar de bon" een knop die je
+              terugstuurt naar iets waar je klaar mee bent. De melding blijft, de knop niet. */}
+          {!billMismatchAck && (
+            <button onClick={() => { setAdminTab("scan"); scrollTop() }} style={{ flexShrink: 0, fontSize: 15.5, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#e8a33d,#d98324)", border: "none", borderRadius: 8, padding: "9px 10px", cursor: "pointer", whiteSpace: "nowrap" }}>{L.mismatchFix}</button>
+          )}
         </div>
       )}
       {isAdmin && adminTab === "guests" && (
@@ -6171,7 +6235,9 @@ export default function RundoTable() {
                 <li>{L.checkSharedMarked}</li>
               </ul>
               <button onClick={() => { setShowShareWarn(false); setAdminTab("scan"); scrollTop() }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", padding: "12px 0", fontWeight: 800 }}>{L.backToBill}</button>
-              <button onClick={() => { setBillMismatchAck(true); setShowShareWarn(false); setAdminTab("guests"); scrollTop() }} style={{ ...S.btn, width: "100%", padding: "9px 0", marginTop: 8, fontSize: 16, fontWeight: 700, color: "#8aa3a6", background: "transparent", border: "none" }}>{L.continueAnyway}</button>
+              {/* Deze uitweg stond in lichtgrijs zonder rand: precies de knop die je nodig
+                  hebt als je het verschil niet víndt, en net die was nauwelijks te zien. */}
+              <button onClick={() => { setBillMismatchAck(true); setShowShareWarn(false); setAdminTab("guests"); scrollTop() }} style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 16, fontWeight: 800, color: "#4a6e73", background: "#fff", border: "1.5px solid rgba(18,58,66,0.2)" }}>{L.continueAnyway}</button>
             </div>
           </div>
         )
@@ -8086,7 +8152,12 @@ function ClaimScreen(props: {
   // De beheerder deelt de héle bon uit en heeft dus baat bij een lijst die stilstaat: bij
   // hem staat alles open tot hij zelf opruimt. Een gast duidt enkel zichzelf aan — bij hem
   // is wat af is en niet van hem meteen weg, want daar valt voor hem niets meer te doen.
-  const [allesOpen, setAllesOpen] = useState(isAdmin)
+  // Niet één knop die verbergt, maar drie chips die filteren: Alles, Nog vrij, Van mij.
+  // Een knop moest je eerst uitproberen om te weten wat hij zou doen; een chip zegt in
+  // welke stand je zít. Het verschil tussen de twee schermen is nog maar de beginstand:
+  // de beheerder deelt de héle bon uit en begint bij Alles, een gast heeft één opdracht
+  // — aanduiden wat hij nam — en begint bij Nog vrij.
+  const [filter, setFilter] = useState<"alles" | "vrij" | "mij">(isAdmin ? "alles" : "vrij")
   // Het item waar de beheerder het laatst aan zat. Dat blijft staan, ook al is het af en
   // ook al staat de lijst op opgeruimd: anders verdwijnt de regel onder zijn duim vandaan
   // op het moment dat hij hem volmaakt, en landt zijn volgende tik op het verkeerde item.
@@ -8246,15 +8317,25 @@ function ClaimScreen(props: {
   // die klappen nooit in, want een fles die uit beeld verdwijnt nodigt niemand meer uit
   // om mee te delen.
   const volGenomen = (it: BillItem) => it.quantity - claimedQty(it.id) <= 0
-  // Wat gaat er achter de knop? Nooit een gedeeld item en nooit iets waar nog stuks vrij
-  // zijn. Bij de beheerder: alleen als hij zelf opruimde, en nooit het item waar hij net
-  // aan zat. Bij de gast: alles wat af is en niet op zijn naam staat — hij kan met zijn
-  // eigen tik nooit iets doen verdwijnen, want die zet hem er juist óp.
-  const verborgen = (it: BillItem) => {
-    if (it.is_shared || !volGenomen(it) || allesOpen) return false
-    return isAdmin ? it.id !== netId : myQty(it.id, meId) <= 0
+  // Wie ben "ik" hier: de beheerder heeft zijn eigen plaats, een gast is zichzelf.
+  const ikPid = isAdmin ? adminPid : meId
+  // Een gedeeld item staat in élke stand. Verdwijnt de fles uit "Nog vrij", dan is ze weg
+  // uit de to-dolijst terwijl er nog geld onverdeeld ligt; verdwijnt ze uit "Van mij", dan
+  // kan niemand er nog bij gaan staan.
+  const past = (it: BillItem) => {
+    if (filter === "alles" || it.is_shared) return true
+    if (filter === "vrij") return !volGenomen(it)
+    return myQty(it.id, ikPid) > 0
   }
-  const inklapbaar = items.some((it) => !it.is_shared && volGenomen(it) && (isAdmin || myQty(it.id, meId) <= 0))
+  // Wat je net aanraakte blijft staan, ook als het niet meer bij de filter past. Zonder
+  // die uitzondering verdwijnt de regel onder je duim vandaan op het moment dat je hem
+  // volmaakt, en landt je volgende tik op het verkeerde item.
+  const verborgen = (it: BillItem) => !past(it) && it.id !== netId
+  const tel = (f: "alles" | "vrij" | "mij") => items.filter((it) => {
+    if (f === "alles" || it.is_shared) return true
+    if (f === "vrij") return !volGenomen(it)
+    return myQty(it.id, ikPid) > 0
+  }).length
 
   // ── Niet laten springen ──
   // Verdwijnt er een regel bóven wat jij op dat moment leest, dan schuift de hele lijst
@@ -8264,6 +8345,10 @@ function ClaimScreen(props: {
   // staan waar het stond, ook als er boven je iets wegvalt.
   // We houden drie kandidaten bij: valt de bovenste rij zelf weg, dan dient de volgende.
   const ankerRef = useRef<{ id: string; top: number }[]>([])
+  // Tik je zelf op een chip, dan hoort de lijst bovenaan te beginnen. Het ankeren hieronder
+  // zou die sprong meteen terugdraaien — het kan niet weten dat jíj het was. Dus zetten we
+  // het één keer opzij bij een filterwissel.
+  const negeerAnker = useRef(false)
   const meetAnker = useCallback(() => {
     if (typeof document === "undefined") return
     const rijen = Array.from(document.querySelectorAll<HTMLElement>("[data-rij]"))
@@ -8286,6 +8371,7 @@ function ClaimScreen(props: {
   const zichtbaarHandtekening = items.filter((it) => !verborgen(it)).map((it) => it.id).join(",")
   useLayoutEffect(() => {
     if (typeof window === "undefined") return
+    if (negeerAnker.current) { negeerAnker.current = false; ankerRef.current = []; meetAnker(); return }
     for (const a of ankerRef.current) {
       const el = document.querySelector<HTMLElement>(`[data-rij="${a.id}"]`)
       if (!el) continue
@@ -8301,15 +8387,54 @@ function ClaimScreen(props: {
   // balk, maar dat was de derde plek waar hetzelfde geteld werd: onderaan deze kaart staat
   // al "Stuks geclaimd 4/7" en "Gedeelde items geregeld 1/1". Bij de gast telde niemand
   // mee hoever de héle tafel stond — dat is zijn zorg niet.
+  const CHIPKLEUR = { alles: "#123a42", vrij: "#e0685c", mij: "#ecc564" } as const
+  const CHIPAAN = {
+    alles: { background: "#123a42", borderColor: "#123a42", color: "#fff" },
+    vrij: { background: "rgba(224,107,94,0.16)", borderColor: "#e0685c", color: "#a83c2f" },
+    mij: { background: "rgba(236,197,100,0.5)", borderColor: "#ecc564", color: "#5a4a1a" },
+  } as const
   const klaarBlok = () => {
-    if (!inklapbaar) return null
+    if (items.length === 0) return null
+    const chips: { k: "alles" | "vrij" | "mij"; t: string }[] = [
+      { k: "alles", t: L.filterAll }, { k: "vrij", t: L.filterFree }, { k: "mij", t: L.filterMine },
+    ]
     return (
-      <button onClick={() => { setAllesOpen((v) => !v); setNetId(null) }}
-        style={{ width: "100%", boxSizing: "border-box", border: "1px solid rgba(18,58,66,0.14)", borderRadius: 12,
-          background: "#fff", padding: "9px", marginBottom: 11, textAlign: "center",
-          fontSize: 14, fontWeight: 800, color: "#0f7488", cursor: "pointer", fontFamily: "inherit" }}>
-        {allesOpen ? `${L.hideAssigned} \u25b4` : `${L.showAllItems} \u25be`}
-      </button>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+        {chips.map(({ k, t }) => {
+          const aan = filter === k
+          return (
+            <button key={k} onClick={() => { negeerAnker.current = true; setFilter(k); setNetId(null); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" }) }} aria-pressed={aan}
+              style={{ display: "inline-flex", alignItems: "center", gap: 7, minHeight: 42, cursor: "pointer",
+                fontFamily: "inherit", fontSize: 14, fontWeight: 800, borderRadius: 999, padding: "9px 13px",
+                border: "1.5px solid " + (aan ? CHIPAAN[k].borderColor : "rgba(18,58,66,0.18)"),
+                background: aan ? CHIPAAN[k].background : "#fff",
+                color: aan ? CHIPAAN[k].color : "#4a6e73" }}>
+              <span style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: CHIPKLEUR[k] }} />
+              {t}<span style={{ fontSize: 12.5, fontWeight: 800, opacity: 0.75 }}>{tel(k)}</span>
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+  // Een lege lijst ziet er stuk uit. Dus geen wit vlak maar een regel die zegt waarom er
+  // niets staat en waar je dan wél moet kijken.
+  const leegBlok = () => {
+    // Ook tonen als er alleen nog staat wat je net aantikte: het laatste item blijft
+    // staan (er komt geen volgende tik meer om het weg te duwen), en daaronder hoort dan
+    // te staan dát je klaar bent — anders zie je één kaart bij een chip die 0 zegt.
+    if (items.length === 0 || filter === "alles" || items.some((it) => past(it))) return null
+    const klaar = filter === "vrij"
+    return (
+      <div style={{ textAlign: "center", padding: "18px 12px" }}>
+        <div style={{ fontSize: 22 }}>{klaar ? "\u2705" : "\ud83d\udc46"}</div>
+        <div style={{ fontSize: 15.5, fontWeight: 800, color: klaar ? "#1f8a4c" : "#4a6e73", marginTop: 6 }}>
+          {klaar ? L.nothingFreeTitle : L.nothingMineTitle}
+        </div>
+        <div style={{ fontSize: 14, color: "#8aa3a6", marginTop: 4, lineHeight: 1.45 }}>
+          {klaar ? L.nothingFreeSub : L.nothingMineSub}
+        </div>
+      </div>
     )
   }
 
@@ -8384,10 +8509,10 @@ function ClaimScreen(props: {
     return () => { if (typeof window !== "undefined" && wachtRef.current !== null) { window.clearTimeout(wachtRef.current); wachtRef.current = null } }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allDone, delersHandtekening, isAdmin])
-  // Dit signaal klapte de hele toewijslijst dicht nadat je het bericht "alles toegewezen"
-  // volgde. Die inklapper bestaat niet meer — de afgewerkte items staan vanzelf al kort —
-  // dus zetten we in plaats daarvan alles kort, ook wat je met de hand had opengezet.
-  useEffect(() => { if (klapSignaal && klapSignaal > 0) setAllesOpen(false) }, [klapSignaal])
+  // Alles is toegewezen: dan heb je op "Nog vrij" niets meer te doen. De gast wil dan zien
+  // wat er op zíjn naam staat voor hij bevestigt; de beheerder moet de héle bon nog eens
+  // kunnen overlopen voor hij afsluit. Dus een andere stand per rol.
+  useEffect(() => { if (klapSignaal && klapSignaal > 0) { setFilter(isAdmin ? "alles" : "mij"); setNetId(null) } }, [klapSignaal, isAdmin])
 
   // Afgesloten, en jij bent de beheerder: dan is dit geen werkblad meer maar een
   // eindafrekening. De knoppen zagen er tot nu toe uit als altijd, maar konden enkel nog
@@ -8477,7 +8602,7 @@ function ClaimScreen(props: {
                     // voorbijlezen dat hier iets anders geldt. Zit jij er zelf in, dan
                     // wint het gouden vlak — dat zegt iets over jou, niet over het item.
                     return (
-                      <div key={it.id} id={`item-${it.id}`} data-rij={it.id} style={{ ...ITEMKAART, ...DEEL_STREEP, paddingTop: 11, paddingBottom: 11, paddingRight: 10 }}>
+                      <div key={it.id} id={`item-${it.id}`} data-rij={it.id} onClickCapture={() => setNetId(it.id)} style={{ ...ITEMKAART, ...DEEL_STREEP, paddingTop: 11, paddingBottom: 11, paddingRight: 10 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             {/* Zelfde plaats en zelfde grootte als bij een gewoon item: het
@@ -8787,6 +8912,7 @@ function ClaimScreen(props: {
                     </div>
                   )
                 })}
+                {leegBlok()}
                 </div>
               </>
             )}
@@ -9001,7 +9127,7 @@ function ClaimScreen(props: {
               // Dezelfde vlakken als op het beheerdersscherm: blauw voor een gedeeld item,
               // goud zodra jij er zelf in zit. Een gast zag daarvoor alleen witte regels en
               // moest bij elk item opnieuw lezen wat hij al had aangeduid.
-              <div key={it.id} data-rij={it.id} style={{ ...ITEMKAART, ...DEEL_STREEP, paddingTop: 11, paddingBottom: 11, paddingRight: 10 }}>
+              <div key={it.id} data-rij={it.id} onClickCapture={() => setNetId(it.id)} style={{ ...ITEMKAART, ...DEEL_STREEP, paddingTop: 11, paddingBottom: 11, paddingRight: 10 }}>
                 {/* Naam en bedrag over de volle breedte, de standen op een eigen regel:
                     met alles op één lijn werd een lange itemnaam afgekapt op een telefoon. */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -9099,7 +9225,7 @@ function ClaimScreen(props: {
           return (
             // Geen gekleurd vlak meer: een goud balkje vooraan zodra jij erin zit, en verder
             // zeggen de gouden pil, het gouden aantal en de groene of rode woorden de rest.
-            <div key={it.id} data-rij={it.id} style={{ ...ITEMKAART, ...(mine > 0 ? JOUW_STREEP : null) }}>
+            <div key={it.id} data-rij={it.id} onClickCapture={() => setNetId(it.id)} style={{ ...ITEMKAART, ...(mine > 0 ? JOUW_STREEP : null) }}>
               {/* Zie de beheerder: bij een lange naam zakt de teller naar een eigen regel
                   rechts in plaats van de titel over drie regels te breken. */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -9199,6 +9325,7 @@ function ClaimScreen(props: {
             </div>
           )
         })}
+        {leegBlok()}
         </div>
         </div>
         </>)}
