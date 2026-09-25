@@ -1243,7 +1243,7 @@ const STRINGS = {
     whatYouTook: "Wat jij zelf nam",
     adminNoConfirmNote: "Je bevestigt niets apart \u2014 als beheerder sluit je straks de hele rekening af. Dit is om te zien wat er op jouw naam staat.",
     nothingYoursYet: "Je hebt zelf nog niets aangeduid.",
-    otherQ: "+ iemand?",
+    manageBtn: "\u2699 Beheer",
     iTookThis: "+ ik nam dit",
     didYouTakeQ: "Namen jullie dit?",
     oneOfUs: "1 van ons",
@@ -1932,7 +1932,7 @@ const STRINGS = {
     whatYouTook: "Ce que tu as pris toi-m\u00eame",
     adminNoConfirmNote: "Tu ne confirmes rien s\u00e9par\u00e9ment \u2014 en tant qu'organisateur, tu cl\u00f4tures ensuite toute l'addition. Ceci sert \u00e0 voir ce qui est \u00e0 ton nom.",
     nothingYoursYet: "Tu n'as encore rien coch\u00e9 pour toi.",
-    otherQ: "+ quelqu'un\u00a0?",
+    manageBtn: "\u2699 G\u00e9rer",
     iTookThis: "+ j'ai pris \u00e7a",
     didYouTakeQ: "Vous l\u2019avez pris ?",
     oneOfUs: "1 de nous",
@@ -7935,13 +7935,18 @@ function WieNogBtn({ onClick, open, title }: { onClick: () => void; open?: boole
     // Neutraal grijs, niet turkoois: op dit scherm betekent elke kleur iets — goud is van
     // jou, blauw is van de tafel — en "er komt een naam bij" is geen kleur, maar een
     // handeling. Gestippeld, want het is een plek waar nog iets bij kan.
+    // Hij heette "+ iemand?" en was een stippellijntje van een derde van de breedte, naast
+    // "gedeeld item?" dat er precies hetzelfde uitzag — terwijl het ene een naam toekent en
+    // het andere het item omzet. Nu is het een echte knop die de vrije ruimte pakt, met een
+    // rand in plaats van stippels: hier gebeurt iets, daar wordt iets gevraagd.
     <button onClick={onClick} title={title} aria-label={title} style={{
-      display: "inline-flex", alignItems: "center", gap: 5, flexShrink: 0, cursor: "pointer", fontFamily: "inherit",
-      fontSize: 13, fontWeight: 700, borderRadius: 10, padding: "5px 9px",
+      display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+      flex: "1 1 auto", minWidth: 0, minHeight: 40, cursor: "pointer", fontFamily: "inherit",
+      fontSize: 13.5, fontWeight: 700, borderRadius: 10, padding: "8px 10px", whiteSpace: "nowrap",
       background: open ? "rgba(18,58,66,0.07)" : "#fff",
-      border: `1.5px dashed ${open ? "rgba(18,58,66,0.45)" : "rgba(18,58,66,0.3)"}`,
-      color: "#5d7478",
-    }}>{L.otherQ}</button>
+      border: `1.5px solid ${open ? "rgba(18,58,66,0.45)" : "rgba(18,58,66,0.22)"}`,
+      color: "#2b4f56",
+    }}>{L.manageBtn}</button>
   )
 }
 
@@ -8717,7 +8722,7 @@ function ClaimScreen(props: {
                         {/* Ook hier de derde laag apart: namen boven, de vraag eronder, op
                             dezelfde hoogte als bij een gewoon item. */}
                         {named.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "center" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "stretch" }}>
                             <WieNogBtn onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} open={assignItem === it.id} title={L.addSomeoneElse} />
                           </div>
                         )}
@@ -8868,7 +8873,7 @@ function ClaimScreen(props: {
                           nam, wat je ermee kan — en de vragen staan dus altijd op dezelfde
                           hoogte in plaats van achter een wisselend aantal naampillen aan. */}
                       {open > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "center" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "stretch" }}>
                           {participants.length > 0 && (
                             <WieNogBtn onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} open={assignItem === it.id} title={L.addSomeoneElse} />
                           )}
