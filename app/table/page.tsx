@@ -1256,6 +1256,8 @@ const STRINGS = {
     errNameRequired: "Geef eerst een naam voor de rekening.",
     finalizedReopenFirst: "De rekening is afgesloten — heropen ze eerst om te wijzigen.",
     billClosedToast: "Rekening afgesloten — gasten kunnen niet meer wijzigen",
+    adminReopenTitle: "Rekening heropend",
+    adminReopenBody: "Iedereen kan weer aanpassen en je gasten krijgen een melding. Sluit opnieuw af als je klaar bent.",
     billReopenedToast: "Rekening heropend",
     scanDoneTitle: "Bon gescand",
     scanDoneOnScan: "Totaal op de scan",
@@ -1938,6 +1940,8 @@ const STRINGS = {
     errNameRequired: "Donne d'abord un nom à l'addition.",
     finalizedReopenFirst: "L'addition est clôturée — rouvre-la d'abord pour modifier.",
     billClosedToast: "Addition clôturée — les invités ne peuvent plus modifier",
+    adminReopenTitle: "Addition rouverte",
+    adminReopenBody: "Tout le monde peut de nouveau modifier et tes invit\u00e9s re\u00e7oivent un message. Cl\u00f4ture \u00e0 nouveau quand tu as fini.",
     billReopenedToast: "Addition rouverte",
     scanDoneTitle: "Addition scannée",
     scanDoneOnScan: "Total sur le scan",
@@ -2167,6 +2171,10 @@ export default function RundoTable() {
   // daar niets van: het scherm springt niet en er komt niets. Eén keer een venstertje, en
   // je blijft gewoon staan waar je stond.
   const allesToegewezenGezien = useRef(false)
+  // Heropenen is de enige knop op dat scherm die alles terugdraait, en je kan er met een
+  // duim naast tikken. Eén klein venster dat zegt wat er nu verandert — en dat je opnieuw
+  // moet afsluiten, want dat vergeet je anders.
+  const [heropendPopup, setHeropendPopup] = useState(false)
   // Gaat met één omhoog wanneer de toewijslijst mag dichtklappen. ClaimScreen houdt zijn
   // eigen open/dicht bij, dus vragen we het via een signaal in plaats van die stand
   // hierheen te tillen.
@@ -2770,10 +2778,12 @@ export default function RundoTable() {
     }
     if (!on) setMyGroups((prev) => prev.map((x) => x.id === group.id ? { ...x, pinned: false } : x))
     await loadAll(group.id)
-    setToast(on ? L.billClosedToast : L.billReopenedToast)
+    // Bij het heropenen komt er een venster, dus dan is de korte melding onderaan dubbel.
+    if (on || !isAdmin) setToast(on ? L.billClosedToast : L.billReopenedToast)
     // Dichtgeklapt openen: je ziet eerst de namen met hun bedrag, en klapt zelf open
     // wat je wil nakijken.
     if (on) { setExpandedPeople(new Set()); setAdminFinalPopup(true) }
+    else if (isAdmin) setHeropendPopup(true)
   }
 
   // Alles verrekend: we zetten `pinned` aan. Dat is precies wat bewaren al betekende —
@@ -6867,6 +6877,18 @@ export default function RundoTable() {
         </div>
       )}
 
+      {heropendPopup && (
+        <div style={{ ...S.overlay, zIndex: 3100 }}>
+          <div style={{ ...S.modal, width: "min(330px, 92vw)", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "center", color: "#e67e22", marginBottom: 6 }}><SlotOpenIcon size={34} /></div>
+            <h3 style={{ margin: "0 0 7px", fontSize: 20, fontWeight: 800, color: "#123a42" }}>{L.adminReopenTitle}</h3>
+            <p style={{ fontSize: 17, color: "#2b4f56", lineHeight: 1.55, margin: "0 0 14px" }}>{L.adminReopenBody}</p>
+            <button onClick={() => setHeropendPopup(false)}
+              style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#f39c12,#e67e22)" }}>{L.understood}</button>
+          </div>
+        </div>
+      )}
+
       {adminFinalPopup && (
         <div style={{ ...S.overlay, zIndex: 3000 }}>
           <div style={{ ...S.modal, width: "min(360px, 92vw)", maxHeight: "84vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
@@ -8578,6 +8600,11 @@ function ClaimScreen(props: {
   // effect daarop opnieuw draaien en de teller eindeloos verzetten.
   const meldRef = useRef(onAllAssigned)
   meldRef.current = onAllAssigned
+  // Dit scherm verdwijnt bij het afsluiten en komt terug bij het heropenen. Zonder deze
+  // vlag begint het dan met een schone lei, ziet het "alles is toegewezen" als iets wat
+  // nú gebeurt, en krijg je bij het heropenen het venster "Alles is toegewezen" — terwijl
+  // je net het omgekeerde deed. De eerste doorloop kijkt dus alleen, en meldt niets.
+  const eersteRondeRef = useRef(true)
   const delersHandtekening = _shared.map((i) => `${i.id}:${sharerIds(i.id).length}`).join(";")
   useEffect(() => {
     const nu: Record<string, number> = {}
@@ -8588,12 +8615,14 @@ function ClaimScreen(props: {
     if (!isAdmin || finalized) return
     if (!allDone) {
       prevDoneRef.current = false
+      eersteRondeRef.current = false
       gedeeldLaatstRef.current = null
       if (typeof window !== "undefined" && wachtRef.current !== null) { window.clearTimeout(wachtRef.current); wachtRef.current = null }
       return
     }
-    const werdNetKlaar = !prevDoneRef.current
+    const werdNetKlaar = !prevDoneRef.current && !eersteRondeRef.current
     prevDoneRef.current = true
+    eersteRondeRef.current = false
     // Was het laatste een gedeeld item, dan wachtte de melding 5 seconden zodat er nog
     // iemand kon bijkomen. Maar dit effect draait bij élke nieuwe deler opnieuw, en de
     // opruiming zette die 5 seconden dan telkens terug op nul: aan een drukke tafel kwam
