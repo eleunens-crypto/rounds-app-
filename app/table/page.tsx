@@ -1227,7 +1227,9 @@ const STRINGS = {
     assignFullTap: "Alles toegewezen — tik een naam om weg te halen",
     pickerTitle: "Voor iemand anders aantikken?",
     manageWarnTitle: "Even opletten",
-    manageWarnBody: "Gasten die via de link of de QR kwamen, duiden zelf hun consumpties aan.\n\nAls beheerder kan je hier w\u00e9l:\n1) dingen aanpassen of rechtzetten\n2) aanduiden voor wie niet scant",
+    manageWarnBody: "Gasten die via de link of de QR kwamen, duiden zelf hun consumpties aan.",
+    manageWarnKop2: "Als beheerder kan je hier w\u00e9l:",
+    manageWarnList: "1) dingen aanpassen of rechtzetten\n2) aanduiden voor wie niet scant",
     manageWarnYes: "Ok\u00e9",
     yourShare: (b: number) => `jouw deel \u20ac${b.toFixed(2).replace(".", ",")}`,
     yourShareUs: (b: number) => `jullie deel \u20ac${b.toFixed(2).replace(".", ",")}`,
@@ -1247,7 +1249,7 @@ const STRINGS = {
     addSomeoneElse: "Iemand anders toevoegen",
     youJoinPrefix: "Je sluit aan bij",
     sharedByName: (naam: string) => `gedeeld door ${naam}`,
-    restoTagline: "Scan de rekening en verdeel ze in groep",
+    restoTagline: "Scan de rekeningen en verdeel in groep",
     whoAreYou: "👋 Wie ben jij?",
     enterYourName: "Vul je naam in om mee te doen.",
     errTipAdd: "Fooi toevoegen mislukt: ",
@@ -1907,7 +1909,9 @@ const STRINGS = {
     assignFullTap: "Tout attribué — touchez un nom pour le retirer",
     pickerTitle: "Cocher pour quelqu\u2019un d\u2019autre\u00a0?",
     manageWarnTitle: "Petit rappel",
-    manageWarnBody: "Les invit\u00e9s arriv\u00e9s via le lien ou le QR cochent eux-m\u00eames ce qu\u2019ils ont pris.\n\nEn tant qu\u2019organisateur, tu peux quand m\u00eame\u00a0:\n1) corriger ou ajuster\n2) cocher pour qui ne scanne pas",
+    manageWarnBody: "Les invit\u00e9s arriv\u00e9s via le lien ou le QR cochent eux-m\u00eames ce qu\u2019ils ont pris.",
+    manageWarnKop2: "En tant qu\u2019organisateur, tu peux quand m\u00eame\u00a0:",
+    manageWarnList: "1) corriger ou ajuster\n2) cocher pour qui ne scanne pas",
     manageWarnYes: "D\u2019accord",
     yourShare: (b: number) => `ta part \u20ac${b.toFixed(2).replace(".", ",")}`,
     yourShareUs: (b: number) => `votre part \u20ac${b.toFixed(2).replace(".", ",")}`,
@@ -1927,7 +1931,7 @@ const STRINGS = {
     addSomeoneElse: "Ajouter quelqu'un d'autre",
     youJoinPrefix: "Tu rejoins",
     sharedByName: (naam: string) => `partagé par ${naam}`,
-    restoTagline: "Scanne l'addition et partage-la en groupe",
+    restoTagline: "Scanne les additions et partage en groupe",
     whoAreYou: "👋 Qui es-tu ?",
     enterYourName: "Indique ton nom pour participer.",
     errTipAdd: "Échec de l'ajout du pourboire : ",
@@ -2183,9 +2187,12 @@ export default function RundoTable() {
   // toont o.a. gast-opmerkingen bij de admin. Titel optioneel.
   const [centerNote, setCenterNote] = useState<{ title?: string; body: string; actionLabel?: string; onAction?: () => void; dismissLabel?: string } | null>(null)
   // In-app ja/nee-bevestiging — vervangt de browser-confirm die op een foutmelding lijkt.
-  const [confirmDlg, setConfirmDlg] = useState<{ title?: string; body: string; note?: string; yes: string; danger?: boolean; onYes: () => void } | null>(null)
-  const askConfirm = (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean; note?: string }) =>
-    setConfirmDlg({ body, yes, onYes, title: opts?.title, danger: opts?.danger, note: opts?.note })
+  // kop2/body2: een tweede kopje halverwege. Een opsomming die als gewone tekst onder de
+  // uitleg hangt leest als één lange lap; met een kop erboven zie je meteen dat er twee
+  // dingen staan — wat er aan de hand is, en wat jij hier wél mag.
+  const [confirmDlg, setConfirmDlg] = useState<{ title?: string; body: string; note?: string; kop2?: string; body2?: string; yes: string; danger?: boolean; onYes: () => void } | null>(null)
+  const askConfirm = (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean; note?: string; kop2?: string; body2?: string }) =>
+    setConfirmDlg({ body, yes, onYes, title: opts?.title, danger: opts?.danger, note: opts?.note, kop2: opts?.kop2, body2: opts?.body2 })
   // Zolang het bontotaal niet nagekeken én bevestigd is, blijft de rest op slot: items,
   // btw, gasten en toewijzen. Anders bouw je de hele verdeling op een verkeerd bedrag.
   const requireTotal = () => {
@@ -4337,7 +4344,13 @@ export default function RundoTable() {
           <div style={{ ...S.overlay, zIndex: 3200 }}>
             <div style={{ ...S.modal, width: "min(340px, 92vw)" }} onClick={(e) => e.stopPropagation()}>
               {confirmDlg.title && <h3 style={{ marginTop: 0, marginBottom: 9, fontSize: 20, fontWeight: 800, color: confirmDlg.danger ? "#c0392b" : "#123a42" }}>{confirmDlg.title}</h3>}
-              <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: confirmDlg.note ? "0 0 11px" : "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body}</p>
+              <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: (confirmDlg.note || confirmDlg.kop2) ? "0 0 11px" : "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body}</p>
+              {confirmDlg.kop2 && (
+                <>
+                  <h3 style={{ margin: "0 0 5px", fontSize: 18, fontWeight: 800, color: "#123a42" }}>{confirmDlg.kop2}</h3>
+                  <p style={{ fontSize: 18, color: "#2b4f56", lineHeight: 1.55, margin: confirmDlg.note ? "0 0 11px" : "0 0 16px", whiteSpace: "pre-line" }}>{confirmDlg.body2}</p>
+                </>
+              )}
               {/* Een zachte regel, geen slot: ze houdt je nergens tegen, maar je weet het
                   wel op het moment dat het ertoe doet. */}
               {confirmDlg.note && (
@@ -4784,22 +4797,19 @@ export default function RundoTable() {
 
       {/* Is de rekening afgesloten, dan valt er niets meer te kiezen: geen tabbladen, geen
           kopbalk met de groep erin. Wat overblijft is de groene balk met heropenen, de
-          verdeling, en wat je nog samen kan doen. */}
+          verdeling, en wat je nog samen kan doen.
+          "Bon bekijken" stond bij de beheerder onder de tabs, en bij een gast nergens —
+          terwijl die net het minst van de bon weet. Hij gaat naar rechtsboven in het
+          donkere blok, voor allebei; op de bon-tab zelf blijft hij waar hij stond. */}
       {!group.finalized && <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)}
-        rechts={group.finalized ? undefined : (
-          <>
-            {isAdmin && groepPeekKnop()}
-            {/* "Bon bekijken" stond bij de beheerder onder de tabs, en bij een gast nergens
-                — terwijl die net het minst van de bon weet. Nu op dezelfde plek voor allebei;
-                op de bon-tab zelf blijft hij staan waar hij stond. */}
-            {group.receipt_url && !(isAdmin && adminTab === "scan") && (
-              <button onClick={() => setViewReceipt(group.receipt_url!)}
-                style={{ border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: "#0f7d90", padding: 0, whiteSpace: "nowrap" }}>
-                {L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}
-              </button>
-            )}
-          </>
-        )}
+        rechts={!group.finalized && isAdmin ? groepPeekKnop() : undefined}
+        bonKnop={group.receipt_url && !group.finalized && !(isAdmin && adminTab === "scan") ? (
+          <button onClick={(e) => { e.stopPropagation(); setViewReceipt(group.receipt_url!) }}
+            style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: "#fff", whiteSpace: "nowrap",
+              background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.35)", borderRadius: 10, padding: "9px 12px" }}>
+            {L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}
+          </button>
+        ) : undefined}
         onder={isAdmin && showGroupPeek ? <div style={{ marginTop: 10 }}>{groepPeekLijst()}</div> : undefined} />}
 
       {/* Heropen je de rekening om nog iets te wijzigen, dan verdween dit blok mee — en
@@ -5734,8 +5744,14 @@ export default function RundoTable() {
         const openCount = disputers.filter((d) => !d.resolved).length
         return (
           <div style={{ background: "#fff7e6", border: "1.5px solid #f0b840", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 16, color: "#8a5a00" }}>
-            <div style={{ fontWeight: 800, marginBottom: 6, color: "#a06b00" }}>{openCount > 0 ? L.remarksOpen : L.remarksDone}</div>
-            {disputers.map((d, i) => (
+            {/* Ook hier inklapbaar. Dit blok bleef na het afsluiten openstaan tussen de balk
+                en de verdeling — ook als alles al opgelost was en je het alleen nog als
+                naslag wou kunnen opvragen. */}
+            <div onClick={() => setRemarksOpen((v) => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
+              <span style={{ fontWeight: 800, color: "#a06b00", minWidth: 0 }}>{openCount > 0 ? L.remarksOpen : L.remarksDone}</span>
+              <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#a06b00", border: "1.5px solid rgba(240,184,64,0.8)", borderRadius: 9, padding: "5px 9px", whiteSpace: "nowrap" }}>{remarksOpen ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
+            </div>
+            {remarksOpen && disputers.map((d, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7, opacity: d.resolved ? 0.7 : 1 }}>
                 <div style={{ flex: 1, minWidth: 0, textDecoration: d.resolved ? "line-through" : "none" }}>
                   <b>{d.name}</b>{d.comment ? <span>: “{d.comment}”</span> : ""}
@@ -5759,7 +5775,7 @@ export default function RundoTable() {
             onRename={renameGuest}
             onEditMe={!isAdmin ? editMySpot : undefined}
             setClaim={setClaim} toggleShareClaim={toggleShareClaim} toggleShareMember={toggleShareMember} magOntdelen={magOntdelen} onToggleShared={toggleShared} claimMembers={claimMembers} sharedStatus={sharedStatus} warnCount={openUnits + sharedWarnings.length + zeroPriceItems.length} onDeleteItem={isAdmin ? deleteItem : undefined}
-            onAllAssigned={(gedeeldId) => { if (allesToegewezenGezien.current) return; allesToegewezenGezien.current = true; setAllesGedeeldId(gedeeldId ?? null); setAllesPopup(true) }}
+            onAllAssigned={(gedeeldId) => { if (allesToegewezenGezien.current || group.finalized) return; allesToegewezenGezien.current = true; setAllesGedeeldId(gedeeldId ?? null); setAllesPopup(true) }}
             klapSignaal={klapToewijzenSignaal}
             itemTotal={itemTotal} personTotal={personTotal} personItems={personItems}
             sharedRevealed={sharedRevealed} allConfirmed={allConfirmed} isConfirmed={isConfirmed} explicitConfirmed={explicitConfirmed}
@@ -7574,7 +7590,7 @@ function BonKijker({ urls, onClose }: { urls: string[]; onClose: () => void }) {
   )
 }
 
-function TopBar({ group, isAdmin, onHome, totalPersons, rechts, onder, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; rechts?: React.ReactNode; onder?: React.ReactNode }) {
+function TopBar({ group, isAdmin, onHome, totalPersons, rechts, onder, bonKnop, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; rechts?: React.ReactNode; onder?: React.ReactNode; bonKnop?: React.ReactNode }) {
   const [lang] = useLang()
   const [naamBewerkt, setNaamBewerkt] = useState(false)
   const L = STRINGS[lang]
@@ -7584,12 +7600,16 @@ function TopBar({ group, isAdmin, onHome, totalPersons, rechts, onder, onRenameG
           personen ernaast — dezelfde opbouw als Rundo, in Resto's eigen turquoise. */}
       <div onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined}
         style={{ background: "#123a42", borderRadius: 15, padding: "11px 13px", display: "flex", alignItems: "center", gap: 10, marginBottom: 11, cursor: isAdmin ? "pointer" : "default" }}>
-        <span style={{ minWidth: 0 }}>
+        <span style={{ flex: 1, minWidth: 0 }}>
           <RundoLogo size={42} resto />
           {/* Eén regel die zegt waar je terecht bent gekomen — vooral voor gasten die
-              via een QR binnenvallen zonder de app te kennen. */}
-          <span style={{ display: "block", fontSize: 12.5, color: "rgba(255,255,255,0.75)", marginTop: 3, lineHeight: 1.35 }}>{L.restoTagline}</span>
+              via een QR binnenvallen zonder de app te kennen. Ze stond in 12,5 px onder
+              een logo van 42: de enige zin die uitlegt wat dit is, in de kleinste letter
+              van het scherm. */}
+          <span style={{ display: "block", fontSize: 16, fontWeight: 600, color: "rgba(255,255,255,0.88)", marginTop: 5, lineHeight: 1.35 }}>{L.restoTagline}</span>
         </span>
+        {/* "Bon bekijken" hoort bij de bon, niet bij de tafelnaam — en hier is plaats. */}
+        {bonKnop}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: 8, borderBottom: "1.5px solid rgba(18,58,66,0.2)" }}>
         {/* Ter plekke aanpasbaar: tik op de naam en je typt erin. Een potloodje erachter
@@ -7983,13 +8003,17 @@ function WieNogBtn({ onClick, open, title }: { onClick: () => void; open?: boole
   )
 }
 
-function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confirmedFn, vrijFn, naamVan, onAssign, onClose }: {
+function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confirmedFn, vrijFn, naamVan, seatsFn, membersFn, onAssign, onClose }: {
   participants: Participant[]; itemId: string; isShared?: boolean; meId: string | null; vol?: boolean
   qtyFn: (pid: string) => number
   confirmedFn: (pid: string) => boolean
   vrijFn: (p: Participant) => boolean
   naamVan: (p: Participant) => string
-  onAssign: (pid: string, reden: "bevestigd" | "qr" | "vrij" | "ander" | null) => void; onClose: () => void
+  // Bij een gedeeld item telt elke kop mee voor de prijs. Zit er een koppel aan tafel, dan
+  // moet je dus één van de twee kunnen aanduiden — niet de plaats in haar geheel.
+  seatsFn?: (pid: string) => number
+  membersFn?: (pid: string) => number[]
+  onAssign: (pid: string, reden: "bevestigd" | "qr" | "vrij" | "ander" | null, lid?: number) => void; onClose: () => void
 }) {
   const [lang] = useLang()
   const L = STRINGS[lang]
@@ -8009,6 +8033,27 @@ function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confir
     const mij = qtyFn(p.id)   // hoeveel dit item al op zijn naam staat
     const aan = mij > 0
     const reden: "bevestigd" | "qr" | "vrij" | "ander" | null = klaar ? "bevestigd" : viaQr ? "qr" : nogVrij ? "vrij" : "ander"
+    // Een plaats met twee personen kreeg één knop, en die zette ze allebei tegelijk op de
+    // fles — terwijl het aantal koppen net de prijs bepaalt. Dus bij een gedeeld item
+    // één knop per persoon, met de namen zoals ze op de plaats staan.
+    const zit = seatsFn ? Math.max(1, seatsFn(p.id)) : 1
+    if (isShared && zit > 1 && membersFn) {
+      const leden = membersFn(p.id)
+      const delen = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
+      return Array.from({ length: zit }, (_, k) => k).map((k) => {
+        const lidAan = leden.includes(k)
+        return (
+          <button key={`${p.id}:${k}`} onClick={() => onAssign(p.id, reden, k)} style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "9px 12px", minHeight: 40,
+            cursor: "pointer", fontFamily: "inherit",
+            border: lidAan ? "1.5px solid rgba(196,152,32,0.55)" : "1.5px solid rgba(18,58,66,0.22)",
+            background: lidAan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
+            color: lidAan ? "#5a4a1a" : "#2b4f56",
+          }}>{!lidAan && viaQr && <GsmIcon />}{delen[k] || `${L.personWord} ${k + 1}`}{lidAan ? " \u2713" : ""}</button>
+        )
+      })
+    }
     return (
       /* Deze knop voegt toe, altijd één stuk per tik. Weghalen gebeurt met het kruisje op de
          chips erboven: dat kan per stuk, en het is de handeling die je níét per ongeluk wil
@@ -8041,7 +8086,7 @@ function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confir
         <span style={{ fontSize: 16, fontWeight: 800, color: vol && !isShared ? "#1f8a4c" : "#2b4f56", lineHeight: 1.3 }}>{vol && !isShared ? L.assignFullTap : L.pickerTitle}</span>
         <button onClick={onClose} aria-label="✕" style={{ flexShrink: 0, border: "none", background: "none", cursor: "pointer", fontSize: 16.5, color: "#5d7478", fontWeight: 800 }}>✕</button>
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{[...vanJou, ...viaLink].map(knop)}</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{[...vanJou, ...viaLink].flatMap((p) => knop(p))}</div>
       {anderen.length === 0 && <div style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</div>}
     </div>
   )
@@ -8154,7 +8199,7 @@ function ClaimScreen(props: {
   claimPid: string | null; setClaimPid: (id: string | null) => void
   iConfirmed: boolean; confirmMe: () => Promise<boolean> | void; onPickMe: (id: string) => void
   finalized: boolean; verrekend: boolean; iDispute: boolean; iResolved: boolean; iComment: string; onToggleDispute: (on: boolean, comment?: string) => void
-  askConfirm: (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean }) => void
+  askConfirm: (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean; note?: string; kop2?: string; body2?: string }) => void
   /** brengt de beheerder naar het tabblad waar hij die lege stoel wél kan oplossen */
   onNaarGasten?: () => void
 }) {
@@ -8540,19 +8585,30 @@ function ClaimScreen(props: {
     const vorig = vorigeDelersRef.current
     const netEersteNaam = vorig ? _shared.find((i) => (vorig[i.id] ?? 0) === 0 && nu[i.id] > 0) : undefined
     vorigeDelersRef.current = nu
-    if (!isAdmin) return
-    if (typeof window !== "undefined" && wachtRef.current !== null) { window.clearTimeout(wachtRef.current); wachtRef.current = null }
-    if (!allDone) { prevDoneRef.current = false; gedeeldLaatstRef.current = null; return }
+    if (!isAdmin || finalized) return
+    if (!allDone) {
+      prevDoneRef.current = false
+      gedeeldLaatstRef.current = null
+      if (typeof window !== "undefined" && wachtRef.current !== null) { window.clearTimeout(wachtRef.current); wachtRef.current = null }
+      return
+    }
     const werdNetKlaar = !prevDoneRef.current
     prevDoneRef.current = true
-    if (werdNetKlaar) gedeeldLaatstRef.current = netEersteNaam ? netEersteNaam.id : null
-    const gedeeld = gedeeldLaatstRef.current
-    if (!gedeeld) { if (werdNetKlaar) meldRef.current?.(); return }
-    if (typeof window === "undefined") { if (werdNetKlaar) meldRef.current?.(gedeeld); return }
-    wachtRef.current = window.setTimeout(() => { wachtRef.current = null; meldRef.current?.(gedeeld) }, 5000)
-    return () => { if (typeof window !== "undefined" && wachtRef.current !== null) { window.clearTimeout(wachtRef.current); wachtRef.current = null } }
+    // Was het laatste een gedeeld item, dan wachtte de melding 5 seconden zodat er nog
+    // iemand kon bijkomen. Maar dit effect draait bij élke nieuwe deler opnieuw, en de
+    // opruiming zette die 5 seconden dan telkens terug op nul: aan een drukke tafel kwam
+    // de melding daardoor nooit, en pas veel later — soms zelfs na het afsluiten — alsnog
+    // op het scherm. Nu plannen we één keer, op het moment dat het rond is, en kort.
+    if (!werdNetKlaar) return
+    const gedeeld = netEersteNaam ? netEersteNaam.id : null
+    gedeeldLaatstRef.current = gedeeld
+    if (!gedeeld) { meldRef.current?.(); return }
+    if (typeof window === "undefined") { meldRef.current?.(gedeeld); return }
+    wachtRef.current = window.setTimeout(() => { wachtRef.current = null; meldRef.current?.(gedeeld) }, 1200)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allDone, delersHandtekening, isAdmin])
+  }, [allDone, delersHandtekening, isAdmin, finalized])
+  // Loopt er nog een wachttijd terwijl dit scherm verdwijnt, dan mag die niets meer doen.
+  useEffect(() => () => { if (typeof window !== "undefined" && wachtRef.current !== null) window.clearTimeout(wachtRef.current) }, [])
   // Alles is toegewezen: dan heb je op "Nog vrij" niets meer te doen. De gast wil dan zien
   // wat er op zíjn naam staat voor hij bevestigt; de beheerder moet de héle bon nog eens
   // kunnen overlopen voor hij afsluit. Dus een andere stand per rol.
@@ -8779,7 +8835,10 @@ function ClaimScreen(props: {
                             const pz = Math.max(1, p.seats ?? 1)
                             const leden = claimMembers(it.id, p.id)
                             const delen = (p.name || "").split(/\s*&\s*|\s*\+\s*/).map((x) => x.trim()).filter(Boolean)
-                            const stuks = pz > 1 && leden.length > 0 && leden.length < pz
+                            // Stonden ze er allebei op, dan werd het één pil "Lore & Jan" met één
+                            // kruisje dat ze allebei weghaalde. Nu altijd een pil per persoon
+                            // zodra de plaats er meer dan één heeft — zelfde regel als in de kiezer.
+                            const stuks = pz > 1 && leden.length > 0
                               ? leden.map((k) => ({ nm: delen[k] || `${L.personWord} ${k + 1}`, af: () => toggleShareMember(it.id, p.id, k) }))
                               : [{ nm: naamVan(p), af: () => toggleShareClaim(it.id, p.id) }]
                             return stuks.map((d, k) => (
@@ -8803,12 +8862,15 @@ function ClaimScreen(props: {
                             qtyFn={(pid) => sh.includes(pid) ? 1 : 0}
                             confirmedFn={explicitConfirmed}
                             vrijFn={vrijFn} naamVan={naamVan}
-                            onAssign={(pid, reden) => {
+                            seatsFn={(pid) => seatsOf(pid)}
+                            membersFn={(pid) => claimMembers(it.id, pid)}
+                            onAssign={(pid, reden, lid) => {
                               const wie = participants.find((x) => x.id === pid)
                               const naam = wie ? naamVan(wie) : ""
-                              const doe = () => toggleShareClaim(it.id, pid)
+                              const doe = () => lid != null ? toggleShareMember(it.id, pid, lid) : toggleShareClaim(it.id, pid)
                               // Weghalen vraagt niets: dat herstelt hoogstens een vergissing.
-                              if (sh.includes(pid)) { doe(); return }
+                              const staatAan = lid != null ? claimMembers(it.id, pid).includes(lid) : sh.includes(pid)
+                              if (staatAan) { doe(); return }
                               if (reden === "vrij") { askConfirm(L.freeSeatNoAssignBody, L.goGuestsBtn, () => onNaarGasten?.(), { title: L.freeSeatNoAssignTitle }); return }
                               if (reden === "bevestigd") { askConfirm(L.notSelectedShare(naam), L.yes, doe); return }
                               // Één melding voor allebei de gevallen, want ze zeggen hetzelfde:
@@ -8816,9 +8878,9 @@ function ClaimScreen(props: {
                               // zetten of in te vullen voor wie niet scant. Bij een QR-gast
                               // elke keer — elke tik van jou kan dubbel komen te staan met wat
                               // hij op zijn eigen gsm doet. Bij je eigen gasten één keer.
-                              if (reden === "qr") { askConfirm(L.manageWarnBody, L.manageWarnYes, doe, { title: L.manageWarnTitle }); return }
-                              if (uitlegGezien("ander")) { doe(); return }
-                              askConfirm(L.manageWarnBody, L.manageWarnYes, () => { markUitleg("ander"); doe() }, { title: L.manageWarnTitle })
+                              if (reden === "qr") { askConfirm(L.manageWarnBody, L.manageWarnYes, doe, { title: L.manageWarnTitle, kop2: L.manageWarnKop2, body2: L.manageWarnList }); return }
+                              if (uitlegGezien("beheer")) { doe(); return }
+                              askConfirm(L.manageWarnBody, L.manageWarnYes, () => { markUitleg("beheer"); doe() }, { title: L.manageWarnTitle, kop2: L.manageWarnKop2, body2: L.manageWarnList })
                             }}
                             onClose={() => setAssignItem(null)} />
                         )}
@@ -8975,7 +9037,7 @@ function ClaimScreen(props: {
                             // eigen gasten is invullen net de bedoeling — daar volstaat één keer
                             // uitleg, en daarna zou de vraag alleen nog in de weg zitten.
                             if (reden === "bevestigd") { askConfirm(L.notSelectedAdd(naam), L.yes, doe); return }
-                            if (reden === "qr") { askConfirm(L.manageWarnBody, L.manageWarnYes, doe, { title: L.manageWarnTitle }); return }
+                            if (reden === "qr") { askConfirm(L.manageWarnBody, L.manageWarnYes, doe, { title: L.manageWarnTitle, kop2: L.manageWarnKop2, body2: L.manageWarnList }); return }
                             // Aanduiden op een stoel zonder naam maakt de rekening onbetrouwbaar:
                             // straks weet je niet wie dit moet betalen. Dus niet meer toelaten,
                             // en meteen de weg wijzen naar waar je het wél oplost.
@@ -8984,8 +9046,8 @@ function ClaimScreen(props: {
                               return
                             }
                             if (reden === "ander") {
-                              if (uitlegGezien("ander")) { doe(); return }
-                              askConfirm(L.manageWarnBody, L.manageWarnYes, () => { markUitleg("ander"); doe() }, { title: L.manageWarnTitle })
+                              if (uitlegGezien("beheer")) { doe(); return }
+                              askConfirm(L.manageWarnBody, L.manageWarnYes, () => { markUitleg("beheer"); doe() }, { title: L.manageWarnTitle, kop2: L.manageWarnKop2, body2: L.manageWarnList })
                               return
                             }
                             doe()
