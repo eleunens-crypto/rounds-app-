@@ -1145,11 +1145,13 @@ const T = {
     priceLabel: "Richtprijs",
     priceHint: "Nodig om de rekening achteraf eerlijk te verdelen. Een schatting volstaat.",
     addBtn: "Toevoegen",
-    addAndOrder: "Toevoegen + 1× in bestelling",
+    addAndOrder: "Toevoegen aan rondje",
+    howManyNow: "Hoeveel stuks in dit rondje?",
     addListOnly: "Alleen aan de lijst toevoegen",
     priceRequired: "verplicht",
-    quickPrices: "Snel kiezen — pas gerust aan:",
-    addedToOrder: (n: string) => `⭐ ${n} staat in je bestelling.`,
+    quickPrices: "Snel kiezen:",
+    priceOwnPh: "of typ zelf een bedrag",
+    addedToOrder: (n: string, x = 1) => `⭐ ${x > 1 ? x + "× " : ""}${n} toegevoegd aan dit rondje.`,
     remaining: (n: number, max: number) => `Nog ${n} van je ${max} eigen drankjes over`,
     addedByYou: "Door jou toegevoegd",
     removeHint: "Verwijder wat je niet meer nodig hebt. Al besteld in een rondje? Dan blijft het staan.",
@@ -1469,6 +1471,14 @@ const T = {
     stap2PerRondje: "Drankjes per rondje",
     stap2PerPersoon: "Drankjes per persoon",
     ppDone: (naam: string, volgende: string | null) => volgende ? `Volgende: ${volgende}` : `${naam} sluiten`,
+    ppWhatDrank: (naam: string) => `Wat dronk ${naam}?`,
+    ppOnlyRelevant: "Alleen wat nog vrij is of al bij deze persoon staat.",
+    ppAllGone: "alles verdeeld",
+    ppNothingLeft: "Alles is al verdeeld over de anderen. Ga gerust verder.",
+    ppFullList: (namen: string) => `Al volledig verdeeld: ${namen}`,
+    ppBack: "Terug",
+    ppNext: (naam: string) => `Volgende: ${naam} ›`,
+    ppLastDone: (naam: string) => `Klaar met ${naam}`,
     ppFree: (vrij: number, van: number) => `nog ${vrij} vrij van ${van}`,
     ppFullOf: (n: number) => `${n} van ${n}`,
     yesWordZb: "Ja",
@@ -2188,11 +2198,13 @@ const T = {
     priceLabel: "Prix indicatif",
     priceHint: "Nécessaire pour répartir la note équitablement. Une estimation suffit.",
     addBtn: "Ajouter",
-    addAndOrder: "Ajouter + 1× à la commande",
+    addAndOrder: "Ajouter à la tournée",
+    howManyNow: "Combien de pièces dans cette tournée ?",
     addListOnly: "Seulement ajouter à la liste",
     priceRequired: "obligatoire",
-    quickPrices: "Choix rapide — ajuste si besoin :",
-    addedToOrder: (n: string) => `⭐ ${n} est dans ta commande.`,
+    quickPrices: "Choix rapide :",
+    priceOwnPh: "ou tape un montant",
+    addedToOrder: (n: string, x = 1) => `⭐ ${x > 1 ? x + "× " : ""}${n} ajouté à cette tournée.`,
     remaining: (n: number, max: number) => `Encore ${n} de tes ${max} boissons personnalisées`,
     addedByYou: "Ajouté par toi",
     removeHint: "Supprime ce dont tu n'as plus besoin. Déjà commandé dans une tournée ? Alors ça reste.",
@@ -2509,6 +2521,14 @@ const T = {
     stap2PerRondje: "Boissons par tourn\u00e9e",
     stap2PerPersoon: "Boissons par personne",
     ppDone: (naam: string, volgende: string | null) => volgende ? `Suivant\u00a0: ${volgende}` : `Fermer ${naam}`,
+    ppWhatDrank: (naam: string) => `Qu'a bu ${naam}\u00a0?`,
+    ppOnlyRelevant: "Seulement ce qui est encore libre ou déjà chez cette personne.",
+    ppAllGone: "tout réparti",
+    ppNothingLeft: "Tout est déjà réparti entre les autres. Tu peux continuer.",
+    ppFullList: (namen: string) => `Déjà entièrement réparti\u00a0: ${namen}`,
+    ppBack: "Retour",
+    ppNext: (naam: string) => `Suivant\u00a0: ${naam} ›`,
+    ppLastDone: (naam: string) => `Terminé pour ${naam}`,
     ppFree: (vrij: number, van: number) => `encore ${vrij} libre${vrij === 1 ? "" : "s"} sur ${van}`,
     ppFullOf: (n: number) => `${n} sur ${n}`,
     yesWordZb: "Oui",
@@ -2905,6 +2925,8 @@ export default function PartyTest() {
   // Geopend vanuit het bestelscherm in Zelf noteren? Dan bieden we aan om het nieuwe
   // drankje meteen 1× in de lopende bestelling te zetten.
   const [ndToOrder, setNdToOrder] = useState(false)
+  // Hoeveel exemplaren meteen in de bestelling gaan (standaard 1).
+  const [ndAantal, setNdAantal] = useState(1)
   // Welk eigen drankje ben je aan het aanpassen? null = je maakt een nieuw drankje.
   // De sleutel blijft ongewijzigd, dus bestellingen blijven naar dezelfde rij wijzen
   // en de verdeling herrekent vanzelf met de nieuwe prijs.
@@ -5946,9 +5968,11 @@ export default function PartyTest() {
     // Zelf noteren: meteen 1× in de lopende bestelling. bump1 kiest zelf of het op de
     // naam gaat (per persoon opnemen) of nog zonder naam in het rondje komt.
     if (inBestelling && !settle) {
-      await bump1(sleutel)
-      setNotice(L.addedToOrder(naam))
+      const aantal = Math.max(1, ndAantal)
+      for (let k = 0; k < aantal; k++) await bump1(sleutel)
+      setNotice(L.addedToOrder(naam, aantal))
     }
+    setNdAantal(1)
     loadParty(groupId)
   }
 
@@ -6019,16 +6043,10 @@ export default function PartyTest() {
           <div style={{ fontSize: 14.5, color: "#6b7484", marginBottom: 6, lineHeight: 1.4 }}>
             {L.priceHint}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: zelfNoteren ? 8 : 12 }}>
-            <span style={{ fontSize: 21.5, fontWeight: 700, color: "#6b7484", flexShrink: 0 }}>€</span>
-            <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder={L.pricePh}
-              style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", fontSize: 18, textAlign: "left",
-                ...(prijsOk ? { borderColor: "rgba(31,138,76,0.55)", background: "#f6fbf7", fontWeight: 700 } : {}) }} />
-          </div>
           {/* Richtbedragen: één tik en de prijs staat erin. Wie het juiste bedrag weet,
-              typt gewoon verder in het veld erboven. */}
+              typt het in het veld eronder. */}
           {zelfNoteren && (
-            <div style={{ marginBottom: 14 }}>
+            <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 13.5, color: "#8b93a3", fontWeight: 700, marginBottom: 6 }}>{L.quickPrices}</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {RICHTPRIJZEN.map((b) => {
@@ -6044,12 +6062,30 @@ export default function PartyTest() {
             </div>
           )}
 
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: zelfNoteren ? 14 : 12 }}>
+            <span style={{ fontSize: 21.5, fontWeight: 700, color: "#6b7484", flexShrink: 0 }}>€</span>
+            <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder={zelfNoteren ? L.priceOwnPh : L.pricePh}
+              style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", fontSize: 18, textAlign: "left",
+                ...(prijsOk ? { borderColor: "rgba(31,138,76,0.55)", background: "#f6fbf7", fontWeight: 700 } : {}) }} />
+          </div>
           {!editDrinkKey && ndToOrder && !settle ? (
             <>
-              <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && prijsOk ? 1 : 0.5 }}
-                onClick={() => void addCustomDrink(true)}>
-                {L.addAndOrder}
-              </button>
+              {/* Teller naast de knop: standaard 1, maar wie er meteen meerdere wil
+                  bestellen tikt gewoon + erbij. */}
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#1d2942", marginBottom: 6 }}>{L.howManyNow}</div>
+              <div style={{ display: "flex", alignItems: "stretch", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, borderRadius: 14, border: "1.5px solid rgba(29,41,66,0.25)", padding: "0 4px", background: "#fff" }}>
+                  <button type="button" aria-label="−" disabled={ndAantal <= 1} onClick={() => setNdAantal((n) => Math.max(1, n - 1))}
+                    style={{ width: 40, height: 44, border: "none", background: "none", fontSize: 22, fontWeight: 800, color: "#1d2942", cursor: ndAantal <= 1 ? "default" : "pointer", opacity: ndAantal <= 1 ? 0.3 : 1, fontFamily: "inherit" }}>−</button>
+                  <span style={{ minWidth: 22, textAlign: "center", fontSize: 19, fontWeight: 800, color: "#1d2942" }}>{ndAantal}</span>
+                  <button type="button" aria-label="+" disabled={ndAantal >= 20} onClick={() => setNdAantal((n) => Math.min(20, n + 1))}
+                    style={{ width: 40, height: 44, border: "none", background: "none", fontSize: 22, fontWeight: 800, color: "#1d2942", cursor: "pointer", fontFamily: "inherit" }}>+</button>
+                </div>
+                <button style={{ ...S.btnP, flex: 1, minWidth: 0, opacity: ndName.trim() && prijsOk ? 1 : 0.5 }}
+                  onClick={() => void addCustomDrink(true)}>
+                  {L.addAndOrder}
+                </button>
+              </div>
               <div onClick={() => void addCustomDrink(false)}
                 style={{ textAlign: "center", marginTop: 10, color: "#6b7484", fontSize: 15, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 3, cursor: "pointer" }}>
                 {L.addListOnly}
@@ -12143,7 +12179,7 @@ export default function PartyTest() {
               {zoekt && catVisible.length === 0 && (
                 <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "14px 10px 6px", fontSize: 16, color: "#6b7484" }}>
                   {L.nothingFound}
-                  <div onClick={() => { setShowAddDrink(true); setNdToOrder(!settle); setNdName(drinkSearch.trim()) }}
+                  <div onClick={() => { setShowAddDrink(true); setNdToOrder(!settle); setNdAantal(1); setNdName(drinkSearch.trim()) }}
                     style={{ marginTop: 11, padding: "13px 12px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${RAND}`, color: "#1d2942", cursor: "pointer" }}>
                     <div style={{ fontSize: 16.5, fontWeight: 800, color: RAND }}>{L.addTyped(drinkSearch.trim())}</div>
                     <div style={{ fontSize: 14, color: "#8b93a3", marginTop: 3 }}>{L.addTypedSub}</div>
@@ -12180,7 +12216,7 @@ export default function PartyTest() {
                 )
               })}
               {!zoekt && (
-                <div onClick={() => { if (alleenJij || nogKiezen) return; setShowAddDrink(true); setNdToOrder(!settle); setNdName("") }}
+                <div onClick={() => { if (alleenJij || nogKiezen) return; setShowAddDrink(true); setNdToOrder(!settle); setNdAantal(1); setNdName("") }}
                   style={{ opacity: (alleenJij || nogKiezen) ? 0.4 : 1, pointerEvents: (alleenJij || nogKiezen) ? "none" : "auto", padding: "10px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.75)"}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", color: themaNaam ? "#2c3752" : "#4a5567" }}>
                   {/* Eén regel in plaats van een icoon met twee regels eronder: de tegel was
                       twee keer zo hoog als een drankje en trok daardoor meer aandacht dan de
@@ -14397,88 +14433,109 @@ export default function PartyTest() {
             const hier = [...toonRondjes].reverse().find(({ r }) => (r.orders[d.id]?.[pid] ?? 0) > 0)
             if (hier) rUnassign(hier.idx, d.id, pid)
           }
-          const eersteNietKlaar = people.find((p) => !ppKlaar.has(p.id))?.id ?? null
-          // Heeft alles een naam, dan staat er standaard geen naam meer open.
-          const openId = ppOpen ?? (unassignedAllRounds === 0 ? null : eersteNietKlaar)
-          const rondKnop: React.CSSProperties = { width: 42, height: 42, borderRadius: "50%", flexShrink: 0, cursor: "pointer", fontFamily: "inherit",
+          // Variant A: één gast per scherm. Bovenaan alle namen als tabs (vinkje = al
+          // bekeken), daaronder enkel wat voor deze gast nog relevant is: drankjes die nog
+          // vrij zijn of die hij al heeft. Wat volledig verdeeld is en niet van hem is,
+          // staat samengevat op één regel. Onderaan vaste knoppen naar vorige/volgende.
+          const eersteNietKlaar = people.find((p) => !ppKlaar.has(p.id))?.id ?? people[0]?.id ?? null
+          const huidigId = (ppOpen && ppOpen !== "__geen" && people.some((p) => p.id === ppOpen)) ? ppOpen : eersteNietKlaar
+          const pi = Math.max(0, people.findIndex((p) => p.id === huidigId))
+          const huidig = people[pi]
+          if (!huidig) return null
+          const vorige = pi > 0 ? people[pi - 1] : null
+          const volgende = pi < people.length - 1 ? people[pi + 1] : null
+          const zichtbaar = soorten.filter((d) => vrij(d) > 0 || heeft(d, huidig.id) > 0)
+          const volzet = soorten.filter((d) => vrij(d) === 0 && heeft(d, huidig.id) === 0)
+          const markeer = (id: string) => setPpKlaar((prev) => new Set(prev).add(id))
+          const naar = (id: string) => { markeer(huidig.id); setPpOpen(id); try { window.scrollTo({ top: 0, behavior: "smooth" }) } catch { /* niets */ } }
+          const rondKnop: React.CSSProperties = { width: 44, height: 44, borderRadius: "50%", flexShrink: 0, cursor: "pointer", fontFamily: "inherit",
             display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, lineHeight: 1 }
+          const nHuidig = totaalVan(huidig.id)
           return (
             <>
-              {people.map((p, pi) => {
-                const open = openId === p.id
-                const klaarHier = ppKlaar.has(p.id)
-                const volgende = people.slice(pi + 1).find((q) => !ppKlaar.has(q.id)) ?? people.find((q) => q.id !== p.id && !ppKlaar.has(q.id))
-                if (!open) {
+              {/* Namenbalk: tik om rechtstreeks naar iemand te springen. */}
+              <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "2px 1px 4px", marginBottom: 10 }}>
+                {people.map((p) => {
+                  const aan = p.id === huidig.id
+                  const gezien = ppKlaar.has(p.id)
+                  const n = totaalVan(p.id)
                   return (
-                    <div key={p.id} role="button" onClick={() => setPpOpen(p.id)}
-                      style={{ ...S.card, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: "pointer",
-                        ...(klaarHier ? { background: "#f6f7f9" } : {}) }}>
-                      {/* Grijs vinkje: je bekeek deze naam al. Geen groen, want de app kan
-                          niet weten of het aantal klopt. */}
-                      {klaarHier && <span style={{ width: 23, height: 23, borderRadius: "50%", background: "#c3c9d4", color: "#fff", fontSize: 14, fontWeight: 800, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✓</span>}
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 800, color: "#1d2942", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                      <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 700, color: "#6b7484" }}>{L.drinksCount(totaalVan(p.id))}</span>
-                      <span style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#6b7484" }}>▾</span>
-                    </div>
+                    <button key={p.id} onClick={() => { if (!aan) naar(p.id) }} aria-current={aan ? "true" : undefined}
+                      style={{ flex: people.length <= 5 ? "1 1 0" : "0 0 auto", minWidth: people.length <= 5 ? 0 : 74, minHeight: 52, borderRadius: 12, padding: "6px 8px",
+                        cursor: aan ? "default" : "pointer", fontFamily: "inherit", display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                        ...(aan ? { background: RAND, color: "#fff", border: `2px solid ${RAND}` }
+                          : gezien ? { background: "#eef0f4", color: "#5b6475", border: "1.5px solid rgba(29,41,66,0.15)" }
+                          : { background: "#fff", color: "#1d2942", border: "1.5px solid rgba(29,41,66,0.25)" }) }}>
+                      <span style={{ fontSize: 14.5, fontWeight: 800, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, opacity: 0.85 }}>{gezien && !aan ? `✓ ${n}` : n}</span>
+                    </button>
                   )
-                }
-                return (
-                  <div key={p.id} style={{ ...S.card, padding: 0, overflow: "hidden", border: `2px solid ${RAND}` }}>
-                    <div role="button" onClick={() => setPpOpen(ppOpen === p.id || openId === p.id ? "__geen" : p.id)}
-                      style={{ ...S.row, justifyContent: "space-between", gap: 8, padding: "12px 14px", cursor: "pointer", background: "rgba(29,41,66,0.05)" }}>
-                      <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1d2942", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                        <span style={{ fontSize: 14.5, fontWeight: 700, color: "#6b7484" }}>{L.drinksCount(totaalVan(p.id))}</span>
-                        <span style={{ fontSize: 15, fontWeight: 800, color: "#6b7484" }}>▴</span>
-                      </span>
-                    </div>
-                    <div style={{ padding: "2px 14px 12px" }}>
-                      {soorten.map((d, di) => {
-                        const n = heeft(d, p.id)
-                        const v = vrij(d)
-                        return (
-                          <div key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "9px 0",
-                            borderTop: di > 0 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
-                            <span style={{ minWidth: 0 }}>
-                              {/* Nog vrij: amberen pilletje. Volzet: grijs pilletje, en de naam
-                                  gedempt als deze persoon er zelf geen van heeft. */}
-                              <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: v === 0 && n === 0 ? "#8b93a3" : "#1d2942", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.emoji} {d.name}</span>
-                              {v > 0 ? (
-                                <span style={{ display: "inline-block", marginTop: 3, fontSize: 13, fontWeight: 800, color: "#8a5e0f", background: "#fff4e0", border: "1px solid rgba(224,138,0,0.5)", borderRadius: 999, padding: "2px 9px" }}>{L.ppFree(v, van(d))}</span>
-                              ) : (
-                                <span style={{ display: "inline-block", marginTop: 3, fontSize: 13, fontWeight: 700, color: "#8b93a3", background: "#f1f3f7", borderRadius: 999, padding: "2px 9px" }}>{L.ppFullOf(van(d))}</span>
-                              )}
-                            </span>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
-                              <button aria-label="−" disabled={n <= 0} onClick={() => min(d, p.id)}
-                                style={{ ...rondKnop, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#6b7484", opacity: n <= 0 ? 0.35 : 1, cursor: n <= 0 ? "default" : "pointer" }}>−</button>
-                              <span style={{ minWidth: 26, textAlign: "center", fontSize: 21, fontWeight: 800, color: n > 0 ? "#c98a00" : "#a7b0bf" }}>{n}</span>
-                              {/* Niets meer vrij: een groen vinkje waar anders de + staat. */}
-                              <button aria-label={v > 0 ? "+" : L.ppFullOf(van(d))} onClick={() => plus(d, p.id)}
-                                style={{ ...rondKnop, border: "none", ...(v > 0
-                                  ? { background: RAND, color: "#fff" }
-                                  : { background: "#e7f5ec", color: "#1f8a4c", fontSize: 19 }) }}>{v > 0 ? "+" : "✓"}</button>
-                            </span>
-                          </div>
-                        )
-                      })}
-                      {/* Hulpknop om door te gaan: deze naam klapt dicht en de volgende gaat
-                          open. Hij controleert niets; hoeveel iemand dronk, weet de app niet. */}
-                      <button onClick={() => {
-                        setPpKlaar((prev) => new Set(prev).add(p.id))
-                        setPpOpen(volgende ? volgende.id : "__geen")
-                      }}
-                        // Wit met een dun randje viel weg tussen de drankjesregels; gevuld in
-                        // het blauw van de app is het onmiskenbaar de knop die je verderhelpt.
-                        style={{ width: "100%", marginTop: 10, cursor: "pointer", fontFamily: "inherit", borderRadius: 999, padding: "13px 8px",
-                          fontSize: 16.5, fontWeight: 800, background: RAND, color: "#fff", border: "none",
-                          boxShadow: "0 5px 14px -6px rgba(29,41,66,0.8)" }}>
-                        {L.ppDone(p.name, volgende?.name ?? null)}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
+                })}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 2 }}>
+                <h4 style={{ margin: 0, fontSize: 24, lineHeight: 1.15, fontWeight: 800, color: "#1d2942", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.ppWhatDrank(huidig.name)}</h4>
+                <span style={{ flexShrink: 0, fontSize: 15, fontWeight: 800, color: "#6b7484" }}>{L.drinksCount(nHuidig)}</span>
+              </div>
+              <div style={{ fontSize: 14.5, color: "#6b7484", fontWeight: 600, marginBottom: 9 }}>{L.ppOnlyRelevant}</div>
+
+              {zichtbaar.length > 0 ? (
+                <div style={{ ...S.card, padding: "2px 14px" }}>
+                  {zichtbaar.map((d, di) => {
+                    const n = heeft(d, huidig.id)
+                    const v = vrij(d)
+                    return (
+                      <div key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "11px 0",
+                        borderTop: di > 0 ? "1px solid rgba(29,41,66,0.1)" : "none" }}>
+                        <span style={{ minWidth: 0 }}>
+                          <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#1d2942", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.emoji} {d.name}</span>
+                          {v > 0 ? (
+                            <span style={{ display: "inline-block", marginTop: 3, fontSize: 13, fontWeight: 800, color: "#8a5e0f", background: "#fff4e0", border: "1px solid rgba(224,138,0,0.5)", borderRadius: 999, padding: "2px 9px" }}>{L.ppFree(v, van(d))}</span>
+                          ) : (
+                            <span style={{ display: "inline-block", marginTop: 3, fontSize: 13, fontWeight: 700, color: "#6b7484", background: "#f1f3f7", borderRadius: 999, padding: "2px 9px" }}>{L.ppAllGone}</span>
+                          )}
+                        </span>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+                          <button aria-label="−" disabled={n <= 0} onClick={() => min(d, huidig.id)}
+                            style={{ ...rondKnop, background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#1d2942", opacity: n <= 0 ? 0.35 : 1, cursor: n <= 0 ? "default" : "pointer" }}>−</button>
+                          <span style={{ minWidth: 26, textAlign: "center", fontSize: 21, fontWeight: 800, color: n > 0 ? "#c98a00" : "#a7b0bf" }}>{n}</span>
+                          <button aria-label="+" disabled={v <= 0} onClick={() => plus(d, huidig.id)}
+                            style={{ ...rondKnop, border: "none", background: RAND, color: "#fff", opacity: v <= 0 ? 0.3 : 1, cursor: v <= 0 ? "default" : "pointer" }}>+</button>
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div style={{ ...S.card, fontSize: 15.5, color: "#6b7484", fontWeight: 600 }}>{L.ppNothingLeft}</div>
+              )}
+              {volzet.length > 0 && (
+                <div style={{ fontSize: 14, color: "#6b7484", fontWeight: 600, lineHeight: 1.4, margin: "-2px 4px 12px" }}>
+                  {L.ppFullList(volzet.map((d) => d.name).join(", "))}
+                </div>
+              )}
+
+              {/* Vaste navigatie onderaan: altijd binnen duimbereik, ook bij een lange lijst. */}
+              <div style={{ position: "sticky", bottom: 0, zIndex: 5, display: "flex", gap: 8, padding: "10px 0 12px", marginBottom: 8,
+                background: "linear-gradient(to bottom, rgba(250,247,236,0), #faf7ec 22%)" }}>
+                <button disabled={!vorige} onClick={() => { if (vorige) naar(vorige.id) }}
+                  style={{ flex: "0 0 auto", maxWidth: "38%", minHeight: 52, padding: "0 16px", borderRadius: 999, fontFamily: "inherit", fontSize: 16, fontWeight: 800,
+                    background: "#fff", border: "1.5px solid rgba(29,41,66,0.3)", color: "#1d2942", cursor: vorige ? "pointer" : "default", opacity: vorige ? 1 : 0.4,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  ‹ {vorige ? vorige.name : L.ppBack}
+                </button>
+                <button onClick={() => {
+                  if (volgende) { naar(volgende.id); return }
+                  markeer(huidig.id)
+                  const nogOpen = people.find((q) => q.id !== huidig.id && !ppKlaar.has(q.id))
+                  if (nogOpen && unassignedAllRounds > 0) naar(nogOpen.id)
+                }}
+                  style={{ flex: "1 1 auto", minWidth: 0, minHeight: 52, borderRadius: 999, border: "none", fontFamily: "inherit", fontSize: 17, fontWeight: 800,
+                    background: RAND, color: "#fff", cursor: "pointer", boxShadow: "0 5px 14px -6px rgba(29,41,66,0.8)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "0 12px" }}>
+                  {volgende ? L.ppNext(volgende.name) : L.ppLastDone(huidig.name)}
+                </button>
+              </div>
             </>
           )
         })()}
