@@ -1009,8 +1009,6 @@ const STRINGS = {
     showDetailsBtn: "Toon de verdeling",
     closedBarTitle: "Rekening afgesloten",
     reopenWord: "Heropenen",
-    closedListTitle: "De verdeling, zoals afgesloten",
-    lockedWord: "op slot",
     closedBarAll: "Afgesloten · alles verdeeld",
     closedBarSub: (bedrag: string, n: number) => `${bedrag} · ${n} ${n === 1 ? "persoon" : "personen"}`,
     disputeCtaTitle: "Klopt er iets niet?",
@@ -1025,7 +1023,7 @@ const STRINGS = {
     // links — daar hoef je niets voor te doen.
     settleDoneKeep: "Je groepje staat 7 dagen op het startscherm, onder \u201cJouw groepen\u201d. Daarna wordt het automatisch gewist.",
     keptShortPre: "\ud83d\udcc2 Nog 7 dagen bewaard op ",
-    whatNowHead: "Nog iets samen met de groep?",
+    whatNowHead: "Bevestigd! Wat nu?",
     andWord: "en",
     notConfirmedYet: (n: number, namen: string) => n === 1 ? `${namen} bevestigde zijn consumpties nog niet.` : `${n} gasten bevestigden hun consumpties nog niet: ${namen}.`,
     ideaBtnTitle: "Iemand een idee?",
@@ -1084,8 +1082,9 @@ const STRINGS = {
     finalizeBtn: "✅ Alles toegewezen?  Rekening afsluiten",
     finalizeBtnDone: "✓ Alles toegewezen. Rekening afsluiten",
     tipAddedNow: (b: string) => `✓ Fooi van €${b} toegevoegd`,
-    tipCloseNow: "Rekening afsluiten",
-    tipPickWho: "Wie betaalt de fooi mee?",
+    tipEveryone: "Over iedereen verdeeld",
+    tipPickSome: "Alleen over deze personen",
+    tipToOverview: "Afsluiten en naar het overzicht",
     finalizeBtnOpen: (n: number) => n === 1 ? "Nog 1 stuk niet toegewezen" : `Nog ${n} stuks niet toegewezen`,
     finalizeConfirm: "De rekening afsluiten? Gasten kunnen daarna niets meer aantikken of wijzigen tot je ze heropent.",
     backToTop: "↑ Terug naar boven",
@@ -1139,12 +1138,6 @@ const STRINGS = {
     notSelectedShare: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch laten meedelen?`,
     removeOne: "verwijder er één",
     notSelectedAdd: (name: string | undefined) => `${name} had dit zelf niet aangeduid. Toch toevoegen?`,
-    assignQrTitle: (name: string | undefined) => `${name} duidt zelf aan`,
-    assignToQrGuest: (name: string | undefined, item: string) => `${name} kwam via de QR binnen en tikt op de eigen gsm aan wat hij nam. Vul jij het hier in, dan staat het er misschien dubbel.\n\nToch “${item}” voor ${name} aanduiden?`,
-    assignQrYes: "Ja, toch invullen",
-    assignOwnTitle: (name: string | undefined) => `Jij duidt aan voor ${name}`,
-    assignOwnBody: (name: string | undefined) => `${name} kwam niet via de QR binnen, dus jij tikt aan wat hij nam. Dat is hier de gewone gang van zaken.\n\nDit vragen we maar één keer — daarna gaat het meteen door.`,
-    assignOwnYes: "Ja, doorgaan",
     sharedQ: "gedeeld item?",
     filterAll: "Alles",
     filterFree: "Nog vrij",
@@ -1162,8 +1155,8 @@ const STRINGS = {
     addGuestsInTab2: 'Voeg eerst gasten toe in de tab "Gasten".',
     closedShort: "✅ Afgesloten",
     yourShareWord: "Mijn deel",
-    reopenedShort: "Heropend",
-    reopenedShortSub: "je bevestiging blijft staan",
+    reopenedShort: "Rekening heropend door de beheerder",
+    reopenedShortSub: "Je kan nog aanpassen als je wil.",
     reopenedTitle: "De rekening is heropend",
     reopenedBody: "De beheerder past nog iets aan. Je bevestiging blijft staan, maar je kan nog wijzigen.",
     selectItemsPlural: "Selecteer jullie consumpties",
@@ -1198,10 +1191,6 @@ const STRINGS = {
     whatIConfirmed: "Wat ik bevestigde",
     helloName: (naam: string) => `Hallo ${naam}`,
     persShort: (n: number) => `${n} pers.`,
-    statusBillOk: (bedrag: string) => `✓ Bon klopt · ${bedrag}`,
-    statusBillCheck: "⚠ Bon nakijken",
-    statusAllAssigned: "✓ Alles toegewezen",
-    statusOpenToAssign: (n: number) => `${n} open om toe te wijzen`,
     finalSplitTitle: "Definitieve verdeling",
     nothingTappedYet: "Je hebt nog niets aangetikt.",
     yourTotal: "Jouw totaal",
@@ -1236,12 +1225,16 @@ const STRINGS = {
     remarkReceived: "💬 De beheerder heeft je opmerking ontvangen en bekijkt ze.",
     withdraw: "toch intrekken",
     assignFullTap: "Alles toegewezen — tik een naam om weg te halen",
-    whoElseTook: "Wie nam dit nog?",
+    pickerTitle: "Voor iemand anders aantikken?",
+    manageWarnTitle: "Even opletten",
+    manageWarnBody: "Gasten die via de link of de QR kwamen, duiden zelf hun consumpties aan.\n\nAls beheerder kan je hier w\u00e9l:\n1) dingen aanpassen of rechtzetten\n2) aanduiden voor wie niet scant",
+    manageWarnYes: "Ok\u00e9",
     yourShare: (b: number) => `jouw deel \u20ac${b.toFixed(2).replace(".", ",")}`,
     yourShareUs: (b: number) => `jullie deel \u20ac${b.toFixed(2).replace(".", ",")}`,
     didYouShareQ: "Nam jij hiervan?",
     whoOfYouSharedQ: "Wie van jullie nam hiervan?",
-    whatYouTook: "Wat jij zelf nam",
+    whatWeTook: "Dit namen wij zelf",
+    whatYouTook: "Dit nam ik zelf",
     adminNoConfirmNote: "Je bevestigt niets apart \u2014 als beheerder sluit je straks de hele rekening af. Dit is om te zien wat er op jouw naam staat.",
     nothingYoursYet: "Je hebt zelf nog niets aangeduid.",
     manageBtn: "\u2699 Beheer",
@@ -1252,9 +1245,6 @@ const STRINGS = {
     perPieceSuffix: "/stuk",
     iTakeOne: "Ik neem er een",
     addSomeoneElse: "Iemand anders toevoegen",
-    addedByYou: "door jou toegevoegd",
-    cameViaQr: "kwamen via de QR",
-    qrPicksSelf: "Zij duiden normaal zelf aan — daarom vraagt de app het elke keer.",
     youJoinPrefix: "Je sluit aan bij",
     sharedByName: (naam: string) => `gedeeld door ${naam}`,
     restoTagline: "Scan de rekening en verdeel ze in groep",
@@ -1273,10 +1263,6 @@ const STRINGS = {
   },
   fr: {
     errCantReadPhoto: "Impossible de lire la photo",
-    statusBillOk: (bedrag: string) => `✓ Addition OK · ${bedrag}`,
-    statusBillCheck: "⚠ Vérifier l’addition",
-    statusAllAssigned: "✓ Tout est attribué",
-    statusOpenToAssign: (n: number) => `${n} à attribuer`,
     backToRundo: "← retour à l'accueil Rundo",
     welkomSub: "Scanne l'addition, partage en groupe",
     cafeAfterQ: "Suivre les tourn\u00e9es au caf\u00e9\u00a0?",
@@ -1710,8 +1696,6 @@ const STRINGS = {
     showDetailsBtn: "Afficher les détails",
     closedBarTitle: "Addition clôturée",
     reopenWord: "Rouvrir",
-    closedListTitle: "La répartition, telle que clôturée",
-    lockedWord: "verrouillé",
     closedBarAll: "Clôturée · tout est réparti",
     closedBarSub: (bedrag: string, n: number) => `${bedrag} · ${n} ${n === 1 ? "personne" : "personnes"}`,
     disputeCtaTitle: "Quelque chose ne va pas ?",
@@ -1724,7 +1708,7 @@ const STRINGS = {
     settleDoneTitle: "Tout est réglé",
     settleDoneKeep: "Ton groupe reste 7 jours sur l\u2019écran d\u2019accueil, sous \u00ab Tes groupes \u00bb. Ensuite il est effacé automatiquement.",
     keptShortPre: "📂 Encore 7 jours sur ",
-    whatNowHead: "Encore un truc avec le groupe ?",
+    whatNowHead: "C\u2019est confirm\u00e9\u00a0! Et maintenant\u00a0?",
     andWord: "et",
     notConfirmedYet: (n: number, namen: string) => n === 1 ? `${namen} n\u2019a pas encore confirm\u00e9 ses consommations.` : `${n} invit\u00e9s n\u2019ont pas encore confirm\u00e9 leurs consommations\u00a0: ${namen}.`,
     ideaBtnTitle: "Une idée, quelqu'un ?",
@@ -1778,8 +1762,9 @@ const STRINGS = {
     finalizeBtn: "✅ Tout attribué ?  Clôturer l'addition",
     finalizeBtnDone: "✓ Tout est attribué. Clôturer l'addition",
     tipAddedNow: (b: string) => `✓ Pourboire de €${b} ajouté`,
-    tipCloseNow: "Clôturer l'addition",
-    tipPickWho: "Qui participe au pourboire ?",
+    tipEveryone: "R\u00e9parti sur tout le monde",
+    tipPickSome: "Seulement sur ces personnes",
+    tipToOverview: "Cl\u00f4turer et voir le r\u00e9capitulatif",
     finalizeBtnOpen: (n: number) => n === 1 ? "Encore 1 article non attribué" : `Encore ${n} articles non attribués`,
     finalizeConfirm: "Clôturer l'addition ? Les invités ne pourront plus rien cocher ni modifier jusqu'à ce que tu la rouvres.",
     backToTop: "↑ Retour en haut",
@@ -1833,12 +1818,6 @@ const STRINGS = {
     notSelectedShare: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. Le faire participer quand même ?`,
     removeOne: "en retirer un",
     notSelectedAdd: (name: string | undefined) => `${name} ne l'avait pas coché soi-même. L'ajouter quand même ?`,
-    assignQrTitle: (name: string | undefined) => `${name} attribue lui-même`,
-    assignToQrGuest: (name: string | undefined, item: string) => `${name} est arrivé via le QR et coche sur son propre téléphone ce qu'il a pris. Si tu le remplis ici, ça risque d'y figurer deux fois.\n\nAttribuer quand même « ${item} » à ${name} ?`,
-    assignQrYes: "Oui, remplir quand même",
-    assignOwnTitle: (name: string | undefined) => `Tu attribues pour ${name}`,
-    assignOwnBody: (name: string | undefined) => `${name} n'est pas arrivé via le QR, c'est donc toi qui coches ce qu'il a pris. C'est le fonctionnement normal ici.\n\nOn ne te le demande qu'une seule fois — ensuite ça passe directement.`,
-    assignOwnYes: "Oui, continuer",
     sharedQ: "article partag\u00e9\u00a0?",
     filterAll: "Tout",
     filterFree: "Libre",
@@ -1856,8 +1835,8 @@ const STRINGS = {
     addGuestsInTab2: "Ajoute d'abord des invités dans l'onglet « Invités ».",
     closedShort: "✅ Clôturé",
     yourShareWord: "Ma part",
-    reopenedShort: "Rouverte",
-    reopenedShortSub: "ta confirmation reste valable",
+    reopenedShort: "Addition rouverte par l\u2019organisateur",
+    reopenedShortSub: "Tu peux encore modifier si tu veux.",
     reopenedTitle: "L'addition est rouverte",
     reopenedBody: "L'organisateur modifie encore quelque chose. Ta confirmation reste valable, mais tu peux encore modifier.",
     selectItemsPlural: "Sélectionnez vos consommations",
@@ -1926,12 +1905,16 @@ const STRINGS = {
     remarkReceived: "💬 L'hôte a reçu ta remarque et l'examine.",
     withdraw: "retirer finalement",
     assignFullTap: "Tout attribué — touchez un nom pour le retirer",
-    whoElseTook: "Qui d'autre en a pris\u00a0?",
+    pickerTitle: "Cocher pour quelqu\u2019un d\u2019autre\u00a0?",
+    manageWarnTitle: "Petit rappel",
+    manageWarnBody: "Les invit\u00e9s arriv\u00e9s via le lien ou le QR cochent eux-m\u00eames ce qu\u2019ils ont pris.\n\nEn tant qu\u2019organisateur, tu peux quand m\u00eame\u00a0:\n1) corriger ou ajuster\n2) cocher pour qui ne scanne pas",
+    manageWarnYes: "D\u2019accord",
     yourShare: (b: number) => `ta part \u20ac${b.toFixed(2).replace(".", ",")}`,
     yourShareUs: (b: number) => `votre part \u20ac${b.toFixed(2).replace(".", ",")}`,
     didYouShareQ: "Tu en as pris\u00a0?",
     whoOfYouSharedQ: "Qui de vous en a pris\u00a0?",
-    whatYouTook: "Ce que tu as pris toi-m\u00eame",
+    whatWeTook: "Ce que nous avons pris",
+    whatYouTook: "Ce que j\u2019ai pris moi-m\u00eame",
     adminNoConfirmNote: "Tu ne confirmes rien s\u00e9par\u00e9ment \u2014 en tant qu'organisateur, tu cl\u00f4tures ensuite toute l'addition. Ceci sert \u00e0 voir ce qui est \u00e0 ton nom.",
     nothingYoursYet: "Tu n'as encore rien coch\u00e9 pour toi.",
     manageBtn: "\u2699 G\u00e9rer",
@@ -1942,9 +1925,6 @@ const STRINGS = {
     perPieceSuffix: "/pi\u00e8ce",
     iTakeOne: "J'en prends un",
     addSomeoneElse: "Ajouter quelqu'un d'autre",
-    addedByYou: "ajout\u00e9s par toi",
-    cameViaQr: "arriv\u00e9s via le QR",
-    qrPicksSelf: "Ils cochent normalement eux-m\u00eames \u2014 c'est pourquoi l'appli le demande \u00e0 chaque fois.",
     youJoinPrefix: "Tu rejoins",
     sharedByName: (naam: string) => `partagé par ${naam}`,
     restoTagline: "Scanne l'addition et partage-la en groupe",
@@ -2299,6 +2279,10 @@ export default function RundoTable() {
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null)
   const [viewReceipt, setViewReceipt] = useState<string | null>(null)
   const [showGroupPeek, setShowGroupPeek] = useState(false)  // groepsoverzicht in-/uitklappen
+  const [remarksOpen, setRemarksOpen] = useState(true)       // opmerkingen van gasten in-/uitklappen
+  // Zonder tabbladen kan je nergens meer heen: staat de beheerder toevallig op de bon- of
+  // gastentab wanneer hij afsluit, dan zou hij op een scherm blijven staan zonder uitweg.
+  useEffect(() => { if (group?.finalized && isAdmin) setAdminTab("overview") }, [group?.finalized, isAdmin])
   // Popup waarin de beheerder zichzelf toevoegt: eerst met hoeveel, dan de naam/namen.
   const [showSelfModal, setShowSelfModal] = useState(false)
   const [selfSeats, setSelfSeats] = useState(1)
@@ -4171,13 +4155,16 @@ export default function RundoTable() {
     // elders in de app blijft het rustige oranje, want daar ben je ze net aan het vullen.
     const kleur = vrij === 0 ? "#1f8a4c" : "#c0392b"
     return (
-      <button onClick={() => setShowGroupPeek((v) => !v)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: kleur, padding: "4px 4px", display: "inline-flex", alignItems: "center", gap: 7 }}>
+      // Staat nu in de kopbalk in plaats van los onder de tabs, dus een maatje kleiner —
+      // maar de rode melding bij een lege stoel houdt zijn volle kleur: dat is het enige
+      // wat hier echt om aandacht vraagt.
+      <button onClick={() => setShowGroupPeek((v) => !v)} style={{ border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: kleur, padding: 0, display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
         👥 {L.groupWord}{vrij === 0
-          ? <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 12, padding: "2px 9px" }}>✓ {totalPersons}</span>
+          ? <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 12, padding: "2px 8px" }}>✓ {totalPersons}</span>
           : (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-              <span aria-hidden style={{ flexShrink: 0, width: 19, height: 19, borderRadius: "50%", background: "#c0392b", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, lineHeight: 1 }}>!</span>
-              <span style={{ fontSize: 13.5, fontWeight: 800, color: "#c0392b", background: "rgba(224,107,94,0.14)", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "2px 9px" }}>{L.nStillFree(vrij)}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <span aria-hidden style={{ flexShrink: 0, width: 17, height: 17, borderRadius: "50%", background: "#c0392b", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, lineHeight: 1 }}>!</span>
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#c0392b", background: "rgba(224,107,94,0.14)", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "2px 8px" }}>{L.nStillFree(vrij)}</span>
             </span>
           )} {showGroupPeek ? "▴" : "▾"}
       </button>
@@ -4239,7 +4226,7 @@ export default function RundoTable() {
   const renderEnNu = () => (
     <>
       {/* Het icoontje wisselt, zodat de knop niet meteen verklapt waar hij over gaat. */}
-      <div style={{ fontSize: 16.5, fontWeight: 800, color: "#123a42", margin: "0 0 8px" }}>{L.whatNowHead}</div>
+      <div style={{ fontSize: 19, fontWeight: 800, color: "#123a42", margin: "0 0 10px", lineHeight: 1.25 }}>{L.whatNowHead}</div>
       <button onClick={() => setIdeeLijst(true)}
         style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
           border: "1.5px solid rgba(20,153,176,0.4)", background: "#fff", borderRadius: 13, padding: "12px 13px" }}>
@@ -4795,13 +4782,25 @@ export default function RundoTable() {
         </div>
       )}
 
-      <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)}
-        status={isAdmin && adminTab === "overview" ? {
-          bon: billOk ? L.statusBillOk(`€${billTotal.toFixed(2).replace(".", ",")}`) : L.statusBillCheck,
-          bonOk: billOk,
-          open: (openUnits + undecidedShared.length) === 0 ? L.statusAllAssigned : L.statusOpenToAssign(openUnits + undecidedShared.length),
-          openOk: (openUnits + undecidedShared.length) === 0,
-        } : undefined} />
+      {/* Is de rekening afgesloten, dan valt er niets meer te kiezen: geen tabbladen, geen
+          kopbalk met de groep erin. Wat overblijft is de groene balk met heropenen, de
+          verdeling, en wat je nog samen kan doen. */}
+      {!group.finalized && <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)}
+        rechts={group.finalized ? undefined : (
+          <>
+            {isAdmin && groepPeekKnop()}
+            {/* "Bon bekijken" stond bij de beheerder onder de tabs, en bij een gast nergens
+                — terwijl die net het minst van de bon weet. Nu op dezelfde plek voor allebei;
+                op de bon-tab zelf blijft hij staan waar hij stond. */}
+            {group.receipt_url && !(isAdmin && adminTab === "scan") && (
+              <button onClick={() => setViewReceipt(group.receipt_url!)}
+                style={{ border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: "#0f7d90", padding: 0, whiteSpace: "nowrap" }}>
+                {L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}
+              </button>
+            )}
+          </>
+        )}
+        onder={isAdmin && showGroupPeek ? <div style={{ marginTop: 10 }}>{groepPeekLijst()}</div> : undefined} />}
 
       {/* Heropen je de rekening om nog iets te wijzigen, dan verdween dit blok mee — en
           bleef er een onopgeloste opmerking die het opnieuw afsluiten tegenhield, zonder
@@ -4813,9 +4812,15 @@ export default function RundoTable() {
         if (openCount === 0) return null
         return (
           <div id="rundo-remarks" style={{ background: "#fff7e6", border: "1.5px solid #f0b840", borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
-            <div style={{ fontSize: 17, fontWeight: 800, color: "#a06b00", marginBottom: 2 }}>{L.remarksBlockTitle}</div>
-            <div style={{ fontSize: 15.5, color: "#8a5a00", lineHeight: 1.45, marginBottom: 8 }}>{L.remarksBlockBody}</div>
-            {disputers.map((d, i) => (
+            {/* Een opmerking die je al gelezen hebt bleef de hele avond bovenaan staan en
+                duwde het toewijzen naar beneden. Ze mag dus dicht — met het aantal in de
+                titel, zodat je blijft zien dat er iets openstaat. */}
+            <div onClick={() => setRemarksOpen((v) => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
+              <span style={{ fontSize: 17, fontWeight: 800, color: "#a06b00", minWidth: 0 }}>{L.remarksBlockTitle}{openCount > 1 ? ` (${openCount})` : ""}</span>
+              <span style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 800, color: "#a06b00", border: "1.5px solid rgba(240,184,64,0.8)", borderRadius: 9, padding: "5px 9px", whiteSpace: "nowrap" }}>{remarksOpen ? `${L.hideAll} \u25b4` : `${L.showAll} \u25be`}</span>
+            </div>
+            {remarksOpen && <div style={{ fontSize: 15.5, color: "#8a5a00", lineHeight: 1.45, margin: "6px 0 8px" }}>{L.remarksBlockBody}</div>}
+            {remarksOpen && disputers.map((d, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7, opacity: d.resolved ? 0.7 : 1, fontSize: 16, color: "#8a5a00" }}>
                 <div style={{ flex: 1, minWidth: 0, textDecoration: d.resolved ? "line-through" : "none" }}>
                   <b>{d.name}</b>{d.comment ? <span>: “{d.comment}”</span> : ""}
@@ -4870,7 +4875,7 @@ export default function RundoTable() {
         )
       })()}
 
-      {isAdmin && (
+      {isAdmin && !group.finalized && (
         <div style={{ ...S.tabBar, gap: 7, padding: 6, border: "1px solid rgba(20,153,176,0.18)", borderRadius: 16, boxShadow: "0 3px 12px -5px rgba(20,153,176,0.35)" }}>
           {([
             { id: "scan", label: L.tabBon },
@@ -4899,19 +4904,6 @@ export default function RundoTable() {
               transition: "all 0.15s",
             }}>{t.label}{t.id === "overview" && group.finalized ? " \u2713" : ""}</button>
           ))}
-        </div>
-      )}
-
-      {/* Subtiele bon-preview + groepsoverzicht, in elke tab behalve de Bon-tab. */}
-      {adminTab !== "scan" && (
-        <div style={{ marginTop: -6, marginBottom: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            {adminTab === "overview" && groepPeekKnop()}
-            {group.receipt_url && (
-              <button onClick={() => setViewReceipt(group.receipt_url!)} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#0f7d90", padding: "4px 4px" }}>{L.viewReceipt}{(group.receipt_url!.split(/\s+/).filter(Boolean).length > 1) ? ` (${group.receipt_url!.split(/\s+/).filter(Boolean).length})` : ""}</button>
-            )}
-          </div>
-          {adminTab === "overview" && showGroupPeek && groepPeekLijst()}
         </div>
       )}
 
@@ -5795,7 +5787,7 @@ export default function RundoTable() {
         <div id="rekening-per-persoon">
           <div style={S.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0 }}>{L.perPersonTitle}</h3>
+              <h3 style={{ ...S.h3, marginBottom: 0, gap: 8 }}>{group.finalized ? `👥 ${L.finalSplitTitle}` : L.perPersonTitle}</h3>
               {participants.length > 0 && (() => {
                 const allOpen = participants.every((p) => expandedPeople.has(p.id))
                 return (
@@ -6323,23 +6315,63 @@ export default function RundoTable() {
                 het venster wegklikken, scrollen, invullen, en dan opnieuw afsluiten. De
                 fooi is één bedrag — dat kan gewoon hier. */}
             {tipTotal > 0.005 ? (
+              <>
               <div style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(39,174,96,0.12)", border: "1px solid rgba(39,174,96,0.5)", borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}>
                 <span style={{ flexShrink: 0, fontSize: 18, color: "#1f8a4c", fontWeight: 800 }}>✓</span>
                 <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 800, color: "#15703f" }}>{L.tipAddedNow(tipTotal.toFixed(2).replace(".", ","))}</span>
               </div>
+              {/* Hierna stuurde "Wie betaalt de fooi mee?" je het venster uit, naar een blok
+                  tussen de items. Je was dan het afsluiten kwijt en moest opnieuw beginnen.
+                  Dezelfde keuze staat nu hier: standaard over iedereen, en wie niet meebetaalt
+                  tik je weg. */}
+              {tipItem && participants.length > 0 && (() => {
+                const gekozen = tipPickedIds()
+                const iedereen = gekozen.length === 0 || gekozen.length >= participants.length
+                const doetMee = (q: string) => gekozen.length > 0 ? gekozen.includes(q) : true
+                const zet = (pid: string, aan: boolean) => {
+                  const basis = gekozen.length > 0 ? gekozen : participants.map((q) => q.id)
+                  const volgende = aan ? [...new Set([...basis, pid])] : basis.filter((x) => x !== pid)
+                  participants.forEach((q) => {
+                    const moet = volgende.includes(q.id) ? 1 : 0
+                    const nu = claims.some((c) => c.item_id === tipItem.id && c.participant_id === q.id && c.quantity > 0) ? 1 : 0
+                    if (moet !== nu) void setClaim(tipItem.id, q.id, moet)
+                  })
+                }
+                return (
+                  <div style={{ background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.22)", borderRadius: 12, padding: "11px 12px", marginBottom: 12 }}>
+                    <div style={{ fontSize: 15.5, fontWeight: 800, color: "#2b4f56" }}>{iedereen ? L.tipEveryone : L.tipPickSome}</div>
+                    <div style={{ fontSize: 14, color: "#8aa3a6", margin: "2px 0 9px", lineHeight: 1.4 }}>{L.whoPaysTipSub}</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {participants.map((q) => {
+                        const aan = doetMee(q.id)
+                        return (
+                          <button key={q.id} onClick={() => zet(q.id, !aan)}
+                            style={{ fontSize: 15.5, fontWeight: 700, borderRadius: 10, padding: "9px 13px", cursor: "pointer", fontFamily: "inherit",
+                              color: aan ? "#15703f" : "#8aa3a6", background: aan ? "rgba(39,174,96,0.12)" : "#fff",
+                              border: aan ? "1.5px solid rgba(39,174,96,0.5)" : "1.5px solid rgba(18,58,66,0.15)",
+                              textDecoration: aan ? "none" : "line-through" }}>
+                            {aan ? "✓ " : ""}{naamVan(q)}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
+              </>
             ) : (
               <div style={{ background: "rgba(90,108,166,0.07)", border: "1.5px solid rgba(90,108,166,0.3)", borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", flex: 1, minWidth: 0, border: "1px solid rgba(18,58,66,0.15)", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
-                    <span style={{ fontSize: 19, fontWeight: 700, color: "#4a6e73", padding: "0 2px 0 11px" }}>€</span>
-                    <input type="text" inputMode="decimal" value={tipInput} placeholder="0,00"
-                      onChange={(e) => setTipInput(numFilter(e.target.value, true))}
-                      onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); void addTip() } }}
-                      style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "10px 12px 10px 2px", fontSize: 19 }} />
-                  </span>
-                  <button onPointerDown={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur?.(); void addTip() }}
-                    style={{ ...S.btn, ...S.btnPrimary, flexShrink: 0, padding: "11px 15px", fontSize: 16, fontWeight: 800 }}>{L.addTipShort}</button>
-                </div>
+                {/* "Toevoegen" stond naast het invoervak, halverwege het venster, terwijl
+                    "Afsluiten zonder fooi" helemaal onderaan stond. De twee uitwegen van dit
+                    venster stonden dus niet bij elkaar. Het bedrag vul je nu in, de knop staat
+                    eronder, en daaronder pas de knop die het overslaat. */}
+                <span style={{ display: "flex", alignItems: "center", border: "1px solid rgba(18,58,66,0.15)", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
+                  <span style={{ fontSize: 19, fontWeight: 700, color: "#4a6e73", padding: "0 2px 0 11px" }}>€</span>
+                  <input type="text" inputMode="decimal" value={tipInput} placeholder="0,00"
+                    onChange={(e) => setTipInput(numFilter(e.target.value, true))}
+                    onKeyDown={(e) => { if (e.key === "Enter") { (e.currentTarget as HTMLInputElement).blur(); void addTip() } }}
+                    style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", textAlign: "right", padding: "10px 12px 10px 2px", fontSize: 19 }} />
+                </span>
                 {/* Een percentage is hoe de meeste mensen over fooi denken; het bedrag
                     komt gewoon in het veld hierboven, zodat je het nog kan bijstellen. */}
                 <div style={{ display: "flex", gap: 6, marginTop: 9 }}>
@@ -6353,6 +6385,8 @@ export default function RundoTable() {
                     )
                   })}
                 </div>
+                <button onPointerDown={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur?.(); void addTip() }}
+                  style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 9, padding: "12px 0", fontSize: 16.5, fontWeight: 800 }}>{L.addTipShort}</button>
               </div>
             )}
             <div style={{ background: "rgba(90,108,166,0.07)", borderRadius: 11, padding: "11px 13px", marginBottom: 14 }}>
@@ -6362,14 +6396,12 @@ export default function RundoTable() {
               </div>
             </div>
             {tipTotal > 0.005 ? (
-              <>
-                <button onClick={() => { setShowTipReminder(false); void finalizeBill(true) }}
-                  style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.tipCloseNow}</button>
-                <button onClick={() => { setShowTipReminder(false); if (typeof document !== "undefined") document.getElementById("fooi-sectie")?.scrollIntoView({ behavior: "smooth", block: "center" }) }}
-                  style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 15.5, fontWeight: 700, color: "#4a6e73", background: "transparent", border: "none" }}>{L.tipPickWho}</button>
-              </>
+              // Één weg vooruit: afsluiten en meteen op het overzicht landen, want dat is
+              // waar je hierna naar kijkt — wie wat betaalt.
+              <button onClick={() => { setShowTipReminder(false); setAdminTab("overview"); scrollTop(); void finalizeBill(true) }}
+                style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, fontWeight: 800, border: "none", color: "#fff", background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -6px rgba(39,174,96,0.6)" }}>{L.tipToOverview}</button>
             ) : (
-              <button onClick={() => { setShowTipReminder(false); void finalizeBill(true) }}
+              <button onClick={() => { setShowTipReminder(false); setAdminTab("overview"); scrollTop(); void finalizeBill(true) }}
                 style={{ ...S.btn, width: "100%", padding: "12px 0", fontSize: 16.5, fontWeight: 800, color: "#4a6e73", background: "#fff", border: "1.5px solid rgba(18,58,66,0.18)" }}>{L.tipSkipBtn}</button>
             )}
           </div>
@@ -6862,13 +6894,14 @@ export default function RundoTable() {
               <span style={{ fontSize: 17.5, fontWeight: 800, color: "#123a42" }}>{L.totalTogether}</span>
               <span style={{ fontSize: 20, fontWeight: 800, color: "#1f8a4c" }}>€{participants.reduce((a, p) => a + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
             </div>
-            {/* "Sluiten" zei wat de knop met het venster doet; dit zegt wat je erna ziet.
-                Hij brengt je naar het overzicht per persoon op de pagina zelf, met iedereen
-                opengeklapt en de toewijslijst dicht. */}
+            {/* Hij bracht je naar het overzicht met i\u00e9dereen opengeklapt: bij zes personen
+                maal zes items sta je dan middenin een lijst waar je niets van terugvindt.
+                Net als bij de gast landt de beheerder nu op de namen met hun bedrag, en
+                klapt hij zelf open wat hij wil nakijken. */}
             <button onClick={() => {
               setAdminFinalPopup(false)
               setKlapToewijzenSignaal((n) => n + 1)
-              setExpandedPeople(new Set(participants.map((p) => p.id)))
+              setExpandedPeople(new Set())
               if (typeof document !== "undefined") setTimeout(() => document.getElementById("rekening-per-persoon")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80)
             }} style={{ ...S.btn, ...S.btnPrimary, width: "100%", marginTop: 14, padding: "13px 0", fontSize: 17, fontWeight: 800 }}>{L.showDetailsBtn}</button>
           </div>
@@ -7541,7 +7574,7 @@ function BonKijker({ urls, onClose }: { urls: string[]; onClose: () => void }) {
   )
 }
 
-function TopBar({ group, isAdmin, onHome, totalPersons, status, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; status?: { bon: string; bonOk: boolean; open: string; openOk: boolean } }) {
+function TopBar({ group, isAdmin, onHome, totalPersons, rechts, onder, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; rechts?: React.ReactNode; onder?: React.ReactNode }) {
   const [lang] = useLang()
   const [naamBewerkt, setNaamBewerkt] = useState(false)
   const L = STRINGS[lang]
@@ -7572,25 +7605,23 @@ function TopBar({ group, isAdmin, onHome, totalPersons, status, onRenameGroup }:
             {group.name}{onRenameGroup && <span style={{ fontSize: 15, color: "#0f7d90", marginLeft: 6 }}>✏️</span>}
           </span>
         )}
-        {/* Het aantal personen stond hier altijd, ook op de scanpagina waar er nog niemand
-            is aangeduid — dan zegt "1 pers." alleen dat jij bestaat. Pas tonen zodra er
-            echt meer dan één aan tafel zit. */}
-        {totalPersons != null && totalPersons > 1 && (
+        {/* Hier stond "3 pers." — een getal zonder verhaal. Het groepsblokje dat lager op
+            het scherm stond zegt hetzelfde én laat zien wie er zit, wie via de QR kwam en
+            of er nog een stoel leeg is. Dat hoort hier, waar je toch al kijkt. Voor een
+            gast, die geen groepsblok heeft, blijft het gewone aantal staan. */}
+        {rechts != null ? (
+          <span style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, borderLeft: "1px solid rgba(18,58,66,0.18)", paddingLeft: 11 }}>{rechts}</span>
+        ) : totalPersons != null && totalPersons > 1 ? (
           <span style={{ flexShrink: 0, borderLeft: "1px solid rgba(18,58,66,0.18)", paddingLeft: 11, fontSize: 14, fontWeight: 800, color: "#4a6e73", whiteSpace: "nowrap" }}>
             {L.persShort(totalPersons)}
           </span>
-        )}
+        ) : null}
       </div>
-      {/* De twee vragen die een beheerder de hele avond heeft: klopt de bon, en staat er nog
-          iets open? Die stonden elk in hun eigen tabblad, dus je moest ernaartoe om te kijken. */}
-      {status && (
-        <div style={{ display: "flex", gap: 6, marginTop: 9 }}>
-          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 800, textAlign: "center", borderRadius: 9, padding: "6px 8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            color: status.bonOk ? "#1f8a4c" : "#b5591a", background: status.bonOk ? "rgba(39,174,96,0.12)" : "rgba(243,156,18,0.14)" }}>{status.bon}</span>
-          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 800, textAlign: "center", borderRadius: 9, padding: "6px 8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            color: status.openOk ? "#1f8a4c" : "#b5591a", background: status.openOk ? "rgba(39,174,96,0.12)" : "rgba(243,156,18,0.14)" }}>{status.open}</span>
-        </div>
-      )}
+      {/* Hier stonden twee statuschips: "Bon klopt €64,20" en "Alles toegewezen". Allebei
+          staan ze een scherm lager nog eens — de bon in zijn eigen kader, het toewijzen in
+          de tellers onder de lijst én in de chip "Nog vrij". Drie keer hetzelfde bovenaan
+          het drukste scherm van de app. */}
+      {onder}
     </div>
   )
 }
@@ -7943,7 +7974,7 @@ function WieNogBtn({ onClick, open, title }: { onClick: () => void; open?: boole
     // rand in plaats van stippels: hier gebeurt iets, daar wordt iets gevraagd.
     <button onClick={onClick} title={title} aria-label={title} style={{
       display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-      flex: "1 1 auto", minWidth: 0, minHeight: 40, cursor: "pointer", fontFamily: "inherit",
+      flex: "1 1 0", minWidth: 0, minHeight: 40, cursor: "pointer", fontFamily: "inherit",
       fontSize: 13.5, fontWeight: 700, borderRadius: 10, padding: "8px 10px", whiteSpace: "nowrap",
       background: open ? "rgba(18,58,66,0.07)" : "#fff",
       border: `1.5px solid ${open ? "rgba(18,58,66,0.45)" : "rgba(18,58,66,0.22)"}`,
@@ -7984,45 +8015,33 @@ function AssignPicker({ participants, itemId, isShared, meId, vol, qtyFn, confir
          doen. Vol geel = staat al op zijn naam, turkoois = jij duidt voor hem aan,
          stippellijn met gsm = hij duidt zelf aan. Een nog naamloze plaats krijgt een lichte
          rand en schuine letters, anders lijkt ze op de stippellijn van de QR-gasten. */
+      // Half doorzichtige namen, schuine letters, grijs op grijs: een naam die je moet
+      // kunnen aantikken hoort niet weggemoffeld te staan. Alles even leesbaar nu; het
+      // gsm'etje blijft als teken dat die gast ook zelf aanduidt, en dat staat ook in de
+      // melding die volgt. Goud blijft goud: dat staat al op zijn naam.
       <button key={p.id} disabled={vol && !isShared} onClick={() => onAssign(p.id, reden)} style={{
         display: "inline-flex", alignItems: "center", gap: 5,
-        fontSize: 15, fontWeight: viaQr ? 700 : 800, borderRadius: 9, padding: "7px 10px",
-        cursor: vol && !isShared ? "not-allowed" : "pointer",
-        fontStyle: !aan && !viaQr && nogVrij ? "italic" : "normal",
-        border: aan ? "1px solid rgba(196,152,32,0.5)"
-          : viaQr ? "1.5px dashed rgba(18,58,66,0.3)"
-          : nogVrij ? "1.5px solid rgba(18,58,66,0.14)"
-          : "1.5px solid rgba(20,153,176,0.45)",
-        background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : viaQr ? "transparent" : nogVrij ? "#fff" : "rgba(20,153,176,0.06)",
-        color: aan ? "#5a4a1a" : viaQr ? "#8aa3a6" : nogVrij ? "#6b8489" : "#123a42",
-        opacity: vol && !isShared ? 0.45 : aan ? 1 : klaar ? 0.75 : viaQr ? 0.85 : 1,
+        fontSize: 15.5, fontWeight: 800, borderRadius: 10, padding: "9px 12px", minHeight: 40,
+        cursor: vol && !isShared ? "not-allowed" : "pointer", fontFamily: "inherit",
+        border: aan ? "1.5px solid rgba(196,152,32,0.55)" : "1.5px solid rgba(18,58,66,0.22)",
+        background: aan ? "linear-gradient(135deg,#f3d27c,#ecc564)" : "#fff",
+        color: aan ? "#5a4a1a" : "#2b4f56",
+        opacity: vol && !isShared ? 0.45 : 1,
       }}>{!aan && viaQr && <GsmIcon />}{naamVan(p)}{aan ? (isShared ? " \u2713" : ` \u00d7${mij}`) : klaar ? " \u2713" : ""}</button>
     )
   }
 
-  const kopje = (tekst: string) => (
-    <div style={{ fontSize: 12.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#8aa3a6", marginBottom: 6 }}>{tekst}</div>
-  )
-
   return (
     <div style={{ marginTop: 8, padding: "10px 11px", borderRadius: 12, background: "rgba(90,108,166,0.07)", border: "1px solid rgba(90,108,166,0.2)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 9 }}>
-        <span style={{ fontSize: 15, fontWeight: 800, color: vol && !isShared ? "#1f8a4c" : "#4a6e73" }}>{vol && !isShared ? L.assignFullTap : L.whoElseTook}</span>
-        <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 16.5, color: "#8aa3a6", fontWeight: 800 }}>✕</button>
+      {/* Eén duidelijke zin bovenaan in plaats van "Wie nam dit nog?" — die vroeg naar de
+          tafel, terwijl deze kiezer over jóuw handeling gaat. De groepjes "door jou
+          toegevoegd" en "kwamen via de QR" zijn weg: dat onderscheid staat nu in de
+          melding die volgt zodra je een naam aantikt, en hier stond het in de weg. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 16, fontWeight: 800, color: vol && !isShared ? "#1f8a4c" : "#2b4f56", lineHeight: 1.3 }}>{vol && !isShared ? L.assignFullTap : L.pickerTitle}</span>
+        <button onClick={onClose} aria-label="✕" style={{ flexShrink: 0, border: "none", background: "none", cursor: "pointer", fontSize: 16.5, color: "#5d7478", fontWeight: 800 }}>✕</button>
       </div>
-      {vanJou.length > 0 && (
-        <div style={{ marginBottom: viaLink.length > 0 ? 12 : 0 }}>
-          {viaLink.length > 0 && kopje(L.addedByYou)}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>{vanJou.map(knop)}</div>
-        </div>
-      )}
-      {viaLink.length > 0 && (
-        <div>
-          {kopje(L.cameViaQr)}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>{viaLink.map(knop)}</div>
-          <div style={{ fontSize: 13.5, color: "#8aa3a6", lineHeight: 1.45, marginTop: 7 }}>{L.qrPicksSelf}</div>
-        </div>
-      )}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{[...vanJou, ...viaLink].map(knop)}</div>
       {anderen.length === 0 && <div style={{ fontSize: 15.5, color: "#aaa" }}>{L.addGuestsFirst}</div>}
     </div>
   )
@@ -8209,6 +8228,14 @@ function ClaimScreen(props: {
   // Bij een afgesloten rekening is de verdeling van de tafel het enige dat nog telt:
   // die staat dus open, en de twee blokken van tijdens het bestellen gaan dicht.
   useEffect(() => { if (finalized) { setGastItemsOpen(false); setGastBevestigdOpen(false) } }, [finalized])
+  // Bevestigd: dan is de lange lijst waar je uit koos klaar en wil je zien wát je
+  // bevestigde. Dus blok 1 dicht, blok 2 open. Tik je "Aanpassen", dan gaat blok 1
+  // vanzelf weer open, want dan begin je opnieuw te kiezen.
+  useEffect(() => {
+    if (finalized) return
+    if (iConfirmed) { setGastItemsOpen(false); setGastBevestigdOpen(true) }
+    else setGastItemsOpen(true)
+  }, [iConfirmed, finalized])
   // Twee momenten waarop een gast uitleg nodig heeft: net na zijn bevestiging (wat nu?)
   // en zodra de rekening dichtgaat (dit is je bedrag). De eerste kan hij altijd opnieuw
   // oproepen via het ⓘ naast de knop; de tweede verschijnt één keer vanzelf.
@@ -8452,7 +8479,8 @@ function ClaimScreen(props: {
     )
   }
 
-  const shareBtn = (it: BillItem, stil = false) => !magOntdelen(it) ? (
+  // breed=true: de knop vult de plek die hij krijgt, zodat hij even groot wordt als Beheer.
+  const shareBtn = (it: BillItem, stil = false, breed = false) => !magOntdelen(it) ? (
     <span title={L.sharedByOther}
       style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 9, padding: "7px 10px",
         background: INDIGO.vlak, color: INDIGO.tekst, fontSize: 15.5, fontWeight: 800 }}>
@@ -8475,13 +8503,15 @@ function ClaimScreen(props: {
       } : it.is_shared ? {
         // Aan: volle vulling met witte tekst. Met een lichte vulling viel hij samen met het
         // blauwe vlak van de regel eromheen — je zag niet meer dát het een knop was.
-        flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10,
-        padding: "5px 9px", cursor: "pointer", fontFamily: "inherit", border: "none", background: "#4a5a9e",
-      } : { flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, padding: "5px 9px", cursor: "pointer",
+        ...(breed ? { flex: "1 1 0", minWidth: 0, minHeight: 40, justifyContent: "center", padding: "8px 10px" } : { flexShrink: 0, padding: "5px 9px" }),
+        display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10,
+        cursor: "pointer", fontFamily: "inherit", border: "none", background: "#4a5a9e",
+      } : { ...(breed ? { flex: "1 1 0", minWidth: 0, minHeight: 40, justifyContent: "center", padding: "8px 10px" } : { flexShrink: 0, padding: "5px 9px" }),
+        display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, cursor: "pointer",
         fontFamily: "inherit", border: "1.5px dashed rgba(90,108,166,0.5)", background: "#fff" }}>
       <ShareIcon on={it.is_shared} size={13} kleur={!stil && it.is_shared ? "#fff" : INDIGO.tekst} />
       {!stil && (
-        <span style={{ fontSize: 13, fontWeight: it.is_shared ? 800 : 700, color: it.is_shared ? "#fff" : "#5a6ca6" }}>
+        <span style={{ fontSize: breed ? 13.5 : 13, fontWeight: it.is_shared ? 800 : 700, color: it.is_shared ? "#fff" : "#5a6ca6", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {it.is_shared ? `${L.sharedOnShort} ✓` : L.sharedQ}
         </span>
       )}
@@ -8532,46 +8562,65 @@ function ClaimScreen(props: {
   // eindafrekening. De knoppen zagen er tot nu toe uit als altijd, maar konden enkel nog
   // melden dat de rekening dicht is — een scherm dat uitnodigt tot iets wat niet kan.
   // Hier staat dus enkel nog wat er verdeeld is, en het scheelt ook de helft in hoogte.
-  if (isAdmin && finalized) {
-    return (
-      <div id="wie-nam-wat">
-        <div style={{ ...S.card, border: "1.5px solid rgba(39,174,96,0.3)" }}>
-          <div onClick={() => setSlotOpen((v) => !v)}
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingBottom: slotOpen ? 10 : 0, borderBottom: slotOpen ? "1px solid rgba(39,174,96,0.2)" : "none", cursor: "pointer" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-              <span style={{ fontSize: 16.5, fontWeight: 800, color: "#1f6b3a" }}>{L.closedListTitle}</span>
-              <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "#4e7a62", background: "rgba(39,174,96,0.12)", borderRadius: 8, padding: "4px 8px", whiteSpace: "nowrap" }}>{L.lockedWord}</span>
-            </span>
-            <span style={{ flexShrink: 0, border: "1.5px solid rgba(39,174,96,0.4)", color: "#1f6b3a", borderRadius: 9, padding: "5px 10px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap" }}>
-              {slotOpen ? `${L.hideAll} \u25b4` : `${L.showAll} \u25be`}
-            </span>
-          </div>
-          {slotOpen && items.length === 0 && <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsScanFirst}</div>}
-          {slotOpen && items.map((it, i) => {
-            const gedeeld = !!it.is_shared
-            const wie = gedeeld
-              ? sharerIds(it.id).map((pid) => { const q = participants.find((x) => x.id === pid); return q ? naamVan(q) : "" }).filter(Boolean)
-              : participants
-                  .map((q) => ({ n: naamVan(q), q: myQty(it.id, q.id) }))
-                  .filter((x) => x.q > 0)
-                  .map((x) => `${x.n}${x.q > 1 ? ` ×${x.q}` : ""}`)
-            return (
-              <div key={it.id} style={{ padding: "11px 0", borderBottom: i === items.length - 1 ? "none" : "1px solid rgba(18,58,66,0.06)" }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 700, color: "#1d2433" }}>{it.quantity > 1 ? `${it.quantity}× ` : ""}{showTip(it.name, L)}</span>
-                  <span style={{ flexShrink: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42" }}>€{itemTotal(it).toFixed(2).replace(".", ",")}</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 15, color: wie.length > 0 ? "#6b8489" : "#c0392b", marginTop: 3 }}>
-                  {gedeeld && <ShareIcon on size={13} />}
-                  {wie.length > 0 ? wie.join(" · ") : L.tagFree}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+  // Hier stond "De verdeling zoals afgesloten": elk item met de namen erachter. Dat was
+  // dezelfde informatie als "Per persoon" een scherm lager, maar dan andersom gesorteerd —
+  // en niemand leest na afloop nog per item. De beheerder krijgt dus precies wat de gast
+  // krijgt: de namen met hun bedrag, details dichtgeklapt.
+  const eindVerdeling = () => (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, marginBottom: 8 }}>
+        {blokBol(3, true)}
+        <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1f8a4c", lineHeight: 1.25 }}>👥 {L.finalSplitTitle}</span>
       </div>
-    )
-  }
+      {participants.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <button onClick={() => setOpenGuestRows((cur) => cur.size >= participants.length ? new Set() : new Set(participants.map((q) => q.id)))}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontFamily: "inherit", fontSize: 14.5, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 9, padding: "6px 10px" }}>
+            {openGuestRows.size >= participants.length ? `${L.hideDetails} \u25b4` : `${L.showDetails} \u25be`}
+          </button>
+        </div>
+      )}
+      {participants.map((p) => {
+        const pt = personTotal(p.id)
+        const isMe = p.id === meId
+        const rowOpen = openGuestRows.has(p.id)
+        const detail = personItems(p.id)
+        return (
+          <div key={p.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 8, background: isMe ? "rgba(233,196,95,0.16)" : "transparent" }}>
+            <div onClick={() => setOpenGuestRows((cur) => { const n = new Set(cur); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 8px", cursor: "pointer" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                <span style={{ fontSize: 15.5, color: "#8aa3a6", width: 12, flexShrink: 0 }}>{rowOpen ? "\u25bc" : "\u25b6"}</span>
+                <span style={{ fontSize: 17.5, fontWeight: isMe ? 800 : 600, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{naamVan(p)}{isMe ? L.youSuffix : ""}</span>
+              </span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2).replace(".", ",")}</span>
+            </div>
+            {rowOpen && (
+              <div style={{ padding: "0 8px 10px 26px" }}>
+                {detail.length === 0 && <div style={{ fontSize: 16, color: "#aaa" }}>{L.nothingTapped2}</div>}
+                {detail.map((d, k) => (
+                  <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#4a6e73", padding: "2px 0" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}\u00d7 ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? L.sharedPart : L.sharedByN(d.sharers)) : ""}</span>
+                    <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#123a42" }}>{d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "\u2248 " : ""}\u20ac${d.amount.toFixed(2).replace(".", ",")}`}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(18,58,66,0.1)" }}>
+        <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.billTotalLabel}</span>
+        <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
+      </div>
+    </>
+  )
+
+  // Na het afsluiten stond hier "De verdeling zoals afgesloten": elk item met de namen
+  // erachter. Een scherm lager staat "Per persoon" — dezelfde cijfers, maar gesorteerd
+  // zoals je ze nodig hebt: per portemonnee. Twee keer dezelfde verdeling op één pagina,
+  // dus deze gaat weg en die andere heet voortaan "Definitieve verdeling".
+  if (isAdmin && finalized) return null
 
   if (isAdmin) {
     const normalItems = items.filter((i) => !i.is_shared)
@@ -8582,12 +8631,26 @@ function ClaimScreen(props: {
     const billSum = items.reduce((s, i) => s + itemTotal(i), 0)
     return (
       <div id="wie-nam-wat">
+        {/* De gast wordt begroet met zijn naam en een handje; de beheerder viel meteen met
+            de deur in huis. Hij zit aan dezelfde tafel en betaalt mee, dus krijgt hij
+            dezelfde begroeting — met de namen van zijn plaats als hij met twee is. */}
+        {meId && (() => {
+          const ik = participants.find((p) => p.id === meId)
+          if (!ik) return null
+          return (
+            <div style={{ marginBottom: 12, padding: "2px", display: "flex", alignItems: "center", gap: 11 }}>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 19, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.helloName(naamVan(ik))} 👋</span>
+            </div>
+          )
+        })()}
         <div style={S.card}>
-          {/* Rechtsboven stond "▼ inklappen", dat de hele kaart wegklapte. Die was er om een
-              lange lijst kwijt te raken — en dat doen de afgewerkte items nu zelf. Twee soorten
-              inklappen naast elkaar, allebei met een pijltje, was vooral verwarrend. */}
+          {/* Zelfde opbouw als bij de gast: een genummerd bolletje, zodat de twee schermen
+              dezelfde volgorde vertellen — eerst aanduiden, dan wat er op jouw naam staat. */}
           <div style={{ minWidth: 0, marginBottom: 10 }}>
-            <h3 style={{ ...S.h3, marginBottom: 2 }}>{meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</h3>
+            <h3 style={{ ...S.h3, marginBottom: 2, gap: 9 }}>
+              {blokBol(1, claimedUnits >= totalUnits && sharedDecided >= sharedItems.length)}
+              <span style={{ minWidth: 0 }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
+            </h3>
             <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.claimSubAdmin}</div>
           </div>
           {items.length === 0
@@ -8748,12 +8811,14 @@ function ClaimScreen(props: {
                               if (sh.includes(pid)) { doe(); return }
                               if (reden === "vrij") { askConfirm(L.freeSeatNoAssignBody, L.goGuestsBtn, () => onNaarGasten?.(), { title: L.freeSeatNoAssignTitle }); return }
                               if (reden === "bevestigd") { askConfirm(L.notSelectedShare(naam), L.yes, doe); return }
-                              // Wie via de QR of de link kwam, zit op zijn eigen gsm hetzelfde te
-                              // doen: daar vraagt de app het elke keer opnieuw. Bij je eigen gasten
-                              // is invullen net de bedoeling, dus daar volstaat één keer uitleg.
-                              if (reden === "qr") { askConfirm(L.assignToQrGuest(naam, it.name), L.assignQrYes, doe, { title: L.assignQrTitle(naam) }); return }
+                              // Één melding voor allebei de gevallen, want ze zeggen hetzelfde:
+                              // wie zelf scant duidt zelf aan, en jij bent hier om recht te
+                              // zetten of in te vullen voor wie niet scant. Bij een QR-gast
+                              // elke keer — elke tik van jou kan dubbel komen te staan met wat
+                              // hij op zijn eigen gsm doet. Bij je eigen gasten één keer.
+                              if (reden === "qr") { askConfirm(L.manageWarnBody, L.manageWarnYes, doe, { title: L.manageWarnTitle }); return }
                               if (uitlegGezien("ander")) { doe(); return }
-                              askConfirm(L.assignOwnBody(naam), L.assignOwnYes, () => { markUitleg("ander"); doe() }, { title: L.assignOwnTitle(naam) })
+                              askConfirm(L.manageWarnBody, L.manageWarnYes, () => { markUitleg("ander"); doe() }, { title: L.manageWarnTitle })
                             }}
                             onClose={() => setAssignItem(null)} />
                         )}
@@ -8881,12 +8946,16 @@ function ClaimScreen(props: {
                       {/* Derde laag. Elke regel is nu hetzelfde opgebouwd — wát het is, wie het
                           nam, wat je ermee kan — en de vragen staan dus altijd op dezelfde
                           hoogte in plaats van achter een wisselend aantal naampillen aan. */}
+                      {/* Allebei exact de helft: de ene deelt uit, de andere zet om — geen van
+                          beide is belangrijker, dus krijgen ze evenveel plaats. Met flex kroop
+                          de langste tekst de ruimte van de andere in; een raster van twee
+                          gelijke kolommen doet dat niet. */}
                       {open > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, alignItems: "stretch" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: participants.length > 0 ? "1fr 1fr" : "1fr", gap: 6, marginTop: 6, alignItems: "stretch" }}>
                           {participants.length > 0 && (
                             <WieNogBtn onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} open={assignItem === it.id} title={L.addSomeoneElse} />
                           )}
-                          {shareBtn(it)}
+                          <div style={{ minWidth: 0, display: "flex" }}>{shareBtn(it, false, true)}</div>
                         </div>
                       )}
                       {assignItem === it.id && open > 0 && (
@@ -8906,7 +8975,7 @@ function ClaimScreen(props: {
                             // eigen gasten is invullen net de bedoeling — daar volstaat één keer
                             // uitleg, en daarna zou de vraag alleen nog in de weg zitten.
                             if (reden === "bevestigd") { askConfirm(L.notSelectedAdd(naam), L.yes, doe); return }
-                            if (reden === "qr") { askConfirm(L.assignToQrGuest(naam, it.name), L.assignQrYes, doe, { title: L.assignQrTitle(naam) }); return }
+                            if (reden === "qr") { askConfirm(L.manageWarnBody, L.manageWarnYes, doe, { title: L.manageWarnTitle }); return }
                             // Aanduiden op een stoel zonder naam maakt de rekening onbetrouwbaar:
                             // straks weet je niet wie dit moet betalen. Dus niet meer toelaten,
                             // en meteen de weg wijzen naar waar je het wél oplost.
@@ -8916,7 +8985,7 @@ function ClaimScreen(props: {
                             }
                             if (reden === "ander") {
                               if (uitlegGezien("ander")) { doe(); return }
-                              askConfirm(L.assignOwnBody(naam), L.assignOwnYes, () => { markUitleg("ander"); doe() }, { title: L.assignOwnTitle(naam) })
+                              askConfirm(L.manageWarnBody, L.manageWarnYes, () => { markUitleg("ander"); doe() }, { title: L.manageWarnTitle })
                               return
                             }
                             doe()
@@ -8959,7 +9028,10 @@ function ClaimScreen(props: {
           <div style={{ ...S.card, background: "linear-gradient(135deg,#fffdf6,#fdf6e3)", border: "1.5px solid rgba(196,152,32,0.45)" }}>
             <div onClick={() => setEigenOpen((v) => !v)}
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: eigenOpen ? 11 : 0 }}>
-              <span style={{ fontSize: 17.5, fontWeight: 800, color: "#5a4a1a" }}>{L.whatYouTook}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                {blokBol(2, personTotal(meId).settled > 0.005)}
+                <span style={{ fontSize: 17.5, fontWeight: 800, color: "#5a4a1a" }}>2 · {meId && seatsOf(meId) > 1 ? L.whatWeTook : L.whatYouTook}</span>
+              </span>
               <span style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
                 {!eigenOpen && <span style={{ fontSize: 19, fontWeight: 800, color: "#123a42" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>}
                 <span style={{ fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{eigenOpen ? L.collapseClose : L.collapseOpen}</span>
@@ -9071,10 +9143,13 @@ function ClaimScreen(props: {
       {!finalized && reviewing && (
         <div style={{ position: "sticky", top: 0, zIndex: 5, width: "100%", marginBottom: 12, display: "flex", alignItems: "center", gap: 9,
           padding: "10px 13px", borderRadius: 13, background: "linear-gradient(135deg,#e08a00,#f0a500)", color: "#fff", boxShadow: "0 6px 16px -8px rgba(224,138,0,0.9)" }}>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>🔓</span>
+          {/* Het slotje was een emoji die op de meeste toestellen dicht oogt — precies het
+              omgekeerde van wat hier gebeurt. Nu een getekend slot met de beugel open, in
+              dezelfde lijnen als de andere iconen, en de titel op leesbare grootte. */}
+          <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}><SlotOpenIcon size={24} /></span>
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 14.5, fontWeight: 800, lineHeight: 1.3 }}>{L.reopenedShort}</span>
-            <span style={{ display: "block", fontSize: 12, fontWeight: 600, opacity: 0.9, lineHeight: 1.35 }}>{L.reopenedShortSub}</span>
+            <span style={{ display: "block", fontSize: 16.5, fontWeight: 800, lineHeight: 1.3 }}>{L.reopenedShort}</span>
+            <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, opacity: 0.92, lineHeight: 1.35, marginTop: 2 }}>{L.reopenedShortSub}</span>
           </span>
         </div>
       )}
@@ -9416,55 +9491,7 @@ function ClaimScreen(props: {
                 titel, terwijl de namen met hun bedragen juist het minimum zijn dat hier moet
                 staan — daarvoor kom je kijken. Er is al een inklapper voor wat niét altijd
                 hoeft: "toon details" opent de regels per persoon. Die volstaat. */}
-            <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, marginBottom: 8 }}>
-              {blokBol(3, true)}
-              <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1f8a4c", lineHeight: 1.25 }}>👥 {L.finalSplitTitle}</span>
-            </div>
-            {participants.length > 0 && (
-              // Dezelfde knop als de beheerder heeft: alles in één keer open of dicht,
-              // in plaats van rij per rij.
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-                <button onClick={() => setOpenGuestRows((cur) => cur.size >= participants.length ? new Set() : new Set(participants.map((q) => q.id)))}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 14.5, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 9, padding: "6px 10px" }}>
-                  {openGuestRows.size >= participants.length ? `${L.hideDetails} ▴` : `${L.showDetails} ▾`}
-                </button>
-              </div>
-            )}
-            <>
-            {participants.map((p) => {
-              const pt = personTotal(p.id)
-              const isMe = p.id === meId
-              const rowOpen = openGuestRows.has(p.id)
-              const detail = personItems(p.id)
-              return (
-                <div key={p.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 8, background: isMe ? "rgba(233,196,95,0.16)" : "transparent" }}>
-                  <div onClick={() => setOpenGuestRows((cur) => { const n = new Set(cur); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
-                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 8px", cursor: "pointer" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                      <span style={{ fontSize: 15.5, color: "#8aa3a6", width: 12, flexShrink: 0 }}>{rowOpen ? "▼" : "▶"}</span>
-                      <span style={{ fontSize: 17.5, fontWeight: isMe ? 800 : 600, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}{isMe ? L.youSuffix : ""}</span>
-                    </span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2).replace(".", ",")}</span>
-                  </div>
-                  {rowOpen && (
-                    <div style={{ padding: "0 8px 10px 26px" }}>
-                      {detail.length === 0 && <div style={{ fontSize: 16, color: "#aaa" }}>{L.nothingTapped2}</div>}
-                      {detail.map((d, k) => (
-                        <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 16, color: "#4a6e73", padding: "2px 0" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{d.shared && <ShareIcon on size={14} />}{d.qty > 1 ? `${d.qty}× ` : ""}{showTip(d.name, L)}{d.shared ? (d.revealed ? L.sharedPart : L.sharedByN(d.sharers)) : ""}</span>
-                          <span style={{ fontWeight: 700, color: d.shared && !d.revealed ? "#a06b00" : "#123a42" }}>{d.shared && !d.revealed ? L.toBeDivided : `${d.shared ? "≈ " : ""}€${d.amount.toFixed(2).replace(".", ",")}`}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(18,58,66,0.1)" }}>
-              <span style={{ fontSize: 16.5, fontWeight: 700, color: "#4a6e73" }}>{L.billTotalLabel}</span>
-              <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42" }}>€{participants.reduce((s, p) => s + personTotal(p.id).settled, 0).toFixed(2).replace(".", ",")}</span>
-            </div>
-            </>
+            {eindVerdeling()}
             {/* Twijfel je over je deel, dan staat de weg terug hier, onder het totaal. */}
             {kloptIets && (
               <div style={{ marginTop: 13, paddingTop: 13, borderTop: "1.5px dashed rgba(18,58,66,0.2)" }}>
@@ -9670,6 +9697,18 @@ function UitgangIcon({ size = 20 }: { size?: number }) {
       <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h8" />
       <path d="M11 12h10" />
       <path d="m17.5 8.5 4 3.5-4 3.5" />
+    </svg>
+  )
+}
+
+// Hetzelfde slot, maar met de beugel omhoog en opzij: op één oogopslag te zien dat het
+// niet meer dicht is. Een emoji deed dat niet — die tekent elk toestel anders.
+function SlotOpenIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0 }} aria-hidden="true">
+      <rect x="3.5" y="10.5" width="14" height="10.5" rx="2.2" />
+      <path d="M7 10.5V7.8a4 4 0 0 1 7.8-1.2" />
     </svg>
   )
 }
