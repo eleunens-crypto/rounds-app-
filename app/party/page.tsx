@@ -489,6 +489,9 @@ const drinkMatches = (naam: string, zoek: string) => {
 
 const DEMO_DRINKS: Drink[] = DATA.map(([cat, name, price]) => ({ id: drinkKey(name), name, emoji: CAT_EMOJI[cat], cat, price, cup: CUPCAT[cat], fav: FAVS.has(name), coins: coinDefault(cat, name) }))
 
+// Richtbedragen onder het prijsveld van een eigen drankje (Zelf noteren).
+const RICHTPRIJZEN = [3, 5, 8, 10, 12]
+
 type Assign = Record<string, Record<string, number>>
 type Anon = Record<string, number>
 // Een rondje leeft nu in de databank. id/seq/status komen daarvandaan; de rest is
@@ -1142,6 +1145,11 @@ const T = {
     priceLabel: "Richtprijs",
     priceHint: "Nodig om de rekening achteraf eerlijk te verdelen. Een schatting volstaat.",
     addBtn: "Toevoegen",
+    addAndOrder: "Toevoegen + 1× in bestelling",
+    addListOnly: "Alleen aan de lijst toevoegen",
+    priceRequired: "verplicht",
+    quickPrices: "Snel kiezen — pas gerust aan:",
+    addedToOrder: (n: string) => `⭐ ${n} staat in je bestelling.`,
     remaining: (n: number, max: number) => `Nog ${n} van je ${max} eigen drankjes over`,
     addedByYou: "Door jou toegevoegd",
     removeHint: "Verwijder wat je niet meer nodig hebt. Al besteld in een rondje? Dan blijft het staan.",
@@ -2180,6 +2188,11 @@ const T = {
     priceLabel: "Prix indicatif",
     priceHint: "Nécessaire pour répartir la note équitablement. Une estimation suffit.",
     addBtn: "Ajouter",
+    addAndOrder: "Ajouter + 1× à la commande",
+    addListOnly: "Seulement ajouter à la liste",
+    priceRequired: "obligatoire",
+    quickPrices: "Choix rapide — ajuste si besoin :",
+    addedToOrder: (n: string) => `⭐ ${n} est dans ta commande.`,
     remaining: (n: number, max: number) => `Encore ${n} de tes ${max} boissons personnalisées`,
     addedByYou: "Ajouté par toi",
     removeHint: "Supprime ce dont tu n'as plus besoin. Déjà commandé dans une tournée ? Alors ça reste.",
@@ -2889,6 +2902,9 @@ export default function PartyTest() {
   // Afwijkende coin-prijzen voor dit feest. Ook jsonb op de groep-rij, dus gratis mee.
   const [coinPrices, setCoinPrices] = useState<Record<string, number>>({})
   const [showAddDrink, setShowAddDrink] = useState(false)
+  // Geopend vanuit het bestelscherm in Zelf noteren? Dan bieden we aan om het nieuwe
+  // drankje meteen 1× in de lopende bestelling te zetten.
+  const [ndToOrder, setNdToOrder] = useState(false)
   // Welk eigen drankje ben je aan het aanpassen? null = je maakt een nieuw drankje.
   // De sleutel blijft ongewijzigd, dus bestellingen blijven naar dezelfde rij wijzen
   // en de verdeling herrekent vanzelf met de nieuwe prijs.
@@ -5901,7 +5917,7 @@ export default function PartyTest() {
   const MAX_EIGEN_GROEP = 20
   const eigenVanMij = customDrinks.filter((c) => c.by === me.current).length
 
-  const addCustomDrink = async () => {
+  const addCustomDrink = async (inBestelling = false) => {
     const naam = ndName.trim()
     if (!naam) { setNotice(L.nameYourDrink); return }
     const prijs = parseFloat(ndPrice.replace(",", "."))
@@ -5925,8 +5941,14 @@ export default function PartyTest() {
       else setNotice("Toevoegen mislukt: " + error.message)
       return
     }
-    setNdName(""); setNdPrice(""); setShowAddDrink(false)
+    setNdName(""); setNdPrice(""); setShowAddDrink(false); setNdToOrder(false)
     setActiveCat("Eigen"); setDrinkSearch("")
+    // Zelf noteren: meteen 1× in de lopende bestelling. bump1 kiest zelf of het op de
+    // naam gaat (per persoon opnemen) of nog zonder naam in het rondje komt.
+    if (inBestelling && !settle) {
+      await bump1(sleutel)
+      setNotice(L.addedToOrder(naam))
+    }
     loadParty(groupId)
   }
 
@@ -5961,12 +5983,15 @@ export default function PartyTest() {
   const renderAddDrink = () => {
     if (!showAddDrink && !editDrinkKey) return null
     const mijne = customDrinks.filter((c) => c.by === me.current)
+    const zelfNoteren = !settle
+    const prijsNu = parseFloat(ndPrice.replace(",", "."))
+    const prijsOk = prijsNu > 0
     return (
-      <div style={S.overlay} onClick={tikNaast(() => setShowAddDrink(false))}>
+      <div style={S.overlay} onClick={tikNaast(() => { setShowAddDrink(false); setNdToOrder(false) })}>
         <div style={S.sheet} onClick={(e) => e.stopPropagation()}>
           <div style={{ ...S.row, justifyContent: "space-between", marginBottom: 12 }}>
             <h3 style={{ ...S.h3, margin: 0 }}>{editDrinkKey ? L.editDrinkTitle(ndName.trim() || "") : L.ownDrinkTitle}</h3>
-            <button onClick={() => { setShowAddDrink(false); setEditDrinkKey(null) }} style={{ border: "none", background: "none", fontSize: 21, cursor: "pointer", color: "#6b7484" }}>✕</button>
+            <button onClick={() => { setShowAddDrink(false); setEditDrinkKey(null); setNdToOrder(false) }} style={{ border: "none", background: "none", fontSize: 21, cursor: "pointer", color: "#6b7484" }}>✕</button>
           </div>
 
           <div style={{ fontSize: 15.5, color: "#6b7484", marginBottom: 12, lineHeight: 1.5 }}>
@@ -5987,21 +6012,55 @@ export default function PartyTest() {
               ...(ndName.trim() ? { borderColor: "rgba(31,138,76,0.55)", background: "#f6fbf7", fontWeight: 700 } : {}) }} />
 
 
-          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 5 }}>{L.priceLabel}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 5 }}>
+            {L.priceLabel}
+            {zelfNoteren && <span style={{ marginLeft: 7, fontSize: 13, fontWeight: 800, color: "#c0554a", background: "#fdecea", borderRadius: 999, padding: "2px 8px", verticalAlign: 2 }}>{L.priceRequired}</span>}
+          </div>
           <div style={{ fontSize: 14.5, color: "#6b7484", marginBottom: 6, lineHeight: 1.4 }}>
             {L.priceHint}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: zelfNoteren ? 8 : 12 }}>
             <span style={{ fontSize: 21.5, fontWeight: 700, color: "#6b7484", flexShrink: 0 }}>€</span>
             <input value={ndPrice} onChange={(e) => setNdPrice(e.target.value)} inputMode="decimal" placeholder={L.pricePh}
-              style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", fontSize: 18, textAlign: "left" }} />
+              style={{ ...S.input, flex: 1, minWidth: 0, boxSizing: "border-box", fontSize: 18, textAlign: "left",
+                ...(prijsOk ? { borderColor: "rgba(31,138,76,0.55)", background: "#f6fbf7", fontWeight: 700 } : {}) }} />
           </div>
+          {/* Richtbedragen: één tik en de prijs staat erin. Wie het juiste bedrag weet,
+              typt gewoon verder in het veld erboven. */}
+          {zelfNoteren && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 13.5, color: "#8b93a3", fontWeight: 700, marginBottom: 6 }}>{L.quickPrices}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                {RICHTPRIJZEN.map((b) => {
+                  const aan = prijsNu === b
+                  return (
+                    <button key={b} type="button" onClick={() => setNdPrice(String(b))}
+                      style={{ cursor: "pointer", fontFamily: "inherit", borderRadius: 999, padding: "8px 15px", fontSize: 16, fontWeight: 800,
+                        background: aan ? RAND : "#fff", color: aan ? "#fff" : "#1d2942",
+                        border: aan ? `1.5px solid ${RAND}` : "1.5px solid rgba(29,41,66,0.25)" }}>€{b}</button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
-
-          <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && ndPrice ? 1 : 0.5 }}
-            onClick={() => { if (editDrinkKey) void saveCustomDrink(); else void addCustomDrink() }}>
-            {editDrinkKey ? L.editDrinkSave : L.addBtn}
-          </button>
+          {!editDrinkKey && ndToOrder && !settle ? (
+            <>
+              <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && prijsOk ? 1 : 0.5 }}
+                onClick={() => void addCustomDrink(true)}>
+                {L.addAndOrder}
+              </button>
+              <div onClick={() => void addCustomDrink(false)}
+                style={{ textAlign: "center", marginTop: 10, color: "#6b7484", fontSize: 15, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 3, cursor: "pointer" }}>
+                {L.addListOnly}
+              </div>
+            </>
+          ) : (
+            <button style={{ ...S.btnP, width: "100%", opacity: ndName.trim() && prijsOk ? 1 : 0.5 }}
+              onClick={() => { if (editDrinkKey) void saveCustomDrink(); else void addCustomDrink() }}>
+              {editDrinkKey ? L.editDrinkSave : L.addBtn}
+            </button>
+          )}
           {!editDrinkKey && (
             <div style={{ fontSize: 14.5, color: "#6b7484", textAlign: "center", marginTop: 8 }}>
               {L.remaining(Math.max(0, MAX_EIGEN_PERSOON - eigenVanMij), MAX_EIGEN_PERSOON)}
@@ -12084,7 +12143,7 @@ export default function PartyTest() {
               {zoekt && catVisible.length === 0 && (
                 <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "14px 10px 6px", fontSize: 16, color: "#6b7484" }}>
                   {L.nothingFound}
-                  <div onClick={() => { setShowAddDrink(true); setNdName(drinkSearch.trim()) }}
+                  <div onClick={() => { setShowAddDrink(true); setNdToOrder(!settle); setNdName(drinkSearch.trim()) }}
                     style={{ marginTop: 11, padding: "13px 12px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${RAND}`, color: "#1d2942", cursor: "pointer" }}>
                     <div style={{ fontSize: 16.5, fontWeight: 800, color: RAND }}>{L.addTyped(drinkSearch.trim())}</div>
                     <div style={{ fontSize: 14, color: "#8b93a3", marginTop: 3 }}>{L.addTypedSub}</div>
@@ -12121,7 +12180,7 @@ export default function PartyTest() {
                 )
               })}
               {!zoekt && (
-                <div onClick={() => { if (alleenJij || nogKiezen) return; setShowAddDrink(true); setNdName("") }}
+                <div onClick={() => { if (alleenJij || nogKiezen) return; setShowAddDrink(true); setNdToOrder(!settle); setNdName("") }}
                   style={{ opacity: (alleenJij || nogKiezen) ? 0.4 : 1, pointerEvents: (alleenJij || nogKiezen) ? "none" : "auto", padding: "10px", borderRadius: 12, background: "#fff", border: `1.5px dashed ${settle ? MODUS_FAIR.randZacht : themaNaam ? "rgba(90,106,148,0.6)" : "rgba(224,138,0,0.75)"}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", color: themaNaam ? "#2c3752" : "#4a5567" }}>
                   {/* Eén regel in plaats van een icoon met twee regels eronder: de tegel was
                       twee keer zo hoog als een drankje en trok daardoor meer aandacht dan de
