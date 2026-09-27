@@ -46,8 +46,10 @@ const VIDEO_STIJL: "naast-start" | "bij-kiezen" | "knop" | "mini" | "uit" = "naa
 // Bestanden in /public/uitleg/. "groot" = 720p (±1,3 MB) voor de schermvullende
 // speler; "klein" (±370 kB) is alleen nodig voor de varianten "mini" en "bij-kiezen".
 const FILM = {
-  table: { klein: "/uitleg/resto-klein.mp4", groot: "/uitleg/resto-720.mp4", poster: "/uitleg/resto-poster.jpg" },
-  party: { klein: "/uitleg/rundo-klein.mp4", groot: "/uitleg/rundo-720.mp4", poster: "/uitleg/rundo-poster.jpg" },
+  // stappen = begin (in seconden) van elke scène, einde = begin van het slotbeeld.
+  // Rundo heeft als eerste stap de keuze "Zelf opnemen of QR delen".
+  table: { klein: "/uitleg/resto-klein.mp4", groot: "/uitleg/resto-720.mp4", poster: "/uitleg/resto-poster.jpg", stappen: [1.5, 6.0, 10.9, 16.5], einde: 21.1 },
+  party: { klein: "/uitleg/rundo-klein.mp4", groot: "/uitleg/rundo-720.mp4", poster: "/uitleg/rundo-poster.jpg", stappen: [1.6, 6.6, 11.1, 15.9, 20.5], einde: 25.9 },
 }
 
 const T = {
@@ -147,11 +149,9 @@ const PlayIcoon = ({ size = 11 }: { size?: number }) => (
   <svg aria-hidden viewBox="0 0 10 12" width={size} height={size * 1.2} style={{ display: "block" }}><path d="M0 0l10 6-10 6z" fill="currentColor" /></svg>
 )
 
-// Schermvullende speler in "stories"-stijl: vier balkjes bovenaan (de vier stappen
-// uit het filmpje), sluitknop rechtsboven en onderaan meteen de startknop van die
+// Schermvullende speler in "stories"-stijl: een balkje per stap bovenaan, sluitknop rechtsboven en onderaan meteen de startknop van die
 // modus. Bediening: tik midden = pauze/verder, tik links/rechts = vorige/volgende
 // stap, schuifje = spoelen. Na afloop pulseert de startknop en verschijnt "Opnieuw".
-const STAPPEN = 4
 const PauzeIcoon = ({ size = 14 }: { size?: number }) => (
   <svg aria-hidden viewBox="0 0 24 24" width={size} height={size} style={{ display: "block" }}><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor" /></svg>
 )
@@ -178,18 +178,27 @@ function UitlegSpeler({ m, knop, onStart, onSluit, t }: {
   const speel = () => { const v = ref.current; if (!v) return; setKlaar(false); void v.play().catch(() => {}) }
   const wissel = () => { const v = ref.current; if (!v) return; if (v.paused) speel(); else v.pause() }
   const opnieuw = () => { const v = ref.current; if (!v) return; v.currentTime = 0; speel() }
+  const { stappen, einde } = FILM[m]
   // Spring naar het begin van de vorige/volgende stap. Zit je al meer dan 1,2 s in
   // een stap, dan brengt "terug" je eerst naar het begin van die stap.
   const stap = (richting: -1 | 1) => {
     const v = ref.current; if (!v || !v.duration) return
-    const lengte = v.duration / STAPPEN
-    const nu = Math.floor(v.currentTime / lengte)
-    const doel = richting < 0 ? (v.currentTime - nu * lengte < 1.2 ? nu - 1 : nu) * lengte : (nu + 1) * lengte
+    const t0 = v.currentTime
+    let nu = -1
+    stappen.forEach((b, i) => { if (t0 >= b - 0.05) nu = i })
+    let doel: number
+    if (richting < 0) doel = nu < 0 ? 0 : t0 - stappen[nu] < 1.2 ? (nu > 0 ? stappen[nu - 1] : 0) : stappen[nu]
+    else doel = nu + 1 < stappen.length ? stappen[nu + 1] : einde
     v.currentTime = Math.max(0, Math.min(v.duration - 0.1, doel))
     speel()
     setFlits(richting < 0 ? "l" : "r"); window.setTimeout(() => setFlits(null), 450)
   }
   const voortgang = duur ? tijd / duur : 0
+  // Hoe ver elk balkje gevuld is: van het begin van die stap tot het begin van de volgende.
+  const vulling = (i: number) => {
+    const van = stappen[i], tot = stappen[i + 1] ?? einde
+    return Math.max(0, Math.min(1, (tijd - van) / (tot - van)))
+  }
   const sec = (x: number) => `0:${String(Math.floor(x)).padStart(2, "0")}`
   const zone: React.CSSProperties = { border: "none", background: "none", padding: 0, cursor: "pointer", WebkitTapHighlightColor: "transparent" }
   const rondje: React.CSSProperties = { position: "absolute", top: "50%", borderRadius: "50%", background: "rgba(0,0,0,0.5)", color: "#fff",
@@ -218,9 +227,9 @@ function UitlegSpeler({ m, knop, onStart, onSluit, t }: {
           <span style={{ background: "rgba(0,0,0,0.6)", color: "#fff", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700 }}>{t.playerTip}</span>
         </div>
         <div style={{ position: "absolute", top: 14, left: 16, right: 66, display: "flex", gap: 4, pointerEvents: "none" }}>
-          {Array.from({ length: STAPPEN }, (_, i) => (
+          {stappen.map((_, i) => (
             <span key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.3)", overflow: "hidden" }}>
-              <span style={{ display: "block", height: "100%", background: "#fff", width: `${Math.max(0, Math.min(1, voortgang * STAPPEN - i)) * 100}%` }} />
+              <span style={{ display: "block", height: "100%", background: "#fff", width: `${vulling(i) * 100}%` }} />
             </span>
           ))}
         </div>
