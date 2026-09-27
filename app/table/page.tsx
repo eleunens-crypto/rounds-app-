@@ -706,6 +706,8 @@ const STRINGS = {
     orSendLinkShort: "Of stuur de link",
     copyWord: "Kopieer",
     copiedWord: "Gekopieerd",
+    copyLinkBtn: "Kopieer link",
+    linkCopiedToast: "Link gekopieerd. Plak hem in WhatsApp, sms of mail.",
     pasteAndShare: "Plak en deel in:",
     shareStepSub: "Wie scant komt meteen bij deze rekening en duidt zelf aan wat hij nam.",
     scanThis: "Laat je gasten dit scannen",
@@ -1410,6 +1412,8 @@ const STRINGS = {
     orSendLinkShort: "Ou envoie le lien",
     copyWord: "Copier",
     copiedWord: "Copié",
+    copyLinkBtn: "Copier le lien",
+    linkCopiedToast: "Lien copié. Colle-le dans WhatsApp, un SMS ou un mail.",
     pasteAndShare: "Colle et partage dans :",
     shareStepSub: "Qui scanne arrive directement sur cette addition et coche lui-même ce qu'il a pris.",
     scanThis: "Fais scanner à tes invités",
@@ -5519,6 +5523,7 @@ export default function RundoTable() {
                   if (navigator.clipboard) await navigator.clipboard.writeText(invite)
                   else { setInviteModalText(invite); setShowInviteModal(true); return }
                   setLinkCopied(true)
+                  setToast(L.linkCopiedToast)
                 } catch { setInviteModalText(invite); setShowInviteModal(true) }
               }
               return (
@@ -5550,6 +5555,19 @@ export default function RundoTable() {
                         background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", borderRadius: 10,
                         padding: "10px 13px", fontSize: 14.5, fontWeight: 800, color: "#0b6473", whiteSpace: "nowrap" }}>
                       {L.noScanBtn}
+                    </button>
+                  </div>
+
+                  {/* Meteen onder "Iemand die niet scant?": ook een manier om iemand binnen
+                      te krijgen. Geen adres meer in beeld (dat zegt niemand iets), alleen de
+                      knop. Na het kopiëren wordt de knop groen en komt er een korte melding. */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#7d949a" }}>{L.orSendLinkShort}</span>
+                    <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) void kopieer() }}
+                      style={{ flexShrink: 0, cursor: "pointer", minHeight: 44, borderRadius: 10, padding: "0 13px", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap", fontFamily: "inherit",
+                        border: linkCopied ? "1.5px solid rgba(39,174,96,0.45)" : "1.5px solid rgba(20,153,176,0.45)",
+                        background: linkCopied ? "rgba(39,174,96,0.12)" : "#fff", color: linkCopied ? "#1f8a4c" : "#0b6473" }}>
+                      {linkCopied ? `✓ ${L.copiedWord}` : L.copyLinkBtn}
                     </button>
                   </div>
 
@@ -5586,40 +5604,11 @@ export default function RundoTable() {
                     teller en de pillen zeggen samen hoe vol het is. Een plaats bijzetten
                     doe je met de +, je eigen naam pas je aan door op je eigen pil te tikken. */}
                 <div style={{ marginTop: 12 }}>{deelnemerPillen()}</div>
-                <div style={{ fontSize: 12.5, color: "#8a9a9e", margin: "9px 2px 0" }}>{L.tapOwnName}</div>
 
               </div>
             )
           })()}
 
-                  {/* De link is de uitzondering geworden: bijna iedereen scant. Eén rustige
-                      regel onderaan volstaat, met de knop ernaast voor wie hem toch nodig heeft. */}
-                  <div style={{ borderTop: "1px solid rgba(18,58,66,0.08)", paddingTop: 11, marginTop: 13 }}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: "#7d949a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {L.orSendLinkShort} · {link}
-                      </span>
-                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) void kopieer() }}
-                        style={{ flexShrink: 0, cursor: "pointer", borderRadius: 9, padding: "7px 11px", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap",
-                          border: linkCopied ? "1px solid rgba(39,174,96,0.45)" : "1px solid rgba(20,153,176,0.4)",
-                          background: linkCopied ? "rgba(39,174,96,0.12)" : "#fff", color: linkCopied ? "#1f8a4c" : "#0b6473" }}>
-                        {linkCopied ? `✓ ${L.copiedWord}` : L.copyWord}
-                      </button>
-                    </div>
-                    {/* Kopiëren alleen is niet genoeg: zonder deze regel weet je niet wat er
-                        gebeurd is, laat staan wat je nu moet doen. */}
-                    {linkCopied && (
-                      <div style={{ background: "rgba(39,174,96,0.08)", borderRadius: 10, padding: "11px 12px", marginTop: 9 }}>
-                        <div style={{ fontSize: 14.5, color: "#1f6b3a", fontWeight: 800, marginBottom: 5 }}>{L.pasteAndShare}</div>
-                        <div style={{ fontSize: 14.5, color: "#4a6e73", lineHeight: 1.6 }}>
-                          {["WhatsApp", "Messenger", "sms", "e-mail"].map((naam, i) => (
-                            <span key={naam}>{i > 0 && <span style={{ color: "#8aa3a6", fontWeight: 800, margin: "0 9px" }}>•</span>}{naam}</span>
-                          ))}
-                          <span style={{ color: "#8aa3a6", fontWeight: 800, margin: "0 9px" }}>•</span>…
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </>
               )
             })()}
