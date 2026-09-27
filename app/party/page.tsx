@@ -1288,6 +1288,15 @@ const T = {
     modeFairLine: "Eerlijk betalen volgens wat je dronk",
     modeSwitchLater: "Kies je snel noteren, dan kan je op het einde alsnog eerlijk per persoon verdelen.",
     chooseHow: "Kies hoe je wil bestellen",
+    kiesTitel: "Kies hoe je opneemt",
+    kiesSub: "Twee manieren, allebei even makkelijk.",
+    zelfTitel: "Zelf opnemen",
+    zelfSub: "Jij tikt alle rondjes aan.",
+    zelfTag: "1 gsm",
+    qrTitel: "QR delen",
+    qrSub: "Ieder tikt zelf aan wat hij drinkt.",
+    qrTag: "ieders gsm",
+    laterSplit: "Toch zelf genoteerd? Op het einde kan je nog altijd eerlijk splitten.",
     atRestaurantQ: "Ook de rekening delen op restaurant?",
     seeWhatRestoDoes: "Bekijk wat Rundo Resto doet",
     restoTagline: "Scan de rekening, verdeel in groep",
@@ -2342,6 +2351,15 @@ const T = {
     modeFairLine: "Payer équitablement selon ce que tu as bu",
     modeSwitchLater: "Si tu notes en vitesse, tu peux encore r\u00e9partir \u00e9quitablement \u00e0 la fin.",
     chooseHow: "Choisissez comment commander",
+    kiesTitel: "Choisis comment noter",
+    kiesSub: "Deux façons, aussi simples l'une que l'autre.",
+    zelfTitel: "Noter soi-même",
+    zelfSub: "Tu notes toutes les tournées.",
+    zelfTag: "1 téléphone",
+    qrTitel: "Partager le QR",
+    qrSub: "Chacun note ce qu'il boit.",
+    qrTag: "chaque téléphone",
+    laterSplit: "Tout noté toi-même ? À la fin, tu peux encore partager équitablement.",
     atRestaurantQ: "Partager l\u2019addition au restaurant\u00a0?",
     seeWhatRestoDoes: "D\u00e9couvre Rundo Resto",
     restoTagline: "Scanne l'addition, partage en groupe",
@@ -11258,113 +11276,62 @@ export default function PartyTest() {
         {renderDialogs()}
         <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
           @keyframes rundoLoop{from{width:0}to{width:100%}}
-          input::placeholder,textarea::placeholder{color:#a7b0bf;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}`}</style>
+          input::placeholder,textarea::placeholder{color:#a7b0bf;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}
+          .rundo-kieskaart{transition:transform .12s ease,border-color .15s ease,box-shadow .15s ease;-webkit-tap-highlight-color:transparent}
+          .rundo-kieskaart:active{transform:scale(0.985);border-color:var(--kleur)!important}
+          .rundo-kieskaart:focus-visible{outline:3px solid var(--kleur);outline-offset:2px}`}</style>
         <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-        {/* Drie vakken naast elkaar in plaats van een zwevende taalknop. Die stond
-            absoluut gepositioneerd rechts, terwijl de titel in het midden stond te
-            groeien: op 320 en 360 pixels — de breedte van de meeste telefoons — liep de
-            titel dus ónder de knop door. Op een laptop viel dat niet op, want daar is
-            er ruimte genoeg. Nu duwen de drie elkaar netjes opzij. */}
-        <div style={{ display: "flex", alignItems: "center", gap: 9, background: "#0E1A2E", padding: "13px 12px" }}>
+        {/* Kop: alleen het merk en de taal. De vraag zelf staat groot in het vlak eronder,
+            zoals in het uitlegfilmpje. */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 9, background: "#0E1A2E", padding: "11px 12px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rundo-merk.png" alt="" height={34} style={{ width: "auto", flexShrink: 0, display: "block" }} />
-          <span style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 19, fontWeight: 500, color: "#fff", lineHeight: 1.2 }}>{L.chooseHow}</span>
           <span style={{ flexShrink: 0 }}><LanguageToggle compact /></span>
         </div>
 
-        <div style={{ padding: "14px 13px" }}>
-
-          <div>
-            {/* Eén kaart: de eerste vraag gaat over wíe aantikt, niet over hoe. Snel of
-                uitgebreid kies je pas op het instelscherm erna. */}
-            <div style={{ opacity: bpSettle === true ? 0.6 : 1 }}>
-            <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === false ? `2px solid ${MODUS_SNEL.rand}` : `1px solid rgba(29,41,66,0.16)`,
-              boxShadow: bpSettle === false ? `0 16px 34px -18px ${MODUS_SNEL.gloed}, 0 3px 8px -4px rgba(29,41,66,0.35)` : "0 14px 30px -14px rgba(29,41,66,0.85), 0 3px 8px -4px rgba(29,41,66,0.35)" }}>
-              <div style={{ height: 34, background: MODUS_SNEL.rand }} />
-              <button onClick={() => setBpSettle(false)}
-                style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "14px 14px 13px", cursor: "pointer", border: "none",
-                  borderBottom: `1px solid ${MODUS_SNEL.randZacht}`,
-                  background: bpSettle === false ? MODUS_SNEL.vlak : "linear-gradient(180deg,#fcfdfe,#fff)" }}>
-                <span style={{ display: "flex", justifyContent: "center", marginTop: -38, marginBottom: 7 }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 74, height: 74, borderRadius: "50%", background: "#fff", border: `2px solid ${MODUS_SNEL.rand}` }}>
-                    <NoteerIcoon size={48} kleur={MODUS_SNEL.rand} />
-                  </span>
+        {/* Variant A, in de stijl van het filmpje: twee korte kaarten met "of" ertussen.
+            De hele kaart is de knop en start meteen; het ronde pijltje toont alleen dat
+            je erop kan tikken. Eén zin en één labeltje per kaart in plaats van drie vinkjes. */}
+        <div style={{ padding: "20px 14px 18px", background: "#FBF4E6" }}>
+          <div style={{ textAlign: "center", fontSize: 25, fontWeight: 800, color: "#281F0E", letterSpacing: -0.4, lineHeight: 1.15 }}>{L.kiesTitel}</div>
+          <div style={{ textAlign: "center", fontSize: 15, fontWeight: 600, color: "#A8740A", marginTop: 4, marginBottom: 16 }}>{L.kiesSub}</div>
+          {([false, true] as const).map((qr) => {
+            const md = qr ? MODUS_FAIR : MODUS_SNEL
+            const kaart = (
+              <button key={qr ? "qr" : "zelf"} disabled={busy} className="rundo-kieskaart"
+                onClick={() => { setBpSettle(qr); startWithMode(undefined, qr) }}
+                style={{ width: "100%", minHeight: 84, display: "flex", alignItems: "center", gap: 13, textAlign: "left", cursor: busy ? "wait" : "pointer",
+                  background: "#fff", borderRadius: 18, padding: "13px 13px 13px 13px", fontFamily: "inherit",
+                  border: `2px solid ${qr ? MODUS_FAIR.randZacht : "#F0DDA8"}`,
+                  boxShadow: "0 12px 24px -16px rgba(80,50,0,0.5)", ["--kleur" as string]: md.rand } as React.CSSProperties}>
+                <span style={{ flexShrink: 0, width: 54, height: 54, borderRadius: 15, display: "flex", alignItems: "center", justifyContent: "center", background: md.tint }}>
+                  {qr ? <GsmIcoon size={30} kleur={MODUS_FAIR.rand} qr /> : <NoteerIcoon size={38} kleur={MODUS_SNEL.rand} />}
                 </span>
-                <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf}</span>
-                {/* De langste kop van de twee. Op een scherm van 320 pixels breekt hij bij
-                    22px over twee regels; met deze formule krimpt hij daar mee tot hij past,
-                    en blijft hij op een gewone telefoon gewoon 22. */}
-                <span style={{ display: "block", fontSize: "min(22px, calc((100vw - 80px) / 12.2))", fontWeight: 800, color: MODUS_SNEL.rand, lineHeight: 1.18, letterSpacing: -0.3 }}>{L.youNoteSelf2}</span>
-                <span style={{ display: "block", textAlign: "left", marginTop: 12, paddingLeft: 6 }}>
-                  {[L.youNote1, L.youNote2, L.youNote3].map((t, i2) => (
-                    <span key={i2} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i2 < 2 ? 5 : 0 }}>
-                      <span style={{ flexShrink: 0, color: "#1f8a4c", fontWeight: 800, fontSize: 17 }}>✓</span>
-                      <span style={{ fontSize: 18, color: "#4a5567", lineHeight: 1.4 }}>{t}</span>
-                    </span>
-                  ))}
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 18.5, fontWeight: 800, color: "#1d2942", lineHeight: 1.15 }}>{qr ? L.qrTitel : L.zelfTitel}</span>
+                  <span style={{ display: "block", fontSize: 14.5, color: "#5B4A2A", lineHeight: 1.35, marginTop: 2 }}>{qr ? L.qrSub : L.zelfSub}</span>
+                  <span style={{ display: "inline-block", marginTop: 6, fontSize: 12, fontWeight: 800, borderRadius: 999, padding: "2px 10px",
+                    background: md.tint, color: qr ? MODUS_FAIR.rand : "#8A5A00" }}>{qr ? L.qrTag : L.zelfTag}</span>
                 </span>
+                <span aria-hidden style={{ flexShrink: 0, width: 38, height: 38, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  background: md.rand, color: qr ? "#fff" : "#281F0E", fontSize: 22, fontWeight: 800, lineHeight: 1, paddingBottom: 2 }}>›</span>
               </button>
-              <div style={{ padding: "12px 12px 14px", background: bpSettle === false ? MODUS_SNEL.vlak : "#fff" }}>
-                <button disabled={busy} onClick={() => { setBpSettle(false); startWithMode(undefined, false) }}
-                  style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 19.5, fontWeight: 800, cursor: "pointer", border: "none", borderRadius: 15,
-                    background: MODUS_SNEL.knop, color: MODUS_SNEL.knopTekst, boxSizing: "border-box",
-                    boxShadow: `0 12px 28px -8px ${MODUS_SNEL.gloed}, 0 0 0 4px ${MODUS_SNEL.tint}` }}>{busy ? L.starting : L.startQuickBtn}</button>
+            )
+            return qr ? (
+              <div key="qr-blok">
+                {/* Grote ronde "of" met een gouden lijn naar zelf opnemen en een blauwgroene
+                    naar QR delen — dezelfde als op het beginscherm en in het filmpje. */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "14px 2px" }}>
+                  <span style={{ flex: 1, height: 2.5, borderRadius: 2, background: "linear-gradient(90deg,rgba(235,203,122,0),#EBCB7A)" }} />
+                  <span style={{ flexShrink: 0, width: 50, height: 50, borderRadius: "50%", background: "#fff", border: "2.5px solid #E6D6AE", display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 18, fontWeight: 800, color: "#281F0E", boxShadow: "0 8px 18px -10px rgba(80,50,0,0.45)" }}>{L.orWordShort}</span>
+                  <span style={{ flex: 1, height: 2.5, borderRadius: 2, background: "linear-gradient(90deg,#8FD3DC,rgba(143,211,220,0))" }} />
+                </div>
+                {kaart}
               </div>
-            </div>
-            </div>
-
-
-            {/* Duidelijk dat er een tweede, andere keuze volgt. */}
-            {/* Lijnen die naar de randen uitvagen, met het woord in kleine kapitalen: een
-                scheiding die je ziet zonder dat ze zelf een knop lijkt. */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px 2px" }}>
-              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "linear-gradient(90deg,rgba(29,41,66,0),rgba(29,41,66,0.45))" }} />
-              <span style={{ flexShrink: 0, fontSize: 14.5, fontWeight: 800, letterSpacing: "0.24em", color: "#1d2942", textTransform: "uppercase" }}>{L.orWord}</span>
-              <span style={{ flex: 1, height: 2, borderRadius: 2, background: "linear-gradient(90deg,rgba(29,41,66,0.45),rgba(29,41,66,0))" }} />
-            </div>
-
-            <div style={{ opacity: bpSettle === false ? 0.6 : 1 }}>
-            <div style={{ borderRadius: 20, overflow: "hidden", background: "#fff", border: bpSettle === true ? `2px solid ${MODUS_FAIR.rand}` : `1.5px solid ${MODUS_FAIR.randZacht}`,
-              boxShadow: bpSettle === true ? `0 16px 34px -18px ${MODUS_FAIR.gloed}, 0 3px 8px -4px rgba(29,41,66,0.35)` : "0 14px 30px -14px rgba(29,41,66,0.85), 0 3px 8px -4px rgba(29,41,66,0.35)" }}>
-              {/* Kleurbalk als vlag: nog vóór je de tekst leest weet je welke modus dit is.
-                  Het icoon hangt er in een wit rondje half overheen. */}
-              <div style={{ height: 34, background: MODUS_FAIR.rand }} />
-              <button onClick={() => setBpSettle(true)}
-                style={{ position: "relative", width: "100%", display: "block", textAlign: "center", padding: "14px 14px 13px", border: "none", cursor: "pointer",
-                  borderBottom: `1px solid ${MODUS_FAIR.lijnZacht}`,
-                  background: bpSettle === true ? MODUS_FAIR.vlak : "linear-gradient(180deg,#fdfcfa,#fff)" }}>
-                {/* Drie toestellen, de middelste met een QR: het verschil met de andere
-                    kaart is dat er méér telefoons in het spel zijn. */}
-                <span style={{ display: "flex", justifyContent: "center", marginTop: -38, marginBottom: 7 }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 2, width: 74, height: 74, borderRadius: "50%", background: "#fff", border: `2px solid ${MODUS_FAIR.rand}`, boxSizing: "border-box" }}>
-                    <GsmIcoon size={13} kleur={MODUS_FAIR.rand} dof />
-                    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", marginTop: 2 }}>
-                      <GsmIcoon size={24} kleur={MODUS_FAIR.rand} qr />
-                      <span style={{ fontSize: 9.5, fontWeight: 800, color: MODUS_FAIR.rand, letterSpacing: "0.06em", marginTop: 1 }}>QR</span>
-                    </span>
-                    <GsmIcoon size={13} kleur={MODUS_FAIR.rand} dof />
-                  </span>
-                </span>
-                <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: "#16203a", lineHeight: 1.18, letterSpacing: -0.3 }}>{L.modeTitle}</span>
-                <span style={{ display: "block", fontSize: "min(22px, calc((100vw - 80px) / 12.2))", fontWeight: 800, color: MODUS_FAIR.rand, lineHeight: 1.18, letterSpacing: -0.3 }}>{L.modeTitle2}</span>
-                <span style={{ display: "block", textAlign: "left", marginTop: 11, paddingLeft: 6 }}>
-                  {[L.modeFairSub, L.modeFairSub2, L.modeFairSub3].map((t, i) => (
-                    <span key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: i < 2 ? 5 : 0 }}>
-                      <span style={{ flexShrink: 0, color: MODUS_FAIR.rand, fontWeight: 800, fontSize: 17 }}>✓</span>
-                      <span style={{ fontSize: 18, color: "#4a5567", lineHeight: 1.4 }}>{t}</span>
-                    </span>
-                  ))}
-                </span>
-              </button>
-              <div style={{ padding: "12px 12px 14px", background: bpSettle === true ? MODUS_FAIR.vlak : "#fff" }}>
-                <button disabled={busy} onClick={() => { setBpSettle(true); startWithMode(undefined, true) }}
-                  style={{ display: "block", width: "100%", padding: "15px 12px", fontSize: 19.5, fontWeight: 800, cursor: "pointer", borderRadius: 14, border: "none",
-                    background: MODUS_FAIR.knop, color: "#fff", boxSizing: "border-box",
-                    boxShadow: `0 12px 28px -8px ${MODUS_FAIR.gloed}, 0 0 0 4px ${MODUS_FAIR.tint}` }}>{busy ? L.starting : L.startQuickBtn} →</button>
-              </div>
-            </div>
-            </div>
-          </div>
+            ) : kaart
+          })}
+          <div style={{ textAlign: "center", fontSize: 13.5, color: "#8A7A5A", lineHeight: 1.4, marginTop: 14, padding: "0 6px" }}>{L.laterSplit}</div>
         </div>
         </div>
 
@@ -11516,7 +11483,7 @@ export default function PartyTest() {
             De chooser zet bij binnenkomst zelf de zoom recht. */}
         <div style={{ textAlign: "center", marginTop: 16 }}>
           {viaKiezer ? (
-            <button onClick={() => verlaatMetNaamcheck(() => { window.location.href = "/" })} style={{ fontSize: 16, fontWeight: 700, color: "#a08d5f", background: "none", border: "none", padding: 4, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}>{L.backToRundo}</button>
+            <button onClick={() => verlaatMetNaamcheck(() => { window.location.href = "/" })} style={{ fontSize: 18, fontWeight: 800, color: "#8f7a47", background: "none", border: "none", padding: "10px 8px", minHeight: 44, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, fontFamily: "inherit" }}>{L.backToRundo}</button>
           ) : (
             <span style={{ fontSize: 15, color: "#8b93a3", fontWeight: 600 }}>{L.tryTableLine}{" "}
               <a href="/table" style={{ display: "inline-flex", alignItems: "center", gap: 6, verticalAlign: "middle", textDecoration: "none" }}>
