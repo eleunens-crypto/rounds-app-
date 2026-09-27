@@ -632,12 +632,20 @@ export default function Home() {
           {modusKaart("table")}
           {perKaart && groepenBlok("table", true)}
 
-          {/* "of" tussen de twee modi */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "8px 0", flexShrink: 0 }}>
-            <span style={{ flex: 1, height: 1.5, background: "#D9D2C3" }} />
-            <span style={{ fontSize: 15, fontWeight: 800, color: K.tekst, background: "#FFFFFF", border: "1.5px solid #D9D2C3",
-              borderRadius: 999, padding: "4px 16px", lineHeight: 1.2, boxShadow: "0 4px 10px -6px rgba(14,26,46,0.35)" }}>{t.orWord}</span>
-            <span style={{ flex: 1, height: 1.5, background: "#D9D2C3" }} />
+          {/* "of" tussen de twee modi. Zonder groepen (zakken) wordt het een grote ronde
+              "of" met een turquoise lijn naar Resto en een gouden naar Rundo: de kaarten
+              staan dan verder uit elkaar en het scherm is beter gevuld. */}
+          <div style={{ display: "flex", alignItems: "center", gap: zakken ? 14 : 10, margin: zakken ? "30px 0" : "8px 0", flexShrink: 0,
+            transition: "margin .4s ease" }}>
+            <span style={{ flex: 1, height: zakken ? 2.5 : 1.5, borderRadius: 2,
+              background: zakken ? `linear-gradient(90deg, ${MODUS.table.kleur}00, ${MODUS.table.kleur})` : "#D9D2C3" }} />
+            <span style={{ fontWeight: 800, color: K.tekst, background: "#FFFFFF", lineHeight: 1.2, flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center", transition: "all .4s ease",
+              ...(zakken
+                ? { width: 60, height: 60, borderRadius: "50%", fontSize: 21, border: "2.5px solid #D9D2C3", boxShadow: "0 8px 18px -10px rgba(14,26,46,0.45)" }
+                : { fontSize: 15, borderRadius: 999, padding: "4px 16px", border: "1.5px solid #D9D2C3", boxShadow: "0 4px 10px -6px rgba(14,26,46,0.35)" }) }}>{t.orWord}</span>
+            <span style={{ flex: 1, height: zakken ? 2.5 : 1.5, borderRadius: 2,
+              background: zakken ? `linear-gradient(90deg, ${MODUS.party.kleur}, ${MODUS.party.kleur}00)` : "#D9D2C3" }} />
           </div>
 
           {modusKaart("party")}
