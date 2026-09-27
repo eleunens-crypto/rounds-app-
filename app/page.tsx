@@ -73,6 +73,12 @@ const T = {
     bigVideo: "groot",
     replay: "Opnieuw",
     close: "Sluiten",
+    pause: "Pauze",
+    play: "Verder afspelen",
+    prevStep: "Vorige stap",
+    nextStep: "Volgende stap",
+    seek: "Spoelen",
+    playerTip: "Midden: pauze · zijkant: vorige/volgende stap",
     ago: (d: number) => d <= 0 ? "vandaag" : d === 1 ? "gisteren" : `${d} dagen geleden`,
     keepNote: (app: Mode) => `Groepen verdwijnen hier ${GROEP_DAGEN} dagen na ${app === "table" ? "het aanmaken" : "je laatste activiteit"}. Met de link of code kan je er nog in.`,
     openChip: "open",
@@ -111,6 +117,12 @@ const T = {
     bigVideo: "agrandir",
     replay: "Revoir",
     close: "Fermer",
+    pause: "Pause",
+    play: "Reprendre",
+    prevStep: "Étape précédente",
+    nextStep: "Étape suivante",
+    seek: "Avancer",
+    playerTip: "Milieu : pause · côtés : étape précédente/suivante",
     ago: (d: number) => d <= 0 ? "aujourd'hui" : d === 1 ? "hier" : `il y a ${d} jours`,
     keepNote: (app: Mode) => `Les groupes disparaissent d'ici ${GROEP_DAGEN} jours après ${app === "table" ? "leur création" : "ta dernière activité"}. Avec le lien ou le code, tu peux toujours y accéder.`,
     openChip: "ouvert",
@@ -137,35 +149,78 @@ const PlayIcoon = ({ size = 11 }: { size?: number }) => (
 
 // Schermvullende speler in "stories"-stijl: vier balkjes bovenaan (de vier stappen
 // uit het filmpje), sluitknop rechtsboven en onderaan meteen de startknop van die
-// modus. Na afloop pulseert die knop en verschijnt "Opnieuw".
+// modus. Bediening: tik midden = pauze/verder, tik links/rechts = vorige/volgende
+// stap, schuifje = spoelen. Na afloop pulseert de startknop en verschijnt "Opnieuw".
+const STAPPEN = 4
+const PauzeIcoon = ({ size = 14 }: { size?: number }) => (
+  <svg aria-hidden viewBox="0 0 24 24" width={size} height={size} style={{ display: "block" }}><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor" /></svg>
+)
 function UitlegSpeler({ m, knop, onStart, onSluit, t }: {
   m: Mode; knop: React.ReactNode; onStart: () => void; onSluit: () => void
-  t: { replay: string; close: string }
+  t: { replay: string; close: string; pause: string; play: string; prevStep: string; nextStep: string; seek: string; playerTip: string }
 }) {
   const ref = useRef<HTMLVideoElement>(null)
-  const [voortgang, setVoortgang] = useState(0)
+  const [tijd, setTijd] = useState(0)
+  const [duur, setDuur] = useState(0)
+  const [pauze, setPauze] = useState(false)
   const [klaar, setKlaar] = useState(false)
+  const [tip, setTip] = useState(true)
+  const [flits, setFlits] = useState<null | "l" | "r">(null)
+  const slepen = useRef(false)
   useEffect(() => {
     const vorige = document.body.style.overflow
     document.body.style.overflow = "hidden"
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onSluit() }
     window.addEventListener("keydown", esc)
-    return () => { document.body.style.overflow = vorige; window.removeEventListener("keydown", esc) }
+    const weg = window.setTimeout(() => setTip(false), 3500)
+    return () => { document.body.style.overflow = vorige; window.removeEventListener("keydown", esc); window.clearTimeout(weg) }
   }, [onSluit])
-  const opnieuw = () => { const v = ref.current; if (!v) return; v.currentTime = 0; setKlaar(false); void v.play().catch(() => {}) }
+  const speel = () => { const v = ref.current; if (!v) return; setKlaar(false); void v.play().catch(() => {}) }
+  const wissel = () => { const v = ref.current; if (!v) return; if (v.paused) speel(); else v.pause() }
+  const opnieuw = () => { const v = ref.current; if (!v) return; v.currentTime = 0; speel() }
+  // Spring naar het begin van de vorige/volgende stap. Zit je al meer dan 1,2 s in
+  // een stap, dan brengt "terug" je eerst naar het begin van die stap.
+  const stap = (richting: -1 | 1) => {
+    const v = ref.current; if (!v || !v.duration) return
+    const lengte = v.duration / STAPPEN
+    const nu = Math.floor(v.currentTime / lengte)
+    const doel = richting < 0 ? (v.currentTime - nu * lengte < 1.2 ? nu - 1 : nu) * lengte : (nu + 1) * lengte
+    v.currentTime = Math.max(0, Math.min(v.duration - 0.1, doel))
+    speel()
+    setFlits(richting < 0 ? "l" : "r"); window.setTimeout(() => setFlits(null), 450)
+  }
+  const voortgang = duur ? tijd / duur : 0
+  const sec = (x: number) => `0:${String(Math.floor(x)).padStart(2, "0")}`
+  const zone: React.CSSProperties = { border: "none", background: "none", padding: 0, cursor: "pointer", WebkitTapHighlightColor: "transparent" }
+  const rondje: React.CSSProperties = { position: "absolute", top: "50%", borderRadius: "50%", background: "rgba(0,0,0,0.5)", color: "#fff",
+    display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", transition: "opacity .2s ease" }
   return (
     <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}
       style={{ position: "fixed", inset: 0, zIndex: 50, background: "#0A1416", display: "flex", flexDirection: "column",
         paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", animation: "rundoIn .2s ease" }}>
       <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
         <video ref={ref} src={FILM[m].groot} poster={FILM[m].poster} autoPlay muted playsInline preload="auto"
-          onTimeUpdate={(e) => { const v = e.currentTarget; setVoortgang(v.duration ? v.currentTime / v.duration : 0) }}
+          onLoadedMetadata={(e) => setDuur(e.currentTarget.duration || 0)}
+          onTimeUpdate={(e) => { if (!slepen.current) setTijd(e.currentTarget.currentTime) }}
+          onPlay={() => setPauze(false)} onPause={(e) => setPauze(!e.currentTarget.ended)}
           onEnded={() => setKlaar(true)}
           style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "#000" }} />
-        <div style={{ position: "absolute", top: 14, left: 16, right: 66, display: "flex", gap: 4 }}>
-          {[0, 1, 2, 3].map((i) => (
+        {/* Tikzones: links = vorige stap, midden = pauze, rechts = volgende stap. */}
+        <div style={{ position: "absolute", inset: "60px 0 0 0", display: "flex" }}>
+          <button type="button" aria-label={t.prevStep} onClick={() => stap(-1)} style={{ ...zone, flex: "0 0 28%" }} />
+          <button type="button" aria-label={pauze ? t.play : t.pause} onClick={wissel} style={{ ...zone, flex: 1 }} />
+          <button type="button" aria-label={t.nextStep} onClick={() => stap(1)} style={{ ...zone, flex: "0 0 28%" }} />
+        </div>
+        <span aria-hidden style={{ ...rondje, left: "50%", width: 74, height: 74, margin: "-37px 0 0 -37px", opacity: pauze && !klaar ? 1 : 0 }}><PlayIcoon size={24} /></span>
+        <span aria-hidden style={{ ...rondje, left: 14, width: 46, height: 46, marginTop: -23, opacity: flits === "l" ? 1 : 0, fontSize: 20, fontWeight: 800 }}>‹</span>
+        <span aria-hidden style={{ ...rondje, right: 14, width: 46, height: 46, marginTop: -23, opacity: flits === "r" ? 1 : 0, fontSize: 20, fontWeight: 800 }}>›</span>
+        <div aria-hidden style={{ position: "absolute", left: 0, right: 0, bottom: 14, textAlign: "center", pointerEvents: "none", opacity: tip ? 1 : 0, transition: "opacity .4s ease" }}>
+          <span style={{ background: "rgba(0,0,0,0.6)", color: "#fff", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700 }}>{t.playerTip}</span>
+        </div>
+        <div style={{ position: "absolute", top: 14, left: 16, right: 66, display: "flex", gap: 4, pointerEvents: "none" }}>
+          {Array.from({ length: STAPPEN }, (_, i) => (
             <span key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.3)", overflow: "hidden" }}>
-              <span style={{ display: "block", height: "100%", background: "#fff", width: `${Math.max(0, Math.min(1, voortgang * 4 - i)) * 100}%` }} />
+              <span style={{ display: "block", height: "100%", background: "#fff", width: `${Math.max(0, Math.min(1, voortgang * STAPPEN - i)) * 100}%` }} />
             </span>
           ))}
         </div>
@@ -174,6 +229,20 @@ function UitlegSpeler({ m, knop, onStart, onSluit, t }: {
             background: "rgba(0,0,0,0.45)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
+      </div>
+      {/* Pauzeknop, schuifje om te spoelen en de tijd. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px 0" }}>
+        <button type="button" onClick={wissel} aria-label={pauze || klaar ? t.play : t.pause}
+          style={{ flexShrink: 0, width: 40, height: 40, borderRadius: "50%", border: "none", cursor: "pointer",
+            background: "rgba(255,255,255,0.14)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {pauze || klaar ? <PlayIcoon size={13} /> : <PauzeIcoon />}
+        </button>
+        <input type="range" min={0} max={1000} step={1} aria-label={t.seek} value={Math.round(voortgang * 1000)}
+          onPointerDown={() => { slepen.current = true }}
+          onPointerUp={() => { slepen.current = false }}
+          onChange={(e) => { const v = ref.current; if (!v || !v.duration) return; const nieuw = Number(e.target.value) / 1000 * v.duration; v.currentTime = nieuw; setTijd(nieuw); setKlaar(false) }}
+          style={{ flex: 1, accentColor: MODUS[m].kleur, height: 28 }} />
+        <span style={{ flexShrink: 0, color: "#fff", fontSize: 12.5, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{sec(tijd)}</span>
       </div>
       <div style={{ display: "flex", gap: 8, padding: 12 }}>
         {klaar && (
@@ -204,6 +273,9 @@ export default function Home() {
   type MiniGroep = { id: string; name: string; settle?: boolean; gast: boolean; af: boolean; last: string; app: "party" | "table"; code?: string }
   const [groepen, setGroepen] = useState<MiniGroep[]>([])
   const [tafels, setTafels] = useState<MiniGroep[]>([])
+  // Pas true als we weten of er groepen zijn, zodat de kaarten niet eerst zakken
+  // en dan terugspringen.
+  const [geladen, setGeladen] = useState(false)
   const [klap, setKlap] = useState<{ party: boolean; table: boolean }>({ party: false, table: false })
   const [wisVraag, setWisVraag] = useState<null | "party" | "table">(null)
   // Welke kaart is aangetikt (alleen bij KAART_TIK = "selecteer").
@@ -294,6 +366,7 @@ export default function Home() {
         alleIds.current.table = allesT.map((g) => g.id)
         setTafels(recent(allesT))
       } catch { /* stil */ }
+      setGeladen(true)
     })()
   }, [])
 
@@ -536,6 +609,7 @@ export default function Home() {
 
   const perKaart = GROEPEN_LAYOUT === "per-kaart"
   const aantalGroepen = groepen.length + tafels.length
+  const zakken = geladen && aantalGroepen === 0
 
   return (
     // Tik naast de kaarten = keuze ongedaan maken.
@@ -544,6 +618,10 @@ export default function Home() {
         {/* Eerste scherm: kop en beide modi vullen samen de schermhoogte. */}
         <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column",
           paddingTop: "max(14px, env(safe-area-inset-top))", paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}>
+          {/* Zonder groepen zakken taalkeuze en kaarten samen wat: 1/3 van de lege
+              ruimte komt erboven, 2/3 eronder. Met groepen (of tijdens het laden)
+              staat alles gewoon bovenaan. flex-grow schuift zacht mee. */}
+          <div aria-hidden style={{ flex: `${zakken ? 1 : 0} 1 0px`, minHeight: 0, transition: "flex-grow .4s ease" }} />
           {/* Kop zonder los logo (dat staat al op beide kaarten): tagline links,
               taalkeuze rechts, groter zodat je hem op gsm makkelijk raakt. */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: TOON_TAGLINE ? "space-between" : "flex-end", gap: 12, padding: "0 2px", margin: TOON_TAGLINE ? "2px 0 12px" : "0 0 8px", flexShrink: 0 }}>
@@ -597,8 +675,8 @@ export default function Home() {
             </button>
           )}
 
-          {/* marginTop auto: overschot aan ruimte komt boven de voettekst, niet in de kaarten. */}
-          <div style={{ marginTop: "auto", textAlign: "center", padding: "12px 0 4px", fontSize: 12, color: K.zacht, fontWeight: 600 }}>{t.footer}</div>
+          <div aria-hidden style={{ flex: `${zakken ? 2 : 1} 1 0px`, minHeight: 0, transition: "flex-grow .4s ease" }} />
+          <div style={{ textAlign: "center", padding: "12px 0 4px", fontSize: 12, color: K.zacht, fontWeight: 600 }}>{t.footer}</div>
         </div>
 
         {!perKaart && aantalGroepen > 0 && (
@@ -684,8 +762,9 @@ const S: Record<string, React.CSSProperties> = {
   },
   kaart: {
     // Groeit mee met het scherm, maar nooit hoger dan 250 px: zonder groepenbalken
-    // rekken de kaarten anders uit over een hoge gsm.
-    position: "relative", flex: "1 1 auto", minHeight: 190, maxHeight: 250, display: "flex", flexDirection: "column",
+    // rekken de kaarten anders uit over een hoge gsm. De hoge flex-grow zorgt dat
+    // de kaarten eerst groeien; pas daarna gaat de rest naar de lege ruimte.
+    position: "relative", flex: "100 1 auto", minHeight: 190, maxHeight: 250, display: "flex", flexDirection: "column",
     borderRadius: 20, overflow: "hidden",
   },
   cardPhoto: {
