@@ -20,7 +20,7 @@ const TOON_TAGLINE: boolean = false
 const GROEPEN_LAYOUT: "per-kaart" | "onderaan" = "per-kaart"
 // Wat een tik op de kaart zelf doet:
 //   "selecteer" → kaart licht op, de andere dimt, de startknop pulseert.
-//                 Nog eens tikken (kaart of knop) = starten.
+//                 Starten kan ALLEEN met de startknop; de kaart zelf start nooit.
 //   "direct"    → de hele kaart is de startknop.
 const KAART_TIK: "selecteer" | "direct" = "selecteer"
 // Vorm van de startknop (zonder pijltje, met het icoon van de modus):
@@ -35,12 +35,14 @@ const GROEP_DAGEN = 7
 // Vangnet zodat de lijst nooit te lang wordt.
 const MAX_GROEPEN = 8
 // Uitlegfilmpje per kaart:
-//   "knop"       → klein knopje "Hoe werkt het?" in de kaart, opent schermvullend. Standaard.
+//   "naast-start"→ knop "Zo werkt het" naast de startknop onderaan, met ruimte
+//                  ertussen zodat je niet per ongeluk start. Standaard.
+//   "knop"       → klein knopje in de kaart onder de ondertitel
 //   "bij-kiezen" → eerste tik op de kaart kiest ze én speelt de uitleg stil af waar
 //                  de foto stond (+ knopje "groot" voor schermvullend)
 //   "mini"       → klein gsm-venstertje dat stil in een lus speelt op de foto
 //   "uit"        → geen filmpjes
-const VIDEO_STIJL: "bij-kiezen" | "knop" | "mini" | "uit" = "knop"
+const VIDEO_STIJL: "naast-start" | "bij-kiezen" | "knop" | "mini" | "uit" = "naast-start"
 // Bestanden in /public/uitleg/. "groot" = 720p (±1,3 MB) voor de schermvullende
 // speler; "klein" (±370 kB) is alleen nodig voor de varianten "mini" en "bij-kiezen".
 const FILM = {
@@ -64,10 +66,8 @@ const T = {
     modeZelf: "Zelf opnemen",
     modeQr: "Via QR",
     closedChip: "afgesloten ✓",
-    start: "Starten",
-    startTable: "Start hier",
-    startParty: "Start je rondjes",
-    howWorks: "Hoe werkt het?",
+    start: "Start",
+    howWorks: "Zo werkt het",
     tapHint: "tik voor uitleg",
     videoBadge: "uitleg",
     bigVideo: "groot",
@@ -104,9 +104,8 @@ const T = {
     modeQr: "Via QR",
     closedChip: "clôturé ✓",
     start: "Démarrer",
-    startTable: "Commence ici",
-    startParty: "Lance tes tournées",
-    howWorks: "Comment ça marche ?",
+    // Korter dan "Comment ça marche", zodat het naast de startknop past.
+    howWorks: "Voir la démo",
     tapHint: "touche pour l'explication",
     videoBadge: "explication",
     bigVideo: "agrandir",
@@ -211,8 +210,9 @@ export default function Home() {
   const [gekozen, setGekozen] = useState<Mode | null>(null)
   // Welk uitlegfilmpje schermvullend openstaat.
   const [film, setFilm] = useState<Mode | null>(null)
+  // Een tik op de kaart kiest ze alleen (ook een tweede tik start niets).
   const kaartTik = (m: Mode) => {
-    if (KAART_TIK === "direct" || gekozen === m) starten(m)
+    if (KAART_TIK === "direct") starten(m)
     else setGekozen(m)
   }
   const alleIds = useRef<{ party: string[]; table: string[] }>({ party: [], table: [] })
@@ -320,18 +320,20 @@ export default function Home() {
   // marineblauwe tekst. Elke modus heeft één eigen tint (turquoise-blauw voor Resto,
   // goud voor Rundo) die terugkomt in de rand, de kaartkleur en de startbalk.
 
-  // Startknop: geen pijltje meer, wel het icoon van de modus en een actie als label
-  // ("Scan je rekening" / "Start je rondjes"). Pulseert zodra de kaart gekozen is.
+  // Startknop: icoon van de modus + "Start". Pulseert zodra de kaart gekozen is.
+  const naastUitleg = VIDEO_STIJL === "naast-start"
   const startKnop = (m: Mode) => {
     const md = MODUS[m]
-    const pil = START_STIJL === "pil"
+    const pil = START_STIJL === "pil" && !naastUitleg
     const puls = gekozen === m ? ` ${pil ? "rundo-puls-pil" : "rundo-puls-balk"} m-${m}` : ""
     return (
       <button type="button" onClick={(e) => { e.stopPropagation(); starten(m) }} className={`rundo-start${puls}`}
         style={{ position: "relative", zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexShrink: 0,
           fontSize: 19, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", letterSpacing: 0.1, border: "none",
           background: md.knop, color: md.knopTekst, transition: "filter .15s ease, transform .1s ease",
-          ...(pil
+          ...(naastUitleg
+            ? { flex: 1, minWidth: 0, height: 56, padding: "0 10px", borderRadius: 14, overflow: "hidden", whiteSpace: "nowrap" }
+            : pil
             ? { alignSelf: "flex-start", height: 52, padding: "0 24px", margin: "0 16px 16px", borderRadius: 999, boxShadow: `0 10px 22px -10px ${md.schaduw}` }
             : { width: "100%", height: 62, padding: "0 18px", borderRadius: 0, overflow: "hidden" }) }}>
         {knopInhoud(m)}
@@ -341,7 +343,7 @@ export default function Home() {
   // Icoon + label van de startknop (ook gebruikt in de uitlegspeler).
   const knopInhoud = (m: Mode) => (<>
     <Icoon naam={m === "table" ? "scan" : "noteer"} size={21} />
-    {m === "table" ? t.startTable : t.startParty}
+    {t.start}
   </>)
   const openFilm = (e: React.MouseEvent, m: Mode) => { e.stopPropagation(); setFilm(m) }
 
@@ -420,7 +422,20 @@ export default function Home() {
             </button>
           )}
         </div>
-        {startKnop(m)}
+        {naastUitleg ? (
+          // Onderaan twee losse knoppen met 10 px ruimte: wit "Zo werkt het" en de
+          // volle startknop. Anders van vorm en niet tegen elkaar, dus minder mistikken.
+          <div style={{ position: "relative", zIndex: 3, display: "flex", gap: 10, padding: "0 12px 12px", flexShrink: 0 }}>
+            <button type="button" onClick={(e) => openFilm(e, m)}
+              style={{ flex: "0 0 46%", minWidth: 0, height: 56, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "0 6px",
+                borderRadius: 14, background: "#fff", border: `2px solid ${md.kleur}`, color: K.tekst, fontSize: lang === "fr" ? 13.5 : 14.5, fontWeight: 800,
+                fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap" }}>
+              <span style={{ flexShrink: 0, width: 28, height: 28, borderRadius: "50%", background: md.knop, color: md.knopTekst, display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: 2 }}><PlayIcoon /></span>
+              {t.howWorks}
+            </button>
+            {startKnop(m)}
+          </div>
+        ) : startKnop(m)}
       </div>
     )
   }
