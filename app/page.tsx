@@ -597,7 +597,8 @@ export default function Home() {
             </button>
           )}
 
-          <div style={{ textAlign: "center", padding: "12px 0 4px", fontSize: 12, color: K.zacht, fontWeight: 600 }}>{t.footer}</div>
+          {/* marginTop auto: overschot aan ruimte komt boven de voettekst, niet in de kaarten. */}
+          <div style={{ marginTop: "auto", textAlign: "center", padding: "12px 0 4px", fontSize: 12, color: K.zacht, fontWeight: 600 }}>{t.footer}</div>
         </div>
 
         {!perKaart && aantalGroepen > 0 && (
@@ -682,7 +683,9 @@ const S: Record<string, React.CSSProperties> = {
     MozOsxFontSmoothing: "grayscale",
   },
   kaart: {
-    position: "relative", flex: 1, minHeight: 170, display: "flex", flexDirection: "column",
+    // Groeit mee met het scherm, maar nooit hoger dan 250 px: zonder groepenbalken
+    // rekken de kaarten anders uit over een hoge gsm.
+    position: "relative", flex: "1 1 auto", minHeight: 190, maxHeight: 250, display: "flex", flexDirection: "column",
     borderRadius: 20, overflow: "hidden",
   },
   cardPhoto: {
