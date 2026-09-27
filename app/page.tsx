@@ -27,15 +27,22 @@ const KAART_TIK: "selecteer" | "direct" = "selecteer"
 //   "balk" → brede balk over de onderkant van de kaart
 //   "pil"  → zwevende pil linksonder in de kaart
 const START_STIJL: "balk" | "pil" = "balk"
+// Jouw groepen: elke groep (open of afgesloten) blijft zoveel dagen op het
+// beginscherm staan en verdwijnt dan vanzelf. Rundo telt vanaf de laatste
+// activiteit, Resto vanaf het aanmaken (Resto houdt geen activiteit bij).
+// Verdwijnen is niet wissen: met de link of code kan je er nog in.
+const GROEP_DAGEN = 7
+// Vangnet zodat de lijst nooit te lang wordt.
+const MAX_GROEPEN = 8
 // Uitlegfilmpje per kaart:
+//   "knop"       → klein knopje "Hoe werkt het?" in de kaart, opent schermvullend. Standaard.
 //   "bij-kiezen" → eerste tik op de kaart kiest ze én speelt de uitleg stil af waar
-//                  de foto stond (+ knopje "groot" voor schermvullend). Standaard.
-//   "knop"       → klein knopje "Hoe werkt het?" in de kaart, opent schermvullend
+//                  de foto stond (+ knopje "groot" voor schermvullend)
 //   "mini"       → klein gsm-venstertje dat stil in een lus speelt op de foto
 //   "uit"        → geen filmpjes
-const VIDEO_STIJL: "bij-kiezen" | "knop" | "mini" | "uit" = "bij-kiezen"
-// Zet deze bestanden in /public/uitleg/. "klein" = lichte versie (±370 kB) voor in
-// de kaart, "groot" = 720p (±1,3 MB) voor de schermvullende speler.
+const VIDEO_STIJL: "bij-kiezen" | "knop" | "mini" | "uit" = "knop"
+// Bestanden in /public/uitleg/. "groot" = 720p (±1,3 MB) voor de schermvullende
+// speler; "klein" (±370 kB) is alleen nodig voor de varianten "mini" en "bij-kiezen".
 const FILM = {
   table: { klein: "/uitleg/resto-klein.mp4", groot: "/uitleg/resto-720.mp4", poster: "/uitleg/resto-poster.jpg" },
   party: { klein: "/uitleg/rundo-klein.mp4", groot: "/uitleg/rundo-720.mp4", poster: "/uitleg/rundo-poster.jpg" },
@@ -58,7 +65,7 @@ const T = {
     modeQr: "Via QR",
     closedChip: "afgesloten ✓",
     start: "Starten",
-    startTable: "Scan je rekening",
+    startTable: "Start hier",
     startParty: "Start je rondjes",
     howWorks: "Hoe werkt het?",
     tapHint: "tik voor uitleg",
@@ -66,9 +73,8 @@ const T = {
     bigVideo: "groot",
     replay: "Opnieuw",
     close: "Sluiten",
-    pinOn: "Bewaren",
-    pinOff: "Niet meer bewaren",
-    maxPins: (n: number) => `Je kan maximaal ${n} groepen bewaren. Maak er eerst een los.`,
+    ago: (d: number) => d <= 0 ? "vandaag" : d === 1 ? "gisteren" : `${d} dagen geleden`,
+    keepNote: (app: Mode) => `Groepen verdwijnen hier ${GROEP_DAGEN} dagen na ${app === "table" ? "het aanmaken" : "je laatste activiteit"}. Met de link of code kan je er nog in.`,
     openChip: "open",
     countOpen: (n: number) => `${n} open`,
     countClosed: (n: number) => `${n} afgesloten`,
@@ -98,7 +104,7 @@ const T = {
     modeQr: "Via QR",
     closedChip: "clôturé ✓",
     start: "Démarrer",
-    startTable: "Scanne l'addition",
+    startTable: "Commence ici",
     startParty: "Lance tes tournées",
     howWorks: "Comment ça marche ?",
     tapHint: "touche pour l'explication",
@@ -106,9 +112,8 @@ const T = {
     bigVideo: "agrandir",
     replay: "Revoir",
     close: "Fermer",
-    pinOn: "Enregistrer",
-    pinOff: "Ne plus enregistrer",
-    maxPins: (n: number) => `Tu peux garder ${n} groupes au maximum. Détaches-en un d'abord.`,
+    ago: (d: number) => d <= 0 ? "aujourd'hui" : d === 1 ? "hier" : `il y a ${d} jours`,
+    keepNote: (app: Mode) => `Les groupes disparaissent d'ici ${GROEP_DAGEN} jours après ${app === "table" ? "leur création" : "ta dernière activité"}. Avec le lien ou le code, tu peux toujours y accéder.`,
     openChip: "ouvert",
     countOpen: (n: number) => `${n} ouvert${n === 1 ? "" : "s"}`,
     countClosed: (n: number) => `${n} clôturé${n === 1 ? "" : "s"}`,
@@ -126,24 +131,6 @@ const T = {
 
 type Mode = "table" | "party"
 
-// Zelfde bewaaricoon als in Party en Table: gevulde diskette, met de subtiele
-// schuine streep in de niet-bewaard-stand. De uitsparingen nemen de witte
-// kaartkleur aan.
-function BewaarIcoon({ aan, size = 17, gat = "#FFFFFF" }: { aan: boolean; size?: number; gat?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: "block" }}>
-      <path d="M4.5 6A1.5 1.5 0 0 1 6 4.5h9.6L19.5 8.4V18a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 18z" fill="currentColor" />
-      <path d="M9.2 5.4v3.2h5.6V5.4z" fill={gat} />
-      <path d="M8.4 13.4h7.2v5.2H8.4z" fill={gat} />
-      {!aan && (<>
-        <path d="M3.4 20.6L20.6 3.4" stroke={gat} strokeWidth="3.6" strokeLinecap="round" />
-        <path d="M3.4 20.6L20.6 3.4" stroke="#9AA1AD" strokeWidth="1.7" strokeLinecap="round" />
-      </>)}
-    </svg>
-  )
-}
-// Zelfde plafond als in de apps zelf: bewaren blijft een keuze, geen standaard.
-const MAX_PINS = 3
 
 const PlayIcoon = ({ size = 11 }: { size?: number }) => (
   <svg aria-hidden viewBox="0 0 10 12" width={size} height={size * 1.2} style={{ display: "block" }}><path d="M0 0l10 6-10 6z" fill="currentColor" /></svg>
@@ -215,11 +202,9 @@ export default function Home() {
     try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ }
     router.push(m === "table" ? "/table?via=kiezer" : "/party?via=kiezer")
   }
-  type MiniGroep = { id: string; name: string; settle?: boolean; gast: boolean; af: boolean; pin: boolean; last: string; app: "party" | "table"; code?: string }
+  type MiniGroep = { id: string; name: string; settle?: boolean; gast: boolean; af: boolean; last: string; app: "party" | "table"; code?: string }
   const [groepen, setGroepen] = useState<MiniGroep[]>([])
   const [tafels, setTafels] = useState<MiniGroep[]>([])
-  const [pinTotaal, setPinTotaal] = useState<{ party: number; table: number }>({ party: 0, table: 0 })
-  const [melding, setMelding] = useState<string | null>(null)
   const [klap, setKlap] = useState<{ party: boolean; table: boolean }>({ party: false, table: false })
   const [wisVraag, setWisVraag] = useState<null | "party" | "table">(null)
   // Welke kaart is aangetikt (alleen bij KAART_TIK = "selecteer").
@@ -235,6 +220,19 @@ export default function Home() {
   const gewisteIds = (app: "party" | "table"): Set<string> => {
     try { const raw = localStorage.getItem(`rundo_chooser_gewist_${app}`); if (raw) return new Set(JSON.parse(raw)) } catch { /* niets */ }
     return new Set()
+  }
+  // Hoeveel dagen geleden (kalenderdagen), voor "vandaag" / "gisteren" / "3 dagen geleden".
+  const dagenGeleden = (iso: string) => {
+    const t0 = Date.parse(iso); if (Number.isNaN(t0)) return GROEP_DAGEN + 1
+    const vandaag = new Date(); vandaag.setHours(0, 0, 0, 0)
+    const dan = new Date(t0); dan.setHours(0, 0, 0, 0)
+    return Math.round((vandaag.getTime() - dan.getTime()) / 864e5)
+  }
+  // Groepen van de laatste GROEP_DAGEN dagen: open eerst, dan afgesloten, telkens
+  // de recentste bovenaan (de invoer is al op datum gesorteerd).
+  const recent = (alles: MiniGroep[]) => {
+    const binnen = alles.filter((g) => dagenGeleden(g.last) < GROEP_DAGEN)
+    return [...binnen.filter((g) => !g.af), ...binnen.filter((g) => g.af)].slice(0, MAX_GROEPEN)
   }
   // App-gedrag: viewport vast op schaal 1 (geen invoer-autozoom), geen witte rand.
   useEffect(() => {
@@ -255,26 +253,24 @@ export default function Home() {
         const dev = localStorage.getItem("rundo_device_id")
         if (!dev) throw new Error("geen party-id")
         const [eigen, gast] = await Promise.all([
-          supabase.from("party_groups").select("id,name,last_active,finalized,settle,pinned").eq("owner_id", dev),
+          supabase.from("party_groups").select("id,name,last_active,finalized,settle").eq("owner_id", dev),
           supabase.from("party_people").select("group_id").eq("claimed_by", dev),
         ])
         const map = new Map<string, MiniGroep>()
         for (const g of eigen.data ?? []) {
-          map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: false, af: !!g.finalized, pin: !!g.pinned, last: (g.last_active as string) || "", app: "party" })
+          map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: false, af: !!g.finalized, last: (g.last_active as string) || "", app: "party" })
         }
         const gastIds = [...new Set((gast.data ?? []).map((r) => r.group_id as string))].filter((id) => !map.has(id))
         if (gastIds.length > 0) {
-          const { data } = await supabase.from("party_groups").select("id,name,last_active,finalized,settle,pinned").in("id", gastIds)
+          const { data } = await supabase.from("party_groups").select("id,name,last_active,finalized,settle").in("id", gastIds)
           for (const g of data ?? []) {
-            map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: true, af: !!g.finalized, pin: !!g.pinned, last: (g.last_active as string) || "", app: "party" })
+            map.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", settle: !!g.settle, gast: true, af: !!g.finalized, last: (g.last_active as string) || "", app: "party" })
           }
         }
         const weg = gewisteIds("party")
         const alles = [...map.values()].filter((g) => !weg.has(g.id)).sort((a, b) => b.last.localeCompare(a.last))
         alleIds.current.party = alles.map((g) => g.id)
-        const lijst = [...alles.filter((g) => !g.af).slice(0, 4), ...alles.filter((g) => g.af).sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0)).slice(0, 3)]
-        setGroepen(lijst)
-        setPinTotaal((v) => ({ ...v, party: alles.filter((g) => !g.gast && g.pin).length }))
+        setGroepen(recent(alles))
       } catch { /* stil: geen sectie is prima */ }
       try {
         const ownerId = localStorage.getItem("rundo_owner_id")
@@ -282,23 +278,21 @@ export default function Home() {
         let lokaal: { id: string; name: string; invite_code: string; role: string }[] = []
         try { const raw = localStorage.getItem(`rundo_table_groups_${ownerId}`); if (raw) lokaal = JSON.parse(raw) } catch { /* niets */ }
         const tafelMap = new Map<string, MiniGroep>()
-        const { data: eigenT } = await supabase.from("table_groups").select("id,name,invite_code,finalized,created_at,pinned").eq("owner_id", ownerId)
+        const { data: eigenT } = await supabase.from("table_groups").select("id,name,invite_code,finalized,created_at").eq("owner_id", ownerId)
         for (const g of eigenT ?? []) {
-          tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: false, af: !!g.finalized, pin: !!g.pinned, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
+          tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: false, af: !!g.finalized, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
         }
         const gastIds = lokaal.filter((x) => x.role === "gast" && !tafelMap.has(x.id)).map((x) => x.id)
         if (gastIds.length > 0) {
-          const { data: gastT } = await supabase.from("table_groups").select("id,name,invite_code,finalized,created_at,pinned").in("id", gastIds)
+          const { data: gastT } = await supabase.from("table_groups").select("id,name,invite_code,finalized,created_at").in("id", gastIds)
           for (const g of gastT ?? []) {
-            tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: true, af: !!g.finalized, pin: !!g.pinned, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
+            tafelMap.set(g.id as string, { id: g.id as string, name: (g.name as string) || "", gast: true, af: !!g.finalized, last: (g.created_at as string) || "", app: "table", code: (g.invite_code as string) || "" })
           }
         }
         const wegT = gewisteIds("table")
         const allesT = [...tafelMap.values()].filter((g) => !wegT.has(g.id)).sort((a, b) => b.last.localeCompare(a.last))
         alleIds.current.table = allesT.map((g) => g.id)
-        const tafelLijst = [...allesT.filter((g) => !g.af).slice(0, 4), ...allesT.filter((g) => g.af).sort((a, b) => (b.pin ? 1 : 0) - (a.pin ? 1 : 0)).slice(0, 3)]
-        setTafels(tafelLijst)
-        setPinTotaal((v) => ({ ...v, table: allesT.filter((g) => !g.gast && g.pin).length }))
+        setTafels(recent(allesT))
       } catch { /* stil */ }
     })()
   }, [])
@@ -318,31 +312,9 @@ export default function Home() {
     try { localStorage.setItem(`rundo_chooser_gewist_${app}`, JSON.stringify([...weg])) } catch { /* niets */ }
     alleIds.current[app] = []
     if (app === "party") setGroepen([]); else setTafels([])
-    setPinTotaal((v) => ({ ...v, [app]: 0 }))
     setWisVraag(null)
   }
 
-  const meld = (tekst: string) => { setMelding(tekst); window.setTimeout(() => setMelding(null), 3500) }
-  const togglePin = async (g: MiniGroep) => {
-    if (g.gast) return
-    if (!g.pin && pinTotaal[g.app] >= MAX_PINS) { meld(t.maxPins(MAX_PINS)); return }
-    const tabel = g.app === "party" ? "party_groups" : "table_groups"
-    const { error } = await supabase.from(tabel).update({ pinned: !g.pin }).eq("id", g.id)
-    if (error) { meld("Bewaren mislukt: " + error.message); return }
-    const zet = (prev: MiniGroep[]) => prev.map((x) => x.id === g.id ? { ...x, pin: !x.pin } : x)
-    if (g.app === "party") setGroepen(zet); else setTafels(zet)
-    setPinTotaal((v) => ({ ...v, [g.app]: v[g.app] + (g.pin ? -1 : 1) }))
-  }
-  const pinKnop = (g: MiniGroep) => {
-    if (g.gast) return null
-    return (
-      <button onClick={(e) => { e.stopPropagation(); void togglePin(g) }} title={g.pin ? t.pinOff : t.pinOn} aria-label={g.pin ? t.pinOff : t.pinOn}
-        style={{ flexShrink: 0, width: 34, height: 32, borderRadius: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontFamily: "inherit",
-          background: g.pin ? K.goudZacht : "#FFFFFF",
-          border: `1px solid ${g.pin ? K.goud : K.lijn}`,
-          color: g.pin ? K.goudDiep : "#B3B8C2" }}><BewaarIcoon aan={g.pin} gat={g.pin ? K.goudZacht : "#FFFFFF"} /></button>
-    )
-  }
 
   // Eén vormtaal voor het hele scherm: lichte kaarten op een warme achtergrond,
   // marineblauwe tekst. Elke modus heeft één eigen tint (turquoise-blauw voor Resto,
@@ -428,7 +400,7 @@ export default function Home() {
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             <span style={{ position: "absolute", left: "50%", bottom: 6, transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4,
               background: "rgba(14,26,46,0.82)", color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 999, padding: "3px 8px 3px 6px", whiteSpace: "nowrap" }}>
-              <PlayIcoon size={8} />{t.videoBadge} · 24 s</span>
+              <PlayIcoon size={8} />{t.videoBadge}</span>
           </button>
         )}
         <div style={{ position: "relative", zIndex: 2, flex: 1, padding: "16px 16px 14px", maxWidth: VIDEO_STIJL === "uit" ? undefined : "68%" }}>
@@ -444,7 +416,7 @@ export default function Home() {
                 borderRadius: 999, background: "#fff", border: `1.5px solid ${md.kleur}`, color: K.tekst, fontSize: 13.5, fontWeight: 800,
                 fontFamily: "inherit", cursor: "pointer", boxShadow: "0 4px 10px -8px rgba(14,26,46,0.5)" }}>
               <span style={{ width: 28, height: 28, borderRadius: "50%", background: md.knop, color: md.knopTekst, display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: 2 }}><PlayIcoon /></span>
-              {t.howWorks} <span style={{ fontWeight: 700, color: K.zacht }}>24 s</span>
+              {t.howWorks}
             </button>
           )}
         </div>
@@ -501,16 +473,17 @@ export default function Home() {
   }
   const groepRij = (g: MiniGroep) => (
     <div key={g.id} onClick={() => openGroep(g)}
-      style={{ ...S.rij, borderColor: g.pin ? K.goud : K.lijn, opacity: g.af && !g.pin ? 0.6 : 1 }}>
+      style={{ ...S.rij, opacity: g.af ? 0.62 : 1 }}>
       <span style={{ ...S.icoonVak, width: 32, height: 32, borderRadius: 10 }}>
         <Icoon naam={g.app === "table" ? "scan" : g.settle ? "deel" : "noteer"} size={17} />
       </span>
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={S.rijNaam}>{g.name || (g.app === "table" ? "Rundo Resto" : "Rundo")}</span>
-        {g.app === "party" && <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: K.zacht }}>{g.settle ? t.modeQr : t.modeZelf}</span>}
+        <span style={{ display: "block", fontSize: 11.5, fontWeight: 700, color: K.zacht }}>
+          {g.app === "party" && `${g.settle ? t.modeQr : t.modeZelf} · `}{t.ago(dagenGeleden(g.last))}
+        </span>
       </span>
       {statusChips(g)}
-      {pinKnop(g)}
       <span style={{ flexShrink: 0, color: K.zacht, fontWeight: 800 }}>›</span>
     </div>
   )
@@ -535,7 +508,13 @@ export default function Home() {
     return (
       <div style={{ flexShrink: 0, marginTop: perKaart ? 8 : 0, marginBottom: perKaart ? 0 : 10 }}>
         {lijstKop(app, lijst, perKaart)}
-        {klap[app] && <div style={{ marginTop: 6 }}>{lijst.map(groepRij)}{wisBlok(app)}</div>}
+        {klap[app] && (
+          <div style={{ marginTop: 6 }}>
+            {lijst.map(groepRij)}
+            <p style={{ margin: "2px 4px 4px", fontSize: 11.5, lineHeight: 1.4, fontWeight: 600, color: K.zacht }}>{t.keepNote(app)}</p>
+            {wisBlok(app)}
+          </div>
+        )}
       </div>
     )
   }
@@ -624,13 +603,6 @@ export default function Home() {
           onStart={() => { const m = film; setFilm(null); starten(m) }} />
       )}
 
-      {/* Meldingen (bv. max. bewaarde groepen) als toast onderaan, zodat ze in beide
-          varianten zichtbaar zijn. */}
-      {melding && (
-        <div role="status" style={{ position: "fixed", left: 16, right: 16, bottom: "max(16px, env(safe-area-inset-bottom))", zIndex: 20,
-          maxWidth: 368, margin: "0 auto", fontSize: 13, fontWeight: 700, color: K.goudDiep, background: K.goudZacht,
-          border: `1px solid ${K.goud}`, borderRadius: 12, padding: "10px 12px", boxShadow: "0 10px 24px -12px rgba(14,26,46,0.45)" }}>{melding}</div>
-      )}
 
       <style>{`
         * { box-sizing: border-box; }
@@ -642,15 +614,15 @@ export default function Home() {
         .rundo-kaart:focus-visible { outline: 3px solid ${K.tekst}; outline-offset: 2px; }
         .rundo-kaart-direct:active { transform: scale(0.985); }
         /* Balk: zachte ademhaling + een glansstreep die over de knop loopt. */
-        .rundo-puls-balk { animation: rundoAdem 1.5s ease-in-out infinite; }
+        .rundo-puls-balk { animation: rundoAdem 2.8s ease-in-out infinite; }
         .rundo-puls-balk::after { content: ""; position: absolute; top: 0; bottom: 0; left: -45%; width: 40%;
           background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
-          animation: rundoGlans 1.8s ease-in-out infinite; pointer-events: none; }
+          animation: rundoGlans 3.4s ease-in-out infinite; pointer-events: none; }
         @keyframes rundoAdem { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
         @keyframes rundoGlans { 0% { left: -45%; } 60%, 100% { left: 110%; } }
         /* Pil: een ring die naar buiten uitdijt in de kleur van de modus. */
-        .rundo-puls-pil.m-table { animation: rundoRingT 1.5s ease-out infinite; }
-        .rundo-puls-pil.m-party { animation: rundoRingP 1.5s ease-out infinite; }
+        .rundo-puls-pil.m-table { animation: rundoRingT 2.6s ease-out infinite; }
+        .rundo-puls-pil.m-party { animation: rundoRingP 2.6s ease-out infinite; }
         @keyframes rundoRingT { 0% { box-shadow: 0 0 0 0 rgba(19,140,154,0.55); } 100% { box-shadow: 0 0 0 14px rgba(19,140,154,0); } }
         @keyframes rundoRingP { 0% { box-shadow: 0 0 0 0 rgba(245,179,1,0.6); } 100% { box-shadow: 0 0 0 14px rgba(245,179,1,0); } }
         @keyframes rundoIn { from { opacity: 0; } to { opacity: 1; } }
