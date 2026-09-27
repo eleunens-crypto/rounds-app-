@@ -1253,7 +1253,7 @@ const STRINGS = {
     whatYouTook: "Dit nam ik zelf",
     adminNoConfirmNote: "Je bevestigt niets apart \u2014 als beheerder sluit je straks de hele rekening af. Dit is om te zien wat er op jouw naam staat.",
     nothingYoursYet: "Je hebt zelf nog niets aangeduid.",
-    manageBtn: "\u2699 Beheer",
+    manageBtn: "\u2699 Beheren",
     iTookThis: "+ ik nam dit",
     didYouTakeQ: "Namen jullie dit?",
     oneOfUs: "1 van ons",
@@ -8032,8 +8032,8 @@ function WieNogBtn({ onClick, open, title }: { onClick: () => void; open?: boole
     // rand in plaats van stippels: hier gebeurt iets, daar wordt iets gevraagd.
     <button onClick={onClick} title={title} aria-label={title} style={{
       display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-      flex: "1 1 0", minWidth: 0, minHeight: 40, cursor: "pointer", fontFamily: "inherit",
-      fontSize: 13.5, fontWeight: 700, borderRadius: 10, padding: "8px 10px", whiteSpace: "nowrap",
+      flex: "0 0 auto", minHeight: 40, cursor: "pointer", fontFamily: "inherit",
+      fontSize: 13.5, fontWeight: 700, borderRadius: 10, padding: "8px 12px", whiteSpace: "nowrap",
       background: open ? "rgba(18,58,66,0.07)" : "#fff",
       border: `1.5px solid ${open ? "rgba(18,58,66,0.45)" : "rgba(18,58,66,0.22)"}`,
       color: "#2b4f56",
@@ -8182,9 +8182,12 @@ const DELER_PIL = {
 // niet waar het één ophield.
 // De knop die in de plaats van een kale "0" komt te staan: op een leeg item zegt een teller
 // zonder cijfer niet dat hij over jóu gaat, zeker niet met "+ iemand?" eronder.
-const NEEMKNOP = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5,
-  fontSize: 13.5, fontWeight: 800, borderRadius: 9, padding: "7px 11px", whiteSpace: "nowrap",
-  border: "1.5px solid rgba(196,152,32,0.55)", background: "#fffdf5", color: "#7a5a12",
+// "+ ik nam dit": de knop die je het vaakst nodig hebt, dus groter en vol goud in plaats
+// van een lichte rand. Dezelfde knop bij de beheerder en bij de gast.
+const NEEMKNOP = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+  fontSize: 15.5, fontWeight: 800, borderRadius: 11, padding: "0 15px", minHeight: 44, whiteSpace: "nowrap",
+  border: "1.5px solid rgba(196,152,32,0.75)", background: "#fff6dc", color: "#6b4d0c",
+  boxShadow: "0 4px 10px -6px rgba(196,152,32,0.6)",
   cursor: "pointer", fontFamily: "inherit", flexShrink: 0 } as const
 
 const ITEMBAK = { background: "rgba(18,58,66,0.045)", borderRadius: 12, padding: 7 } as const
@@ -8586,10 +8589,10 @@ function ClaimScreen(props: {
       } : it.is_shared ? {
         // Aan: volle vulling met witte tekst. Met een lichte vulling viel hij samen met het
         // blauwe vlak van de regel eromheen — je zag niet meer dát het een knop was.
-        ...(breed ? { flex: "1 1 0", minWidth: 0, minHeight: 40, justifyContent: "center", padding: "8px 10px" } : { flexShrink: 0, padding: "5px 9px" }),
+        ...(breed ? { flex: "0 0 auto", minHeight: 40, justifyContent: "center", padding: "8px 12px" } : { flexShrink: 0, padding: "5px 9px" }),
         display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10,
         cursor: "pointer", fontFamily: "inherit", border: "none", background: "#4a5a9e",
-      } : { ...(breed ? { flex: "1 1 0", minWidth: 0, minHeight: 40, justifyContent: "center", padding: "8px 10px" } : { flexShrink: 0, padding: "5px 9px" }),
+      } : { ...(breed ? { flex: "0 0 auto", minHeight: 40, justifyContent: "center", padding: "8px 12px" } : { flexShrink: 0, padding: "5px 9px" }),
         display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 10, cursor: "pointer",
         fontFamily: "inherit", border: "1.5px dashed rgba(90,108,166,0.5)", background: "#fff" }}>
       <ShareIcon on={it.is_shared} size={13} kleur={!stil && it.is_shared ? "#fff" : INDIGO.tekst} />
@@ -9061,11 +9064,13 @@ function ClaimScreen(props: {
                           de langste tekst de ruimte van de andere in; een raster van twee
                           gelijke kolommen doet dat niet. */}
                       {open > 0 && (
-                        <div style={{ display: "grid", gridTemplateColumns: participants.length > 0 ? "1fr 1fr" : "1fr", gap: 6, marginTop: 6, alignItems: "stretch" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, alignItems: "stretch" }}>
+                          {/* Eerst "gedeeld item?", meteen daarna "Beheren" — allebei zo breed als
+                              hun tekst, niet meer elk de helft van de regel. */}
+                          <div style={{ display: "flex" }}>{shareBtn(it, false, true)}</div>
                           {participants.length > 0 && (
                             <WieNogBtn onClick={() => setAssignItem(assignItem === it.id ? null : it.id)} open={assignItem === it.id} title={L.addSomeoneElse} />
                           )}
-                          <div style={{ minWidth: 0, display: "flex" }}>{shareBtn(it, false, true)}</div>
                         </div>
                       )}
                       {assignItem === it.id && open > 0 && (
