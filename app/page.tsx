@@ -7,6 +7,40 @@ import { supabase } from "@/lib/supabase"
 import { RundoLogo, RundoDealsLogo } from "@/lib/RundoLogo"
 import { Icoon } from "@/lib/RundoIconen"
 
+// ─── Schakelaars ────────────────────────────────────────────────────────────
+// Groepsdeals staat nog uit; de coupon zit volledig in de code. Zet op true om
+// hem terug te tonen.
+const TOON_DEALS: boolean = false
+// Tagline bovenaan ("Rondjes en rekeningen zonder gedoe!"). Uit = meer ruimte
+// voor de kaarten; enkel de taalkeuze blijft rechtsboven staan.
+const TOON_TAGLINE: boolean = false
+// Waar je opgeslagen groepen staan:
+//   "per-kaart" → ingeklapt onder elke modus-kaart (Resto-groepen onder Resto, …)
+//   "onderaan"  → samen in één blok onder het startscherm
+const GROEPEN_LAYOUT: "per-kaart" | "onderaan" = "per-kaart"
+// Wat een tik op de kaart zelf doet:
+//   "selecteer" → kaart licht op, de andere dimt, de startknop pulseert.
+//                 Nog eens tikken (kaart of knop) = starten.
+//   "direct"    → de hele kaart is de startknop.
+const KAART_TIK: "selecteer" | "direct" = "selecteer"
+// Vorm van de startknop (zonder pijltje, met het icoon van de modus):
+//   "balk" → brede balk over de onderkant van de kaart
+//   "pil"  → zwevende pil linksonder in de kaart
+const START_STIJL: "balk" | "pil" = "balk"
+// Uitlegfilmpje per kaart:
+//   "bij-kiezen" → eerste tik op de kaart kiest ze én speelt de uitleg stil af waar
+//                  de foto stond (+ knopje "groot" voor schermvullend). Standaard.
+//   "knop"       → klein knopje "Hoe werkt het?" in de kaart, opent schermvullend
+//   "mini"       → klein gsm-venstertje dat stil in een lus speelt op de foto
+//   "uit"        → geen filmpjes
+const VIDEO_STIJL: "bij-kiezen" | "knop" | "mini" | "uit" = "bij-kiezen"
+// Zet deze bestanden in /public/uitleg/. "klein" = lichte versie (±370 kB) voor in
+// de kaart, "groot" = 720p (±1,3 MB) voor de schermvullende speler.
+const FILM = {
+  table: { klein: "/uitleg/resto-klein.mp4", groot: "/uitleg/resto-720.mp4", poster: "/uitleg/resto-poster.jpg" },
+  party: { klein: "/uitleg/rundo-klein.mp4", groot: "/uitleg/rundo-720.mp4", poster: "/uitleg/rundo-poster.jpg" },
+}
+
 const T = {
   nl: {
     tagline: "Rondjes en rekeningen zonder gedoe!",
@@ -24,10 +58,23 @@ const T = {
     modeQr: "Via QR",
     closedChip: "afgesloten ✓",
     start: "Starten",
+    startTable: "Scan je rekening",
+    startParty: "Start je rondjes",
+    howWorks: "Hoe werkt het?",
+    tapHint: "tik voor uitleg",
+    videoBadge: "uitleg",
+    bigVideo: "groot",
+    replay: "Opnieuw",
+    close: "Sluiten",
     pinOn: "Bewaren",
     pinOff: "Niet meer bewaren",
     maxPins: (n: number) => `Je kan maximaal ${n} groepen bewaren. Maak er eerst een los.`,
     openChip: "open",
+    countOpen: (n: number) => `${n} open`,
+    countClosed: (n: number) => `${n} afgesloten`,
+    showWord: "tonen",
+    hideWord: "verbergen",
+    toGroups: (n: number) => `Jouw groepen (${n})`,
     wipeAll: "🗑 alles wissen",
     wipeTitle: (n: number, app: string) => `${n} ${app}-groep${n === 1 ? "" : "en"} uit jouw lijst wissen?`,
     wipeNote: "Ook de bewaarde. De groepen zelf blijven bestaan — wie de code of link heeft kan er nog in.",
@@ -51,10 +98,23 @@ const T = {
     modeQr: "Via QR",
     closedChip: "clôturé ✓",
     start: "Démarrer",
+    startTable: "Scanne l'addition",
+    startParty: "Lance tes tournées",
+    howWorks: "Comment ça marche ?",
+    tapHint: "touche pour l'explication",
+    videoBadge: "explication",
+    bigVideo: "agrandir",
+    replay: "Revoir",
+    close: "Fermer",
     pinOn: "Enregistrer",
     pinOff: "Ne plus enregistrer",
     maxPins: (n: number) => `Tu peux garder ${n} groupes au maximum. Détaches-en un d'abord.`,
     openChip: "ouvert",
+    countOpen: (n: number) => `${n} ouvert${n === 1 ? "" : "s"}`,
+    countClosed: (n: number) => `${n} clôturé${n === 1 ? "" : "s"}`,
+    showWord: "afficher",
+    hideWord: "masquer",
+    toGroups: (n: number) => `Tes groupes (${n})`,
     wipeAll: "🗑 tout effacer",
     wipeTitle: (n: number, app: string) => `Effacer ${n} groupe${n === 1 ? "" : "s"} ${app} de ta liste ?`,
     wipeNote: "Aussi les enregistrés. Les groupes existent encore — le code ou le lien fonctionne toujours.",
@@ -85,6 +145,65 @@ function BewaarIcoon({ aan, size = 17, gat = "#FFFFFF" }: { aan: boolean; size?:
 // Zelfde plafond als in de apps zelf: bewaren blijft een keuze, geen standaard.
 const MAX_PINS = 3
 
+const PlayIcoon = ({ size = 11 }: { size?: number }) => (
+  <svg aria-hidden viewBox="0 0 10 12" width={size} height={size * 1.2} style={{ display: "block" }}><path d="M0 0l10 6-10 6z" fill="currentColor" /></svg>
+)
+
+// Schermvullende speler in "stories"-stijl: vier balkjes bovenaan (de vier stappen
+// uit het filmpje), sluitknop rechtsboven en onderaan meteen de startknop van die
+// modus. Na afloop pulseert die knop en verschijnt "Opnieuw".
+function UitlegSpeler({ m, knop, onStart, onSluit, t }: {
+  m: Mode; knop: React.ReactNode; onStart: () => void; onSluit: () => void
+  t: { replay: string; close: string }
+}) {
+  const ref = useRef<HTMLVideoElement>(null)
+  const [voortgang, setVoortgang] = useState(0)
+  const [klaar, setKlaar] = useState(false)
+  useEffect(() => {
+    const vorige = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onSluit() }
+    window.addEventListener("keydown", esc)
+    return () => { document.body.style.overflow = vorige; window.removeEventListener("keydown", esc) }
+  }, [onSluit])
+  const opnieuw = () => { const v = ref.current; if (!v) return; v.currentTime = 0; setKlaar(false); void v.play().catch(() => {}) }
+  return (
+    <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}
+      style={{ position: "fixed", inset: 0, zIndex: 50, background: "#0A1416", display: "flex", flexDirection: "column",
+        paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", animation: "rundoIn .2s ease" }}>
+      <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+        <video ref={ref} src={FILM[m].groot} poster={FILM[m].poster} autoPlay muted playsInline preload="auto"
+          onTimeUpdate={(e) => { const v = e.currentTarget; setVoortgang(v.duration ? v.currentTime / v.duration : 0) }}
+          onEnded={() => setKlaar(true)}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "#000" }} />
+        <div style={{ position: "absolute", top: 14, left: 16, right: 66, display: "flex", gap: 4 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <span key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.3)", overflow: "hidden" }}>
+              <span style={{ display: "block", height: "100%", background: "#fff", width: `${Math.max(0, Math.min(1, voortgang * 4 - i)) * 100}%` }} />
+            </span>
+          ))}
+        </div>
+        <button type="button" onClick={onSluit} aria-label={t.close}
+          style={{ position: "absolute", top: 4, right: 10, width: 46, height: 46, borderRadius: "50%", border: "none", cursor: "pointer",
+            background: "rgba(0,0,0,0.45)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 8, padding: 12 }}>
+        {klaar && (
+          <button type="button" onClick={opnieuw}
+            style={{ height: 56, padding: "0 16px", borderRadius: 14, border: "1.5px solid rgba(255,255,255,0.3)", background: "none",
+              color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>{t.replay}</button>
+        )}
+        <button type="button" onClick={onStart} className={klaar ? "rundo-puls-balk" : undefined}
+          style={{ position: "relative", overflow: "hidden", flex: 1, height: 56, borderRadius: 14, border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontSize: 18, fontWeight: 800, fontFamily: "inherit",
+            background: MODUS[m].knop, color: MODUS[m].knopTekst }}>{knop}</button>
+      </div>
+    </div>
+  )
+}
+
 export default function Home() {
   const [lang] = useLang()
   const t = T[lang]
@@ -103,7 +222,16 @@ export default function Home() {
   const [melding, setMelding] = useState<string | null>(null)
   const [klap, setKlap] = useState<{ party: boolean; table: boolean }>({ party: false, table: false })
   const [wisVraag, setWisVraag] = useState<null | "party" | "table">(null)
+  // Welke kaart is aangetikt (alleen bij KAART_TIK = "selecteer").
+  const [gekozen, setGekozen] = useState<Mode | null>(null)
+  // Welk uitlegfilmpje schermvullend openstaat.
+  const [film, setFilm] = useState<Mode | null>(null)
+  const kaartTik = (m: Mode) => {
+    if (KAART_TIK === "direct" || gekozen === m) starten(m)
+    else setGekozen(m)
+  }
   const alleIds = useRef<{ party: string[]; table: string[] }>({ party: [], table: [] })
+  const groepenSectie = useRef<HTMLDivElement>(null)
   const gewisteIds = (app: "party" | "table"): Set<string> => {
     try { const raw = localStorage.getItem(`rundo_chooser_gewist_${app}`); if (raw) return new Set(JSON.parse(raw)) } catch { /* niets */ }
     return new Set()
@@ -220,46 +348,105 @@ export default function Home() {
   // marineblauwe tekst. Elke modus heeft één eigen tint (turquoise-blauw voor Resto,
   // goud voor Rundo) die terugkomt in de rand, de kaartkleur en de startbalk.
 
-  // Startbalk over de hele onderkant van de kaart. Dit is het énige wat doorklikt:
-  // de rest van de kaart reageert niet op een tik.
-  const startKnop = (m: Mode) => (
-    <button type="button" onClick={() => starten(m)} className="rundo-start"
-      style={{ position: "relative", zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-        width: "100%", height: 58, padding: "0 18px", border: "none", borderRadius: 0, flexShrink: 0,
-        fontSize: 18, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", letterSpacing: 0.2,
-        background: MODUS[m].knop, color: MODUS[m].knopTekst, transition: "filter .15s ease, transform .1s ease" }}>
-      {t.start}
-      <svg aria-hidden width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-    </button>
-  )
+  // Startknop: geen pijltje meer, wel het icoon van de modus en een actie als label
+  // ("Scan je rekening" / "Start je rondjes"). Pulseert zodra de kaart gekozen is.
+  const startKnop = (m: Mode) => {
+    const md = MODUS[m]
+    const pil = START_STIJL === "pil"
+    const puls = gekozen === m ? ` ${pil ? "rundo-puls-pil" : "rundo-puls-balk"} m-${m}` : ""
+    return (
+      <button type="button" onClick={(e) => { e.stopPropagation(); starten(m) }} className={`rundo-start${puls}`}
+        style={{ position: "relative", zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexShrink: 0,
+          fontSize: 19, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", letterSpacing: 0.1, border: "none",
+          background: md.knop, color: md.knopTekst, transition: "filter .15s ease, transform .1s ease",
+          ...(pil
+            ? { alignSelf: "flex-start", height: 52, padding: "0 24px", margin: "0 16px 16px", borderRadius: 999, boxShadow: `0 10px 22px -10px ${md.schaduw}` }
+            : { width: "100%", height: 62, padding: "0 18px", borderRadius: 0, overflow: "hidden" }) }}>
+        {knopInhoud(m)}
+      </button>
+    )
+  }
+  // Icoon + label van de startknop (ook gebruikt in de uitlegspeler).
+  const knopInhoud = (m: Mode) => (<>
+    <Icoon naam={m === "table" ? "scan" : "noteer"} size={21} />
+    {m === "table" ? t.startTable : t.startParty}
+  </>)
+  const openFilm = (e: React.MouseEvent, m: Mode) => { e.stopPropagation(); setFilm(m) }
 
   // Kaart: logo en ondertitel links, je foto rechts die naar links in de kaartkleur
   // vervaagt, startbalk onderaan. De kaarten rekken mee zodat het startscherm
-  // (beide modi + Groepsdeals) precies één gsm-scherm vult.
+  // precies één gsm-scherm vult.
   const modusKaart = (m: Mode) => {
     const resto = m === "table"
     const md = MODUS[m]
     const [regel1, ...vervolg] = resto ? t.tableSub : t.partySub
+    const actief = gekozen === m
+    const ander = gekozen !== null && !actief
     return (
-      <div style={{ ...S.kaart, background: md.kaart, border: `1.5px solid ${md.kleur}99`, boxShadow: `0 12px 26px -18px ${md.schaduw}` }}>
-        {/* Foto in twee lagen: over de hele kaart een zachte, vervaagde waas (zo schemert
-            de foto links heel licht door), en rechts de scherpe foto zelf, zodat wat erop
-            staat goed zichtbaar blijft. */}
+      <div role="button" tabIndex={0} aria-pressed={KAART_TIK === "selecteer" ? actief : undefined}
+        onClick={(e) => { e.stopPropagation(); kaartTik(m) }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); kaartTik(m) } }}
+        className={KAART_TIK === "direct" ? "rundo-kaart rundo-kaart-direct" : "rundo-kaart"}
+        style={{ ...S.kaart, background: md.kaart, cursor: "pointer",
+          border: actief ? `2.5px solid ${md.kleur}` : `1.5px solid ${md.kleur}99`,
+          boxShadow: actief ? `0 18px 34px -14px ${md.schaduw}` : `0 12px 26px -18px ${md.schaduw}`,
+          // Zacht dimmen: de andere kaart blijft goed leesbaar, ze wijkt alleen wat terug.
+          opacity: ander ? 0.8 : 1, filter: ander ? "saturate(0.75)" : undefined,
+          transform: actief ? "scale(1.012)" : undefined,
+          transition: "opacity .25s ease, filter .25s ease, transform .25s ease, box-shadow .25s ease, border-color .25s ease" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={resto ? "/table-image.png" : "/party-image.png"} alt="" style={S.cardPhotoWaas} />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={resto ? "/table-image.png" : "/party-image.png"} alt="" style={S.cardPhoto} />
+        <img src={resto ? "/table-image.png" : "/party-image.png"} alt=""
+          style={{ ...S.cardPhoto, transition: "opacity .35s ease", opacity: VIDEO_STIJL === "bij-kiezen" && actief ? 0 : 1 }} />
+        {/* Variant "bij-kiezen": de uitleg speelt stil waar de foto stond. Pas
+            gerenderd (en dus geladen) als je de kaart kiest. */}
+        {VIDEO_STIJL === "bij-kiezen" && actief && (
+          <video src={FILM[m].klein} poster={FILM[m].poster} autoPlay muted loop playsInline preload="auto" aria-hidden
+            style={{ ...S.cardPhoto, width: "62%", objectPosition: "center 50%", animation: "rundoIn .35s ease" }} />
+        )}
         <div style={{ position: "absolute", inset: 0, zIndex: 1,
           background: `linear-gradient(90deg, rgba(${md.kaartRgb},0.86) 0%, rgba(${md.kaartRgb},0.84) 30%, rgba(${md.kaartRgb},0.6) 46%, rgba(${md.kaartRgb},0.15) 66%, rgba(${md.kaartRgb},0) 82%)` }} />
-        <div style={{ position: "relative", zIndex: 2, flex: 1, padding: "16px 16px 16px" }}>
+        {VIDEO_STIJL === "bij-kiezen" && (actief ? (
+          <button type="button" onClick={(e) => openFilm(e, m)}
+            style={{ position: "absolute", zIndex: 4, top: 10, right: 10, height: 34, padding: "0 12px", display: "flex", alignItems: "center", gap: 6,
+              borderRadius: 999, border: "none", background: "rgba(14,26,46,0.85)", color: "#fff", fontSize: 12.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>
+            <svg aria-hidden width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+            {t.bigVideo}
+          </button>
+        ) : (
+          <span aria-hidden style={{ position: "absolute", zIndex: 3, top: 10, right: 10, display: "flex", alignItems: "center", gap: 5,
+            background: "rgba(255,255,255,0.92)", border: `1px solid ${md.kleur}`, borderRadius: 999, padding: "4px 10px 4px 8px",
+            fontSize: 11.5, fontWeight: 800, color: K.tekst }}><PlayIcoon size={9} />{t.tapHint}</span>
+        ))}
+        {/* Variant "mini": klein gsm-venstertje dat stil in een lus speelt. */}
+        {VIDEO_STIJL === "mini" && (
+          <button type="button" onClick={(e) => openFilm(e, m)} aria-label={t.howWorks}
+            style={{ position: "absolute", zIndex: 3, right: 14, top: 14, bottom: 76, aspectRatio: "9 / 16", padding: 0, borderRadius: 12, overflow: "hidden",
+              border: "2.5px solid #fff", background: "#000", cursor: "pointer", transform: "rotate(3deg)", boxShadow: "0 10px 22px -10px rgba(14,26,46,0.6)" }}>
+            <video src={FILM[m].klein} poster={FILM[m].poster} autoPlay muted loop playsInline preload="metadata" aria-hidden
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <span style={{ position: "absolute", left: "50%", bottom: 6, transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4,
+              background: "rgba(14,26,46,0.82)", color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 999, padding: "3px 8px 3px 6px", whiteSpace: "nowrap" }}>
+              <PlayIcoon size={8} />{t.videoBadge} · 24 s</span>
+          </button>
+        )}
+        <div style={{ position: "relative", zIndex: 2, flex: 1, padding: "16px 16px 14px", maxWidth: VIDEO_STIJL === "uit" ? undefined : "68%" }}>
           <span style={{ display: "inline-block", filter: `drop-shadow(0 0 8px rgb(${md.kaartRgb})) drop-shadow(0 0 3px rgb(${md.kaartRgb}))` }}><RundoLogo size={46} resto={resto} opDonker={false} /></span>
-          {/* Ondertitel: de actie vet, het vervolg lichter eronder over korte regels links. Een
-              zachte gloed in de kaartkleur houdt logo en tekst leesbaar waar ze over de
-              foto lopen. */}
           <div style={{ ...S.logoSub, marginTop: 6, textShadow: `0 0 10px rgb(${md.kaartRgb}), 0 0 18px rgb(${md.kaartRgb}), 0 0 4px rgb(${md.kaartRgb})` }}>
             <span style={{ display: "block", color: K.tekst, fontWeight: 800 }}>{regel1}</span>
             {vervolg.map((regel, i) => <span key={i} style={{ display: "block" }}>{regel}</span>)}
           </div>
+          {/* Variant "knop": klein wit knopje onder de ondertitel. */}
+          {VIDEO_STIJL === "knop" && (
+            <button type="button" onClick={(e) => openFilm(e, m)}
+              style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 7, height: 38, padding: "0 13px 0 5px", whiteSpace: "nowrap",
+                borderRadius: 999, background: "#fff", border: `1.5px solid ${md.kleur}`, color: K.tekst, fontSize: 13.5, fontWeight: 800,
+                fontFamily: "inherit", cursor: "pointer", boxShadow: "0 4px 10px -8px rgba(14,26,46,0.5)" }}>
+              <span style={{ width: 28, height: 28, borderRadius: "50%", background: md.knop, color: md.knopTekst, display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: 2 }}><PlayIcoon /></span>
+              {t.howWorks} <span style={{ fontWeight: 700, color: K.zacht }}>24 s</span>
+            </button>
+          )}
         </div>
         {startKnop(m)}
       </div>
@@ -272,20 +459,62 @@ export default function Home() {
       border: `1px solid ${vol ? DEALS.kleur : K.lijn}` }}>{tekst}</span>
   )
 
-  // Groepenlijst: kop per app met het eigen logo, rijen in dezelfde witte stijl.
-  const lijstKop = (app: "party" | "table", aantal: number) => (
-    <div onClick={() => { setKlap((k) => ({ ...k, [app]: !k[app] })); setWisVraag(null) }} style={{ ...S.rij, padding: "10px 12px" }}>
-      <RundoLogo size={22} resto={app === "table"} opDonker={false} />
-      <span style={{ fontSize: 11, fontWeight: 800, color: K.zacht, background: K.vlak, borderRadius: 8, padding: "2px 8px" }}>{aantal}</span>
-      <span style={{ marginLeft: "auto", color: K.zacht, fontWeight: 800 }}>{klap[app] ? "▾" : "▸"}</span>
-    </div>
-  )
+  // ─── Opgeslagen groepen ───────────────────────────────────────────────────
+  // Kop: een volle, tikbare balk (min. 50 px hoog) met tellers "x open · y afgesloten"
+  // en een duidelijke tonen/verbergen-knop. Ingeklapt bij het openen van de pagina.
+  const lijstKop = (app: Mode, lijst: MiniGroep[], perKaart: boolean) => {
+    const open = lijst.filter((g) => !g.af).length
+    const af = lijst.length - open
+    const isOpen = klap[app]
+    const tint = MODUS[app].kleur
+    return (
+      <button type="button" aria-expanded={isOpen}
+        onClick={() => { setKlap((k) => ({ ...k, [app]: !k[app] })); setWisVraag(null) }}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, minHeight: 52, padding: "9px 12px",
+          background: "#FFFFFF", border: `1.5px solid ${isOpen ? tint : K.lijn}`, borderRadius: 14, cursor: "pointer",
+          fontFamily: "inherit", textAlign: "left", color: K.tekst, boxShadow: "0 4px 12px -10px rgba(14,26,46,0.4)" }}>
+        {perKaart
+          ? <span style={{ ...S.icoonVak, width: 34, height: 34, borderRadius: 10, background: MODUS[app].kaart, border: `1px solid ${tint}66` }}><Icoon naam="groep" size={18} /></span>
+          : <RundoLogo size={22} resto={app === "table"} opDonker={false} />}
+        <span style={{ flex: 1, minWidth: 0 }}>
+          {perKaart && <span style={{ display: "block", fontSize: 14.5, fontWeight: 800 }}>{t.yourGroups}</span>}
+          <span style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: perKaart ? 3 : 0 }}>
+            {open > 0 && <span style={{ ...S.chipKlein, background: K.goudZacht, color: K.goudDiep }}>{t.countOpen(open)}</span>}
+            {af > 0 && <span style={{ ...S.chipKlein, background: "#E8F3EC", color: "#2F7A4A" }}>{t.countClosed(af)}</span>}
+          </span>
+        </span>
+        <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: K.zacht }}>{isOpen ? t.hideWord : t.showWord}</span>
+        <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={K.zacht} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+          style={{ flexShrink: 0, transition: "transform .2s ease", transform: isOpen ? "rotate(180deg)" : "none" }}><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+    )
+  }
   const statusChips = (g: MiniGroep) => (<>
     {g.gast && <span style={{ ...S.chipKlein, background: K.vlak, color: K.zacht }}>{t.guestChip}</span>}
     {!g.af && <span style={{ ...S.chipKlein, background: K.goudZacht, color: K.goudDiep }}>{t.openChip}</span>}
     {g.af && <span style={{ ...S.chipKlein, background: "#E8F3EC", color: "#2F7A4A" }}>{t.closedChip}</span>}
   </>)
-  const wisBlok = (app: "party" | "table") => wisVraag === app ? (
+  const openGroep = (g: MiniGroep) => {
+    if (g.app === "table" && !g.code) return
+    try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ }
+    router.push(g.app === "party" ? `/party?g=${g.id}&via=kiezer` : `/table?code=${g.code}&via=kiezer`)
+  }
+  const groepRij = (g: MiniGroep) => (
+    <div key={g.id} onClick={() => openGroep(g)}
+      style={{ ...S.rij, borderColor: g.pin ? K.goud : K.lijn, opacity: g.af && !g.pin ? 0.6 : 1 }}>
+      <span style={{ ...S.icoonVak, width: 32, height: 32, borderRadius: 10 }}>
+        <Icoon naam={g.app === "table" ? "scan" : g.settle ? "deel" : "noteer"} size={17} />
+      </span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={S.rijNaam}>{g.name || (g.app === "table" ? "Rundo Resto" : "Rundo")}</span>
+        {g.app === "party" && <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: K.zacht }}>{g.settle ? t.modeQr : t.modeZelf}</span>}
+      </span>
+      {statusChips(g)}
+      {pinKnop(g)}
+      <span style={{ flexShrink: 0, color: K.zacht, fontWeight: 800 }}>›</span>
+    </div>
+  )
+  const wisBlok = (app: Mode) => wisVraag === app ? (
     <div style={{ background: "#FDEEEC", border: "1px solid #F2C4BE", borderRadius: 12, padding: "10px 12px", margin: "2px 0 10px" }}>
       <div style={{ fontSize: 13, fontWeight: 800, color: "#A23B2F", marginBottom: 6 }}>{t.wipeTitle(alleIds.current[app].length, app === "party" ? "Party" : "Table")}</div>
       <div style={{ fontSize: 11.5, color: "#8A5A54", lineHeight: 1.45, marginBottom: 8 }}>{t.wipeNote}</div>
@@ -299,24 +528,39 @@ export default function Home() {
       <span onClick={() => setWisVraag(app)} style={{ fontSize: 11.5, fontWeight: 800, color: "#B85247", cursor: "pointer" }}>{t.wipeAll}</span>
     </div>
   )
+  // Eén blok per app: kop + (uitgeklapt) de rijen en de wis-link.
+  const groepenBlok = (app: Mode, perKaart: boolean) => {
+    const lijst = app === "party" ? groepen : tafels
+    if (lijst.length === 0) return null
+    return (
+      <div style={{ flexShrink: 0, marginTop: perKaart ? 8 : 0, marginBottom: perKaart ? 0 : 10 }}>
+        {lijstKop(app, lijst, perKaart)}
+        {klap[app] && <div style={{ marginTop: 6 }}>{lijst.map(groepRij)}{wisBlok(app)}</div>}
+      </div>
+    )
+  }
+
+  const perKaart = GROEPEN_LAYOUT === "per-kaart"
+  const aantalGroepen = groepen.length + tafels.length
 
   return (
-    <div style={S.page}>
+    // Tik naast de kaarten = keuze ongedaan maken.
+    <div style={S.page} onClick={() => setGekozen(null)}>
       <div style={{ maxWidth: 400, margin: "0 auto" }}>
-        {/* Eerste scherm: kop, beide modi en Groepsdeals vullen samen precies de
-            schermhoogte. Je groepen (als je die hebt) volgen daaronder. */}
+        {/* Eerste scherm: kop en beide modi vullen samen de schermhoogte. */}
         <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column",
-          paddingTop: "max(16px, env(safe-area-inset-top))", paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 2px" }}>
-            <RundoLogo size={46} opDonker={false} />
-            <LanguageToggle />
+          paddingTop: "max(14px, env(safe-area-inset-top))", paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}>
+          {/* Kop zonder los logo (dat staat al op beide kaarten): tagline links,
+              taalkeuze rechts, groter zodat je hem op gsm makkelijk raakt. */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: TOON_TAGLINE ? "space-between" : "flex-end", gap: 12, padding: "0 2px", margin: TOON_TAGLINE ? "2px 0 12px" : "0 0 8px", flexShrink: 0 }}>
+            {TOON_TAGLINE && <p style={{ margin: 0, color: K.tekst, fontSize: 16.5, fontWeight: 800, lineHeight: 1.25, letterSpacing: -0.2 }}>{t.tagline}</p>}
+            <div className="rundo-taal"><LanguageToggle /></div>
           </div>
-          <p style={{ color: K.zacht, fontSize: 14.5, fontWeight: 600, margin: "4px 4px 14px" }}>{t.tagline}</p>
 
           {modusKaart("table")}
+          {perKaart && groepenBlok("table", true)}
 
-          {/* "of" tussen de twee modi: een duidelijk wit bolletje op een lijn, zodat je
-              ziet dat je hier kiest tussen twee dingen. */}
+          {/* "of" tussen de twee modi */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "8px 0", flexShrink: 0 }}>
             <span style={{ flex: 1, height: 1.5, background: "#D9D2C3" }} />
             <span style={{ fontSize: 15, fontWeight: 800, color: K.tekst, background: "#FFFFFF", border: "1.5px solid #D9D2C3",
@@ -325,70 +569,68 @@ export default function Home() {
           </div>
 
           {modusKaart("party")}
+          {perKaart && groepenBlok("party", true)}
 
-          {/* GROEPSDEALS — oogt als een coupon: groene stippelrand, een afscheurstrook
-              rechts met groepsicoon en "korting", twee uitsparingen op de scheurlijn.
-              Niet klikbaar en zonder knop: het werkt nog niet. */}
-          <div aria-disabled="true" style={{ position: "relative", display: "flex", flexShrink: 0, borderRadius: 16, marginTop: 12,
-            background: "#FFFFFF", border: `1.5px dashed ${DEALS.kleur}` }}>
-            <div style={{ flex: 1, minWidth: 0, padding: "14px 12px 14px 16px" }}>
-              <RundoDealsLogo size={32} label={t.dealsLabel} kleur={DEALS.kleur} opDonker={false} />
-              <span style={{ display: "flex", gap: 6, marginTop: 8 }}>{chip(t.dealsNew, true)}{chip(t.dealsSoon, false)}</span>
-              <div style={{ marginTop: 8, fontSize: 15, fontWeight: 600, color: K.zacht, lineHeight: 1.3 }}>{t.dealsSub}</div>
+          {/* GROEPSDEALS — voorlopig verborgen (TOON_DEALS bovenaan). Oogt als een
+              coupon: groene stippelrand, afscheurstrook rechts met groepsicoon. */}
+          {TOON_DEALS && (
+            <div aria-disabled="true" style={{ position: "relative", display: "flex", flexShrink: 0, borderRadius: 16, marginTop: 12,
+              background: "#FFFFFF", border: `1.5px dashed ${DEALS.kleur}` }}>
+              <div style={{ flex: 1, minWidth: 0, padding: "14px 12px 14px 16px" }}>
+                <RundoDealsLogo size={32} label={t.dealsLabel} kleur={DEALS.kleur} opDonker={false} />
+                <span style={{ display: "flex", gap: 6, marginTop: 8 }}>{chip(t.dealsNew, true)}{chip(t.dealsSoon, false)}</span>
+                <div style={{ marginTop: 8, fontSize: 15, fontWeight: 600, color: K.zacht, lineHeight: 1.3 }}>{t.dealsSub}</div>
+              </div>
+              <div style={{ position: "relative", width: 88, flexShrink: 0, borderLeft: `1.5px dashed ${DEALS.kleur}`, borderRadius: "0 15px 15px 0",
+                background: DEALS.zacht, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, color: DEALS.kleur }}>
+                <span style={{ position: "absolute", left: -9, top: -9, width: 16, height: 16, borderRadius: "50%", background: K.achtergrond, borderBottom: `1.5px dashed ${DEALS.kleur}` }} />
+                <span style={{ position: "absolute", left: -9, bottom: -9, width: 16, height: 16, borderRadius: "50%", background: K.achtergrond, borderTop: `1.5px dashed ${DEALS.kleur}` }} />
+                <Icoon naam="groep" size={40} dikte={1.6} />
+                <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: DEALS.diep }}>{t.dealsKorting}</span>
+              </div>
             </div>
-            <div style={{ position: "relative", width: 88, flexShrink: 0, borderLeft: `1.5px dashed ${DEALS.kleur}`, borderRadius: "0 15px 15px 0",
-              background: DEALS.zacht, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, color: DEALS.kleur }}>
-              <span style={{ position: "absolute", left: -9, top: -9, width: 16, height: 16, borderRadius: "50%", background: K.achtergrond, borderBottom: `1.5px dashed ${DEALS.kleur}` }} />
-              <span style={{ position: "absolute", left: -9, bottom: -9, width: 16, height: 16, borderRadius: "50%", background: K.achtergrond, borderTop: `1.5px dashed ${DEALS.kleur}` }} />
-              <Icoon naam="groep" size={40} dikte={1.6} />
-              <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: DEALS.diep }}>{t.dealsKorting}</span>
-            </div>
-          </div>
+          )}
+
+          {/* Variant "onderaan": een duidelijke knop die naar je groepen scrolt, want
+              die staan net onder de vouw. */}
+          {!perKaart && aantalGroepen > 0 && (
+            <button type="button" onClick={() => groepenSectie.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              style={{ alignSelf: "center", marginTop: 12, display: "flex", alignItems: "center", gap: 8, minHeight: 44, padding: "0 18px",
+                background: "#FFFFFF", border: `1.5px solid ${K.lijn}`, borderRadius: 999, fontFamily: "inherit",
+                fontSize: 14, fontWeight: 800, color: K.tekst, cursor: "pointer", boxShadow: "0 4px 12px -8px rgba(14,26,46,0.4)" }}>
+              {t.toGroups(aantalGroepen)}
+              <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+          )}
 
           <div style={{ textAlign: "center", padding: "12px 0 4px", fontSize: 12, color: K.zacht, fontWeight: 600 }}>{t.footer}</div>
         </div>
 
-        {(groepen.length > 0 || tafels.length > 0) && (
-          <div style={{ marginTop: 10, paddingBottom: 28 }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: K.zacht, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 9 }}>{t.yourGroups}</div>
-            {melding && (
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: K.goudDiep, background: K.goudZacht, border: `1px solid ${K.goud}`, borderRadius: 10, padding: "8px 11px", marginBottom: 8 }}>{melding}</div>
-            )}
-            {groepen.length > 0 && (<>
-              {lijstKop("party", groepen.length)}
-              {klap.party && groepen.map((g) => (
-                <div key={g.id} onClick={() => { try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ } router.push(`/party?g=${g.id}&via=kiezer`) }}
-                  style={{ ...S.rij, borderColor: g.pin ? K.goud : K.lijn, opacity: g.af && !g.pin ? 0.6 : 1 }}>
-                  <span style={{ ...S.icoonVak, width: 32, height: 32, borderRadius: 10 }}><Icoon naam={g.settle ? "deel" : "noteer"} size={17} /></span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={S.rijNaam}>{g.name || "Rundo"}</span>
-                    <span style={{ display: "block", fontSize: 11, fontWeight: 700, color: K.zacht }}>{g.settle ? t.modeQr : t.modeZelf}</span>
-                  </span>
-                  {statusChips(g)}
-                  {pinKnop(g)}
-                  <span style={{ flexShrink: 0, color: K.zacht, fontWeight: 800 }}>›</span>
-                </div>
-              ))}
-              {klap.party && wisBlok("party")}
-            </>)}
-            {tafels.length > 0 && (<>
-              {lijstKop("table", tafels.length)}
-              {klap.table && tafels.map((g) => (
-                <div key={g.id} onClick={() => { if (!g.code) return; try { localStorage.setItem("rundo_via_kiezer", "1") } catch { /* niets */ } router.push(`/table?code=${g.code}&via=kiezer`) }}
-                  style={{ ...S.rij, borderColor: g.pin ? K.goud : K.lijn, opacity: g.af && !g.pin ? 0.6 : 1 }}>
-                  <span style={{ ...S.icoonVak, width: 32, height: 32, borderRadius: 10 }}><Icoon naam="scan" size={17} /></span>
-                  <span style={{ flex: 1, minWidth: 0 }}><span style={S.rijNaam}>{g.name || "Rundo Resto"}</span></span>
-                  {statusChips(g)}
-                  {pinKnop(g)}
-                  <span style={{ flexShrink: 0, color: K.zacht, fontWeight: 800 }}>›</span>
-                </div>
-              ))}
-              {klap.table && wisBlok("table")}
-            </>)}
+        {!perKaart && aantalGroepen > 0 && (
+          <div ref={groepenSectie} style={{ paddingTop: 14, paddingBottom: 28, scrollMarginTop: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: K.tekst, letterSpacing: "0.08em", textTransform: "uppercase" }}>{t.yourGroups}</span>
+              <span style={{ flex: 1, height: 1.5, background: "#D9D2C3" }} />
+            </div>
+            {groepenBlok("table", false)}
+            {groepenBlok("party", false)}
           </div>
         )}
-
       </div>
+
+      {film && (
+        <UitlegSpeler m={film} knop={knopInhoud(film)} t={t}
+          onSluit={() => setFilm(null)}
+          onStart={() => { const m = film; setFilm(null); starten(m) }} />
+      )}
+
+      {/* Meldingen (bv. max. bewaarde groepen) als toast onderaan, zodat ze in beide
+          varianten zichtbaar zijn. */}
+      {melding && (
+        <div role="status" style={{ position: "fixed", left: 16, right: 16, bottom: "max(16px, env(safe-area-inset-bottom))", zIndex: 20,
+          maxWidth: 368, margin: "0 auto", fontSize: 13, fontWeight: 700, color: K.goudDiep, background: K.goudZacht,
+          border: `1px solid ${K.goud}`, borderRadius: 12, padding: "10px 12px", boxShadow: "0 10px 24px -12px rgba(14,26,46,0.45)" }}>{melding}</div>
+      )}
 
       <style>{`
         * { box-sizing: border-box; }
@@ -396,6 +638,26 @@ export default function Home() {
         .rundo-start:active { filter: brightness(0.92); transform: scale(0.99); }
         .rundo-start:focus-visible { outline: 3px solid ${K.tekst}; outline-offset: -3px; }
         @media (hover: hover) { .rundo-start:hover { filter: brightness(1.06); } }
+        .rundo-kaart { -webkit-tap-highlight-color: transparent; outline: none; }
+        .rundo-kaart:focus-visible { outline: 3px solid ${K.tekst}; outline-offset: 2px; }
+        .rundo-kaart-direct:active { transform: scale(0.985); }
+        /* Balk: zachte ademhaling + een glansstreep die over de knop loopt. */
+        .rundo-puls-balk { animation: rundoAdem 1.5s ease-in-out infinite; }
+        .rundo-puls-balk::after { content: ""; position: absolute; top: 0; bottom: 0; left: -45%; width: 40%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+          animation: rundoGlans 1.8s ease-in-out infinite; pointer-events: none; }
+        @keyframes rundoAdem { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
+        @keyframes rundoGlans { 0% { left: -45%; } 60%, 100% { left: 110%; } }
+        /* Pil: een ring die naar buiten uitdijt in de kleur van de modus. */
+        .rundo-puls-pil.m-table { animation: rundoRingT 1.5s ease-out infinite; }
+        .rundo-puls-pil.m-party { animation: rundoRingP 1.5s ease-out infinite; }
+        @keyframes rundoRingT { 0% { box-shadow: 0 0 0 0 rgba(19,140,154,0.55); } 100% { box-shadow: 0 0 0 14px rgba(19,140,154,0); } }
+        @keyframes rundoRingP { 0% { box-shadow: 0 0 0 0 rgba(245,179,1,0.6); } 100% { box-shadow: 0 0 0 14px rgba(245,179,1,0); } }
+        @keyframes rundoIn { from { opacity: 0; } to { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) { .rundo-puls-balk, .rundo-puls-balk::after, .rundo-puls-pil { animation: none !important; } }
+        /* Taalkeuze groter: de hele toggle (ook het tikvlak) schaalt mee. */
+        .rundo-taal { flex-shrink: 0; display: flex; align-items: center; min-height: 48px; padding-left: 34px; }
+        .rundo-taal > * { transform: scale(1.45); transform-origin: right center; }
       `}</style>
     </div>
   )
