@@ -707,6 +707,8 @@ const STRINGS = {
     copyWord: "Kopieer",
     copiedWord: "Gekopieerd",
     copyLinkBtn: "Kopieer link",
+    noScanRow: "Iemand toevoegen die niet scant",
+    orWordQr: "of",
     linkCopiedToast: "Link gekopieerd. Plak hem in WhatsApp, sms of mail.",
     pasteAndShare: "Plak en deel in:",
     shareStepSub: "Wie scant komt meteen bij deze rekening en duidt zelf aan wat hij nam.",
@@ -1413,6 +1415,8 @@ const STRINGS = {
     copyWord: "Copier",
     copiedWord: "Copié",
     copyLinkBtn: "Copier le lien",
+    noScanRow: "Ajouter quelqu'un qui ne scanne pas",
+    orWordQr: "ou",
     linkCopiedToast: "Lien copié. Colle-le dans WhatsApp, un SMS ou un mail.",
     pasteAndShare: "Colle et partage dans :",
     shareStepSub: "Qui scanne arrive directement sur cette addition et coche lui-même ce qu'il a pris.",
@@ -5528,47 +5532,37 @@ export default function RundoTable() {
               }
               return (
                 <>
-                  <div style={{ textAlign: "center", marginBottom: 12 }}>
-                    {/* Pas pulseren zodra je naam er staat: vóór dat moment stuurt de app je
-                        eerst naar het naamveld, en dan zou dit kader je de verkeerde kant op
-                        wijzen. Daarna is scannen wél wat er moet gebeuren. */}
-                    <div className={adminNamed ? "rundo-qr-puls" : undefined}
-                      style={{ display: "inline-block", padding: 14, background: "#f4fbfc", border: "2px solid rgba(20,153,176,0.35)", borderRadius: 16 }}>
-                      <div style={{ background: "#fff", padding: 8, borderRadius: 10, display: "inline-block" }}>
-                        <QRCodeSVG value={link} size={150} bgColor="#ffffff" fgColor="#123a42" />
-                      </div>
-                      <div style={{ fontSize: 15.5, fontWeight: 800, color: "#0f7488", marginTop: 10 }}>👆 {L.scanThis}</div>
+                  {/* QR, link en "iemand toevoegen" vormen één blok. De QR is de hoofdweg en het
+                      enige wat opvalt; onder een klein "of" volgen de twee andere manieren als
+                      stille lijstrijen (icoon, tekst, pijltje), zonder kader of vulkleur.
+                      Pulseren pas zodra je naam er staat: vóór dat moment stuurt de app je
+                      eerst naar het naamveld. */}
+                  <div className={adminNamed ? "rundo-qr-puls" : undefined}
+                    style={{ display: "block", maxWidth: 340, margin: "0 auto 14px", padding: "16px 12px 6px", background: "#f4fbfc", border: "2px solid rgba(20,153,176,0.35)", borderRadius: 18, textAlign: "center" }}>
+                    <div style={{ background: "#fff", padding: 8, borderRadius: 10, display: "inline-block" }}>
+                      <QRCodeSVG value={link} size={170} bgColor="#ffffff" fgColor="#123a42" />
                     </div>
-                  </div>
-
-                  {/* De uitzondering hoort klein en opzij: de meeste gasten scannen. Wie
-                      dat niet kan of niet doet, zet jij er zelf bij — met dezelfde stappen
-                      als een gast (met hoeveel, dan de naam). Waarom hij niet scant hoeft
-                      nergens vermeld te worden. */}
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -2, marginBottom: 12 }}>
-                    <button onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        if (!requireName()) return
-                        setGuestTarget(null); setGuestSeats(1); setGuestNames([""]); setShowGuestModal(true)
-                      }}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 6, minHeight: 44, cursor: "pointer",
-                        background: "#fff", border: "1.5px solid rgba(20,153,176,0.45)", borderRadius: 10,
-                        padding: "10px 13px", fontSize: 14.5, fontWeight: 800, color: "#0b6473", whiteSpace: "nowrap" }}>
-                      {L.noScanBtn}
-                    </button>
-                  </div>
-
-                  {/* Meteen onder "Iemand die niet scant?": ook een manier om iemand binnen
-                      te krijgen. Geen adres meer in beeld (dat zegt niemand iets), alleen de
-                      knop. Na het kopiëren wordt de knop groen en komt er een korte melding. */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: "#7d949a" }}>{L.orSendLinkShort}</span>
-                    <button onMouseDown={(e) => e.preventDefault()} onClick={() => { if (requireName()) void kopieer() }}
-                      style={{ flexShrink: 0, cursor: "pointer", minHeight: 44, borderRadius: 10, padding: "0 13px", fontSize: 14.5, fontWeight: 800, whiteSpace: "nowrap", fontFamily: "inherit",
-                        border: linkCopied ? "1.5px solid rgba(39,174,96,0.45)" : "1.5px solid rgba(20,153,176,0.45)",
-                        background: linkCopied ? "rgba(39,174,96,0.12)" : "#fff", color: linkCopied ? "#1f8a4c" : "#0b6473" }}>
-                      {linkCopied ? `✓ ${L.copiedWord}` : L.copyLinkBtn}
-                    </button>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: "#0f7488", marginTop: 10 }}>👆 {L.scanThis}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 4px 2px", fontSize: 11.5, fontWeight: 800, color: "#8aa3a6", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                      <span style={{ flex: 1, height: 1, background: "rgba(18,58,66,0.12)" }} />{L.orWordQr}<span style={{ flex: 1, height: 1, background: "rgba(18,58,66,0.12)" }} />
+                    </div>
+                    {([
+                      { key: "link", onClick: () => { if (requireName()) void kopieer() },
+                        icoon: <svg aria-hidden width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>,
+                        tekst: linkCopied ? `✓ ${L.copiedWord}` : L.copyLinkBtn, ok: linkCopied },
+                      { key: "zonder", onClick: () => { if (!requireName()) return; setGuestTarget(null); setGuestSeats(1); setGuestNames([""]); setShowGuestModal(true) },
+                        icoon: <svg aria-hidden width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><circle cx="10" cy="8" r="3.4" /><path d="M4 20c0-3.4 2.7-5.8 6-5.8" /><path d="M18 13v7M14.5 16.5h7" /></svg>,
+                        tekst: L.noScanRow, ok: false },
+                    ]).map((r, i) => (
+                      <button key={r.key} onMouseDown={(e) => e.preventDefault()} onClick={r.onClick}
+                        style={{ width: "100%", minHeight: 44, display: "flex", alignItems: "center", gap: 9, padding: "0 6px", textAlign: "left", cursor: "pointer",
+                          background: "none", border: "none", borderTop: i > 0 ? "1px solid rgba(18,58,66,0.08)" : "none", fontFamily: "inherit",
+                          fontSize: 14.5, fontWeight: 700, color: r.ok ? "#1f8a4c" : "#4a6e73" }}>
+                        <span style={{ flexShrink: 0, display: "inline-flex", opacity: 0.85 }}>{r.icoon}</span>
+                        <span style={{ flex: 1, minWidth: 0 }}>{r.tekst}</span>
+                        <span aria-hidden style={{ flexShrink: 0, color: "#a9bcbf", fontSize: 19, fontWeight: 700 }}>›</span>
+                      </button>
+                    ))}
                   </div>
 
                   {/* De stand hoort in dezelfde kaart als de QR: je laat de code zien en ziet
