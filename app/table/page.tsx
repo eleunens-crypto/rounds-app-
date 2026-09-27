@@ -766,6 +766,7 @@ const STRINGS = {
     pinchHint: "Knijp met twee vingers om te zoomen · dubbeltik om te wisselen",
     groupWord: "Groep",
     whoJoins: "Wie doet mee?",
+    tapOwnName: "Tik op je eigen naam om hem aan te passen.",
     freeSeatPill: "vrije plaats",
     removeName: (n: string) => `${n} verwijderen`,
     nStillFree: (n: number) => `${n} nog vrij`,
@@ -1469,6 +1470,7 @@ const STRINGS = {
     pinchHint: "Pince à deux doigts pour zoomer · double-tape pour basculer",
     groupWord: "Groupe",
     whoJoins: "Qui participe ?",
+    tapOwnName: "Touche ton propre nom pour le modifier.",
     freeSeatPill: "place libre",
     removeName: (n: string) => `Retirer ${n}`,
     nStillFree: (n: number) => `${n} encore libre${n !== 1 ? "s" : ""}`,
@@ -4265,7 +4267,8 @@ export default function RundoTable() {
           const zit = Math.max(1, q.seats ?? 1)
           const gescand = q.self_joined && !ikZelf
           return (
-            <span key={q.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: ikZelf || !isAdmin ? "0 12px 0 5px" : "0 4px 0 5px",
+            <span key={q.id} onClick={ikZelf ? openZelfPopup : undefined} role={ikZelf ? "button" : undefined} title={ikZelf ? L.editMe : undefined}
+              style={{ cursor: ikZelf ? "pointer" : "default", display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: ikZelf || !isAdmin ? "0 12px 0 5px" : "0 4px 0 5px",
               borderRadius: 999, maxWidth: "100%", fontSize: 14, fontWeight: 800, color: "#123a42",
               background: ikZelf ? "rgba(20,153,176,0.10)" : "#f2f6f7", border: `1px solid ${ikZelf ? "rgba(20,153,176,0.3)" : "#dde6e8"}` }}>
               <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12.5, fontWeight: 800,
@@ -4275,6 +4278,7 @@ export default function RundoTable() {
               <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {q.name}{zit > 1 ? ` · ${zit}p.` : ""}{ikZelf ? ` (${L.adminWord})` : ""}
               </span>
+              {ikZelf && <span style={{ flexShrink: 0, display: "inline-flex" }}><PotloodIcon size={15} /></span>}
               {gescand && <span style={{ flexShrink: 0, display: "inline-flex", color: "#1f8a4c" }} title={L.scannedBadge}><GsmVinkIcon /></span>}
               {isAdmin && !ikZelf && x(L.removeName(q.name), () => { void removeSpot(q.id) })}
             </span>
@@ -5553,15 +5557,9 @@ export default function RundoTable() {
                       de teller oplopen zonder ergens anders te kijken. De beheerder heeft hier
                       geen eigen regel meer nodig — hij staat gewoon vooraan in de lijst. */}
                   {personsSet && adminNamed && (() => {
-            const zitVan = (q: Participant) => Math.max(1, q.seats ?? 1)
             const vrijeZit = vrijeZitplaatsen
-            const scanZit = participants.filter((q) => q.self_joined && q.id !== meId).reduce((a, q) => a + zitVan(q), 0)
             const totaalZit = totalPersons
-            const gevuldZit = Math.max(0, totaalZit - vrijeZit)
-            const jouwZit = Math.max(0, gevuldZit - scanZit)
             const vol = vrijeZit === 0
-            const bezet = participants.filter((q) => !(isFreeSpot(q) && !q.self_joined))
-            const vrijeRijen = participants.filter((q) => isFreeSpot(q) && !q.self_joined)
             return (
               <div id="plaatsen-sectie" style={{ borderTop: vol ? "1px solid rgba(39,174,96,0.3)" : "1px solid rgba(18,58,66,0.08)", paddingTop: 13, scrollMarginTop: 12 }}>
                 {/* De groepsgrootte staat bovenaan met haar teller erbij: eerst weet je met
@@ -5583,132 +5581,13 @@ export default function RundoTable() {
                 </div>
 
                 {/* Wie gescand heeft of een plaats inneemt staat hier meteen met naam, en elke
-                    vrije plaats als gestippelde pil. Het rode kruisje vraagt altijd eerst. */}
+                    vrije plaats als gestippelde pil. Het rode kruisje vraagt altijd eerst.
+                    De balk, de uitleg per kleur en de lijst "Plaatsen tonen" zijn weg: de
+                    teller en de pillen zeggen samen hoe vol het is. Een plaats bijzetten
+                    doe je met de +, je eigen naam pas je aan door op je eigen pil te tikken. */}
                 <div style={{ marginTop: 12 }}>{deelnemerPillen()}</div>
+                <div style={{ fontSize: 12.5, color: "#8a9a9e", margin: "9px 2px 0" }}>{L.tapOwnName}</div>
 
-                <div>
-
-                  {/* Eén vakje per stoel zolang dat te tellen valt; aan een lange tafel wordt
-                      het één balk op verhouding, anders zie je enkel streepjes. */}
-                  {totaalZit > 0 && (
-                    <span style={{ display: "flex", gap: totaalZit <= 12 ? 5 : 0, marginTop: 10 }}>
-                      {totaalZit <= 12
-                        ? Array.from({ length: totaalZit }, (_, i) => (
-                            <span key={i} style={{ flex: 1, height: 12, borderRadius: 4, boxSizing: "border-box",
-                              ...(vol
-                                ? { background: "#1f8a4c" }
-                                : i < scanZit
-                                ? { background: "#1f8a4c" }
-                                : i < gevuldZit
-                                ? { background: "#0f7d90" }
-                                : { background: "#fff", border: "1.5px dashed rgba(18,58,66,0.3)" }) }} />
-                          ))
-                        : [
-                            { k: "scan", n: vol ? gevuldZit : scanZit, c: "#1f8a4c" },
-                            { k: "jij", n: vol ? 0 : jouwZit, c: "#0f7d90" },
-                            { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.12)" },
-                          ].filter((d) => d.n > 0).map((d, i, arr) => (
-                            <span key={d.k} style={{ flexGrow: d.n, height: 12, background: d.c,
-                              borderTopLeftRadius: i === 0 ? 4 : 0, borderBottomLeftRadius: i === 0 ? 4 : 0,
-                              borderTopRightRadius: i === arr.length - 1 ? 4 : 0, borderBottomRightRadius: i === arr.length - 1 ? 4 : 0 }} />
-                          ))}
-                    </span>
-                  )}
-
-                  <span style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", marginTop: 9, fontSize: 13.5, fontWeight: 700, color: "#44656b" }}>
-                    {([
-                      { k: "scan", n: scanZit, c: "#1f8a4c", t: L.seatsViaScan(scanZit) },
-                      { k: "jij", n: jouwZit, c: "#0f7d90", t: L.seatsByYou(jouwZit) },
-                      { k: "vrij", n: vrijeZit, c: "rgba(18,58,66,0.25)", t: L.nStillFree(vrijeZit) },
-                    ]).filter((d) => d.n > 0).map((d) => (
-                      <span key={d.k} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.c }} />{d.t}
-                      </span>
-                    ))}
-                  </span>
-                </div>
-
-                {/* Eén brede knop in plaats van een pijltje: op een telefoon is dat het
-                    verschil tussen "ik zie het niet" en "ik tik erop". */}
-                <button onClick={() => setShowNamesBlock((v) => !v)}
-                  style={{ width: "100%", marginTop: 12, minHeight: 44, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    cursor: "pointer", border: "1.5px solid rgba(20,153,176,0.45)", borderRadius: 11, background: "#fff",
-                    color: "#0b6473", fontSize: 14.5, fontWeight: 800, fontFamily: "inherit" }}>
-                  {showNamesBlock ? L.hideSeatsLong : L.showSeatsLong}
-                  <span style={{ fontSize: 15, lineHeight: 1 }}>{showNamesBlock ? "▴" : "▾"}</span>
-                </button>
-
-                {showNamesBlock && (
-                  <>
-                    <div style={{ marginTop: 14 }}>
-                      {bezet.map((q) => {
-                        const ikZelf = q.id === meId
-                        const zit = zitVan(q)
-                        return (
-                          <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 10, borderTop: "1px solid rgba(18,58,66,0.07)", padding: "10px 0" }}>
-                            <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800,
-                              ...(q.self_joined && !ikZelf ? { background: "rgba(39,174,96,0.16)", color: "#1f8a4c" } : { background: "rgba(20,153,176,0.16)", color: "#0b6473" }) }}>
-                              {(q.name || "?").trim().charAt(0).toUpperCase()}
-                            </span>
-                            <span style={{ flex: 1, minWidth: 0, fontSize: 16.5, fontWeight: 800, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {q.name}{zit > 1 ? ` · ${zit}p.` : ""}
-                              {ikZelf && <span style={{ ...S_BEHEERDER, fontSize: 15 }}> · {zit > 1 ? L.adminsWord : L.adminWord}</span>}
-                            </span>
-                            {q.self_joined && !ikZelf && (
-                              <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 14, padding: "4px 9px", whiteSpace: "nowrap" }}>
-                                <GsmVinkIcon /> {L.scannedBadge}
-                              </span>
-                            )}
-                            {/* Alleen je eigen naam pas je hier aan. Bij een ander zou jij een naam
-                                zetten die hij zelf al gaf of straks nog geeft, en dan staan er twee
-                                waarheden. Weghalen kan wel: een plaats te veel moet je kunnen
-                                rechtzetten. */}
-                            {ikZelf ? (
-                              <button onClick={openZelfPopup} aria-label={L.editMe} title={L.editMe}
-                                style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, border: "none", background: "rgba(20,153,176,0.14)", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                                <PotloodIcon />
-                              </button>
-                            ) : (
-                              <button onClick={() => void removeSpot(q.id)} aria-label={L.removeGuestBtn} title={L.removeGuestBtn}
-                                style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.08)", color: "#c0392b", fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* De uitleg staat één keer boven het raster: in elk vakje herhalen maakt
-                        van zes stoelen zes keer dezelfde zin. */}
-                    {vrijeRijen.length > 0 && (
-                      <>
-                        {/* Dit is de kop van het rijtje eronder, geen voetnoot: op 14px grijs
-                            las niemand hem. "Wacht op een QR-scan" stond er als grijze
-                            ondertitel onder en viel weg; nu staat het in dezelfde grootte
-                            achter de telling, op één regel. */}
-                        <div style={{ marginTop: 14, marginBottom: 8, fontSize: 17, fontWeight: 800, color: "#123a42", lineHeight: 1.35 }}>{L.stillFreeTitle(vrijeZit)}</div>
-                        <div style={{ display: "grid", gridTemplateColumns: vrijeRijen.length > 4 ? "1fr 1fr" : "1fr", gap: 7 }}>
-                          {vrijeRijen.map((q) => (
-                            <div key={q.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1.5px dashed rgba(18,58,66,0.28)", borderRadius: 12, padding: "10px", background: "#fbfcfd" }}>
-                              <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", border: "1.5px dashed rgba(18,58,66,0.25)", color: "#b3bac6", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800 }}>?</span>
-                              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: "#5b7378", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{L.freeSpotName}</span>
-                              <button onClick={() => void verwijderVrijePlaats(q.id)} aria-label={L.removeFreeSeat} title={L.removeFreeSeat}
-                                style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(224,107,94,0.4)", background: "rgba(224,107,94,0.08)", color: "#c0392b", fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    {/* Er komt iemand bij die je nog niet verwachtte: hier zet je een stoel
-                        bij zonder eerst naar de teller bovenaan te moeten. Het aantal
-                        personen gaat mee omhoog, net als bij die teller. */}
-                    <button onClick={() => void voegVrijePlaatsToe()}
-                      style={{ width: "100%", marginTop: vrijeRijen.length > 0 ? 10 : 14, minHeight: 44, cursor: "pointer",
-                        border: "1.5px dashed rgba(20,153,176,0.5)", borderRadius: 12, background: "rgba(20,153,176,0.05)",
-                        color: "#0b6473", fontSize: 15, fontWeight: 800, fontFamily: "inherit" }}>
-                      {L.addFreeSeat}
-                    </button>
-                  </>
-                )}
               </div>
             )
           })()}
