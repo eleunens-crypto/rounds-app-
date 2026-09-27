@@ -51,6 +51,9 @@ const FILM = {
   table: { klein: "/uitleg/resto-klein.mp4", groot: "/uitleg/resto-720.mp4", poster: "/uitleg/resto-poster.jpg", stappen: [1.5, 6.0, 10.9, 16.5], einde: 21.1 },
   party: { klein: "/uitleg/rundo-klein.mp4", groot: "/uitleg/rundo-720.mp4", poster: "/uitleg/rundo-poster.jpg", stappen: [1.6, 6.6, 11.1, 15.9, 20.5], einde: 25.9 },
 }
+// Franse versies staan in /public/uitleg/fr/ met dezelfde bestandsnamen en dezelfde
+// scènetijden, dus alleen het pad verschilt.
+const filmPad = (pad: string, lang: string) => lang === "fr" ? pad.replace("/uitleg/", "/uitleg/fr/") : pad
 
 const T = {
   nl: {
@@ -155,8 +158,8 @@ const PlayIcoon = ({ size = 11 }: { size?: number }) => (
 const PauzeIcoon = ({ size = 14 }: { size?: number }) => (
   <svg aria-hidden viewBox="0 0 24 24" width={size} height={size} style={{ display: "block" }}><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor" /></svg>
 )
-function UitlegSpeler({ m, knop, onStart, onSluit, t }: {
-  m: Mode; knop: React.ReactNode; onStart: () => void; onSluit: () => void
+function UitlegSpeler({ m, lang, knop, onStart, onSluit, t }: {
+  m: Mode; lang: string; knop: React.ReactNode; onStart: () => void; onSluit: () => void
   t: { replay: string; close: string; pause: string; play: string; prevStep: string; nextStep: string; seek: string; playerTip: string }
 }) {
   const ref = useRef<HTMLVideoElement>(null)
@@ -208,7 +211,7 @@ function UitlegSpeler({ m, knop, onStart, onSluit, t }: {
       style={{ position: "fixed", inset: 0, zIndex: 50, background: "#0A1416", display: "flex", flexDirection: "column",
         paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", animation: "rundoIn .2s ease" }}>
       <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
-        <video ref={ref} src={FILM[m].groot} poster={FILM[m].poster} autoPlay muted playsInline preload="auto"
+        <video ref={ref} src={filmPad(FILM[m].groot, lang)} poster={filmPad(FILM[m].poster, lang)} autoPlay muted playsInline preload="auto"
           onLoadedMetadata={(e) => setDuur(e.currentTarget.duration || 0)}
           onTimeUpdate={(e) => { if (!slepen.current) setTijd(e.currentTarget.currentTime) }}
           onPlay={() => setPauze(false)} onPause={(e) => setPauze(!e.currentTarget.ended)}
@@ -458,7 +461,7 @@ export default function Home() {
         {/* Variant "bij-kiezen": de uitleg speelt stil waar de foto stond. Pas
             gerenderd (en dus geladen) als je de kaart kiest. */}
         {VIDEO_STIJL === "bij-kiezen" && actief && (
-          <video src={FILM[m].klein} poster={FILM[m].poster} autoPlay muted loop playsInline preload="auto" aria-hidden
+          <video src={filmPad(FILM[m].klein, lang)} poster={filmPad(FILM[m].poster, lang)} autoPlay muted loop playsInline preload="auto" aria-hidden
             style={{ ...S.cardPhoto, width: "62%", objectPosition: "center 50%", animation: "rundoIn .35s ease" }} />
         )}
         <div style={{ position: "absolute", inset: 0, zIndex: 1,
@@ -480,7 +483,7 @@ export default function Home() {
           <button type="button" onClick={(e) => openFilm(e, m)} aria-label={t.howWorks}
             style={{ position: "absolute", zIndex: 3, right: 14, top: 14, bottom: 76, aspectRatio: "9 / 16", padding: 0, borderRadius: 12, overflow: "hidden",
               border: "2.5px solid #fff", background: "#000", cursor: "pointer", transform: "rotate(3deg)", boxShadow: "0 10px 22px -10px rgba(14,26,46,0.6)" }}>
-            <video src={FILM[m].klein} poster={FILM[m].poster} autoPlay muted loop playsInline preload="metadata" aria-hidden
+            <video src={filmPad(FILM[m].klein, lang)} poster={filmPad(FILM[m].poster, lang)} autoPlay muted loop playsInline preload="metadata" aria-hidden
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             <span style={{ position: "absolute", left: "50%", bottom: 6, transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 4,
               background: "rgba(14,26,46,0.82)", color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 999, padding: "3px 8px 3px 6px", whiteSpace: "nowrap" }}>
@@ -709,7 +712,7 @@ export default function Home() {
       </div>
 
       {film && (
-        <UitlegSpeler m={film} knop={knopInhoud(film)} t={t}
+        <UitlegSpeler m={film} lang={lang} knop={knopInhoud(film)} t={t}
           onSluit={() => setFilm(null)}
           onStart={() => { const m = film; setFilm(null); starten(m) }} />
       )}
