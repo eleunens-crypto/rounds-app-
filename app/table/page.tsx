@@ -1256,7 +1256,6 @@ const STRINGS = {
     youJoinPrefix: "Je sluit aan bij",
     sharedByName: (naam: string) => `gedeeld door ${naam}`,
     restoTagline: "Scan de rekeningen en verdeel in groep",
-    tableWord: "Tafel",
     whoAreYou: "👋 Wie ben jij?",
     enterYourName: "Vul je naam in om mee te doen.",
     errTipAdd: "Fooi toevoegen mislukt: ",
@@ -1947,7 +1946,6 @@ const STRINGS = {
     youJoinPrefix: "Tu rejoins",
     sharedByName: (naam: string) => `partagé par ${naam}`,
     restoTagline: "Scanne les additions et partage en groupe",
-    tableWord: "Table",
     whoAreYou: "👋 Qui es-tu ?",
     enterYourName: "Indique ton nom pour participer.",
     errTipAdd: "Échec de l'ajout du pourboire : ",
@@ -4517,16 +4515,21 @@ export default function RundoTable() {
               tussen. Nu staat ze in de balk zelf, rechts naast het merk — dezelfde plek
               als in Rundo. Links houden we evenveel ruimte vrij, zodat het logo optisch
               in het midden blijft staan in plaats van naar links te schuiven. */}
-          <div style={{ background: "#123a42", borderRadius: 20, padding: "15px 14px", marginBottom: 9,
-            boxShadow: "0 6px 18px -8px rgba(18,58,66,0.5)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-            <span style={{ width: 62, flexShrink: 0 }} aria-hidden />
-            <RundoLogo size={50} resto />
-            <span style={{ width: 62, flexShrink: 0, display: "flex", justifyContent: "flex-end" }}><LanguageToggle compact /></span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 7, margin: "0 0 24px" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icon-table.png" alt="" style={{ height: 20, width: "auto", objectFit: "contain", display: "block" }} />
-            <span style={{ color: "#0f7d90", fontSize: 18, fontWeight: 700 }}>{L.tableTagline}</span>
+          <div style={{ margin: "-14px -14px 0", background: "#123a42", padding: "15px 14px 18px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 62, flexShrink: 0 }} aria-hidden />
+              <RundoLogo size={50} resto />
+              <span style={{ width: 62, flexShrink: 0, display: "flex", justifyContent: "flex-end" }}><LanguageToggle compact /></span>
+            </div>
+            {/* De ondertitel stond hieronder op het lichte vlak, in turquoise met een
+                icoontje — een derde kleur en een derde kader op een scherm waar maar één
+                ding te doen valt. Ze hoort bij het merk, dus staat ze in het donkere vlak,
+                net als in de kop van de tafel zelf. */}
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 7, marginTop: 8 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icon-table.png" alt="" style={{ height: 18, width: "auto", objectFit: "contain", display: "block" }} />
+              <span style={{ color: "rgba(255,255,255,0.82)", fontSize: 15, fontWeight: 600 }}>{L.tableTagline}</span>
+            </div>
           </div>
 
           <div style={S.card}>
@@ -4631,7 +4634,7 @@ export default function RundoTable() {
     return (
       <div style={S.page}>
         {renderVensters()}
-        <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
+        <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} toonTag totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
         <div style={{ maxWidth: 440, margin: "0 auto" }}>
           {claimSpot === null && (() => {
             // Wie net gescand heeft, weet nog niet waar hij beland is. De groepsnaam
@@ -4885,15 +4888,19 @@ export default function RundoTable() {
         ) : undefined
         // Op het startscherm is de hoek rechtsboven leeg en zit de weg terug verstopt
         // achter een tik op het hele donkere blok. Daar staat nu een huisje.
-        const boven = bonKnop ?? (isAdmin ? (
-          <KopKnop onClick={leaveGroup} stil titel={L.toTableHome}>⌂</KopKnop>
-        ) : undefined)
         const groepKnop = isAdmin && (adminTab === "overview" || (adminTab === "guests" && personsSet && adminNamed))
           ? groepPeekKnop() : undefined
-        const onder = isAdmin && adminTab === "scan"
+        const tweede = isAdmin && adminTab === "scan"
           ? (heeftBon ? <KopKnop onClick={startRescan} stil>{L.rescan}</KopKnop> : undefined)
           : groepKnop
-        const tabs = isAdmin ? (
+        // Op het startscherm is er nog niets te bekijken en niets te verdelen. Dan staat
+        // hier alleen de weg terug, die vroeger verstopt zat achter een tik op het blok.
+        const acties = (bonKnop || tweede) ? <>{bonKnop}{tweede}</>
+          : isAdmin ? <KopKnop onClick={leaveGroup} stil titel={L.toTableHome}>⌂</KopKnop> : undefined
+        // Zolang er geen bon is, valt er niets te kiezen: Gasten en Toewijzen zijn dan
+        // allebei op slot en een tik erop levert alleen een foutmelding. Dan tonen we ze
+        // ook niet — het scherm heeft op dat moment één ding te zeggen.
+        const tabs = isAdmin && heeftBon ? (
           <KopTabs actief={adminTab} klaarId={group.finalized ? "overview" : undefined}
             items={[{ id: "scan", label: L.tabBon }, { id: "guests", label: L.tabGuests }, { id: "overview", label: L.tabAssign }]}
             onKies={(id) => {
@@ -4916,8 +4923,7 @@ export default function RundoTable() {
             signedUp={totalPersons}
             totalPersons={isAdmin && adminTab === "scan" ? undefined : participants.reduce((sum, p) => sum + Math.max(1, p.seats ?? 1), 0)}
             toonTag={!heeftBon}
-            rechtsBoven={boven}
-            rechtsOnder={onder}
+            acties={acties}
             onder={isAdmin && showGroupPeek && adminTab !== "scan" ? <div style={{ marginTop: 10 }}>{groepPeekLijst()}</div> : undefined}
             tabs={tabs} />
         )
@@ -7679,7 +7685,7 @@ function BonKijker({ urls, onClose }: { urls: string[]; onClose: () => void }) {
   )
 }
 
-function TopBar({ group, isAdmin, onHome, totalPersons, rechtsBoven, rechtsOnder, onder, tabs, toonTag, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; rechtsBoven?: React.ReactNode; rechtsOnder?: React.ReactNode; onder?: React.ReactNode; tabs?: React.ReactNode; toonTag?: boolean }) {
+function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, toonTag, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; acties?: React.ReactNode; onder?: React.ReactNode; tabs?: React.ReactNode; toonTag?: boolean }) {
   const [lang] = useLang()
   const [naamBewerkt, setNaamBewerkt] = useState(false)
   const L = STRINGS[lang]
@@ -7689,51 +7695,49 @@ function TopBar({ group, isAdmin, onHome, totalPersons, rechtsBoven, rechtsOnder
   // tot rand, met de tabbladen erin — het actieve blad loopt over in het witte vel eronder.
   return (
     <div style={{ margin: "-14px -14px 0", background: "#123a42" }}>
-      {/* Bovenste regel: het merk. Het logo is het grootste op het scherm; de tafelnaam
-          eronder is kleiner en turquoise, zodat die twee niet meer op elkaar lijken.
-          De ondertitel zegt waar je terecht bent gekomen — zodra de bon binnen is weet je
-          dat, en verdwijnt ze. */}
-      <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "12px 14px 0" }}>
+      {/* Bovenste regel: links het merk, rechts de tafel. Het logo is het grootste op het
+          scherm en de naam staat kleiner en turquoise aan de overkant — zo lijken die twee
+          niet meer op elkaar en heb je in één oogopslag wélke app en wélke tafel. Het woord
+          "Tafel" hoeft er dan niet meer bij. */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px 0" }}>
         <span onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined}
           style={{ flex: 1, minWidth: 0, cursor: isAdmin ? "pointer" : "default" }}>
           <RundoLogo size={46} resto />
-          {toonTag && (
-            <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "rgba(255,255,255,0.78)", marginTop: 5, lineHeight: 1.35 }}>{L.restoTagline}</span>
-          )}
         </span>
-        {rechtsBoven}
-      </div>
-      {/* Tweede regel: wélke tafel. Het streepje links bindt het kopje aan de naam, zodat
-          "Tafel" leest als een label en niet als los woord. Eén knop per regel: zo staat er
-          nooit een rij van drie naast elkaar en kunnen de teksten voluit. */}
-      <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "10px 14px 0" }}>
-        <span style={{ flex: 1, minWidth: 0, display: "flex", gap: 9, alignItems: "stretch" }}>
-          <span style={{ width: 3, borderRadius: 2, background: "#4fd1e0", opacity: 0.8, flexShrink: 0 }} />
-          <span style={{ minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: 10.5, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", color: "rgba(255,255,255,0.62)", lineHeight: 1.1, marginBottom: 3 }}>{L.tableWord}</span>
-            {/* Ter plekke aanpasbaar: tik op de naam en je typt erin. */}
-            {onRenameGroup && naamBewerkt ? (
-              <input autoFocus defaultValue={group.name}
-                onBlur={(e) => { onRenameGroup(e.target.value); setNaamBewerkt(false) }}
-                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setNaamBewerkt(false) }}
-                style={{ width: "100%", fontSize: 17, fontWeight: 700, color: "#123a42", border: "1.5px solid rgba(79,209,224,0.6)", borderRadius: 9, padding: "3px 8px", background: "#fff", fontFamily: "inherit" }} />
-            ) : (
-              <span onClick={() => onRenameGroup && setNaamBewerkt(true)}
-                style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 17, fontWeight: 700, color: "#4fd1e0", lineHeight: 1.2, cursor: onRenameGroup ? "pointer" : "default" }}>
-                {group.name}{onRenameGroup && <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginLeft: 5 }}>✏️</span>}
-              </span>
-            )}
+        {/* Ter plekke aanpasbaar: tik op de naam en je typt erin. */}
+        {onRenameGroup && naamBewerkt ? (
+          <input autoFocus defaultValue={group.name}
+            onBlur={(e) => { onRenameGroup(e.target.value); setNaamBewerkt(false) }}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setNaamBewerkt(false) }}
+            style={{ flexShrink: 0, width: "52%", fontSize: 16.5, fontWeight: 700, color: "#123a42", border: "1.5px solid rgba(79,209,224,0.6)", borderRadius: 9, padding: "4px 8px", background: "#fff", fontFamily: "inherit", textAlign: "right" }} />
+        ) : (
+          <span onClick={() => onRenameGroup && setNaamBewerkt(true)}
+            style={{ flexShrink: 0, maxWidth: "56%", marginTop: 2, textAlign: "right", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 16.5, fontWeight: 700, color: "#4fd1e0", lineHeight: 1.2, cursor: onRenameGroup ? "pointer" : "default" }}>
+            {group.name}{onRenameGroup && <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)", marginLeft: 5 }}>✏️</span>}
           </span>
-        </span>
-        {rechtsOnder != null ? rechtsOnder
-          : totalPersons != null && totalPersons > 1 ? (
-            <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.72)", whiteSpace: "nowrap", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 9, padding: "7px 10px" }}>
-              {L.persShort(totalPersons)}
-            </span>
-          ) : null}
+        )}
       </div>
+      {/* De ondertitel krijgt een eigen regel over de volle breedte. Naast de tafelnaam viel
+          ze over twee regels en duwde ze alles eronder scheef. Ze verdwijnt zodra de bon
+          binnen is: dan weet je waar je bent. */}
+      {/* Tweede regel: links de ondertitel (als die er nog is), rechts wat je kan doen.
+          Zolang er niets te bekijken valt staat er rechts alleen het huisje — die deelt dan
+          de regel met de ondertitel in plaats van er een lege regel onder te krijgen. */}
+      {(toonTag || acties) && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: toonTag ? "7px 14px 0" : "11px 14px 0" }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.78)", lineHeight: 1.35 }}>{toonTag ? L.restoTagline : ""}</span>
+          {acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
+        </div>
+      )}
+      {totalPersons != null && totalPersons > 1 && !acties && (
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "11px 14px 0" }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.72)", whiteSpace: "nowrap", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 9, padding: "7px 10px" }}>
+            {L.persShort(totalPersons)}
+          </span>
+        </div>
+      )}
       {onder && <div style={{ padding: "0 14px" }}>{onder}</div>}
-      {tabs}
+      {tabs ?? <div style={{ height: 14 }} />}
     </div>
   )
 }
@@ -7770,6 +7774,11 @@ function KopTabs({ items, actief, onKies, klaarId }: { items: { id: string; labe
               borderRadius: "13px 13px 0 0", padding: aan ? "11px 3px 15px" : "11px 3px 13px",
               fontSize: 15, lineHeight: 1.15, fontWeight: aan ? 800 : 700,
               background: aan ? (klaar ? "#eafaf1" : "#ffffff") : "transparent",
+              // Het turquoise streepje stond vroeger ónder het actieve woord. Daar kan het
+              // niet meer: daar raakt het blad het witte vel, en een lijn zou die naad weer
+              // opensnijden. Bovenaan is de rand die vrij is, en daar doet het hetzelfde
+              // werk — zelfde kleur, zelfde dikte, alleen aan de andere kant van het woord.
+              boxShadow: aan ? `inset 0 4px 0 ${klaar ? "rgba(39,174,96,0.95)" : "#4fd1e0"}` : "none",
               color: aan ? (klaar ? "#1f8a4c" : "#0b3b45") : "rgba(255,255,255,0.72)" }}>
             {t.label}{klaar ? " ✓" : ""}
           </button>
