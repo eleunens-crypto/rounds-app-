@@ -765,6 +765,9 @@ const STRINGS = {
     bonViewerTitle: "Je gescande bon",
     pinchHint: "Knijp met twee vingers om te zoomen · dubbeltik om te wisselen",
     groupWord: "Groep",
+    whoJoins: "Wie doet mee?",
+    freeSeatPill: "vrije plaats",
+    removeName: (n: string) => `${n} verwijderen`,
     nStillFree: (n: number) => `${n} nog vrij`,
     tagAdmin: "jij \u00b7 admin",
     adminWord: "Beheerder",
@@ -1465,6 +1468,9 @@ const STRINGS = {
     bonViewerTitle: "Ton addition scannée",
     pinchHint: "Pince à deux doigts pour zoomer · double-tape pour basculer",
     groupWord: "Groupe",
+    whoJoins: "Qui participe ?",
+    freeSeatPill: "place libre",
+    removeName: (n: string) => `Retirer ${n}`,
     nStillFree: (n: number) => `${n} encore libre${n !== 1 ? "s" : ""}`,
     tagAdmin: "toi \u00b7 admin",
     adminWord: "Organisateur",
@@ -4222,24 +4228,81 @@ export default function RundoTable() {
 
   const groepPeekKnop = () => {
     const vrij = participants.filter((p) => isFreeSpot(p) && !p.self_joined).reduce((a, p) => a + Math.max(1, p.seats ?? 1), 0)
-    // Op het toewijsscherm is een lege stoel geen detail meer: alles wat daarnaartoe gaat,
-    // gaat naar niemand. Vandaar een rood uitroepteken zodra er nog plaatsen vrij zijn —
-    // elders in de app blijft het rustige oranje, want daar ben je ze net aan het vullen.
-    const kleur = vrij === 0 ? "#1f8a4c" : "#c0392b"
+    // Rustig lichtblauw in plaats van rood: een vrije plaats is informatie, geen fout.
+    // Staat links in de kop, in dezelfde vorm als de andere kopknoppen.
     return (
-      // Staat nu in de kopbalk in plaats van los onder de tabs, dus een maatje kleiner —
-      // maar de rode melding bij een lege stoel houdt zijn volle kleur: dat is het enige
-      // wat hier echt om aandacht vraagt.
-      <button onClick={() => setShowGroupPeek((v) => !v)} style={{ border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 800, color: kleur, padding: 0, display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-        👥 {L.groupWord}{vrij === 0
-          ? <span style={{ fontSize: 12.5, fontWeight: 800, color: "#1f8a4c", background: "rgba(39,174,96,0.14)", borderRadius: 12, padding: "2px 8px" }}>✓ {totalPersons}</span>
-          : (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <span aria-hidden style={{ flexShrink: 0, width: 17, height: 17, borderRadius: "50%", background: "#c0392b", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, lineHeight: 1 }}>!</span>
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: "#c0392b", background: "rgba(224,107,94,0.14)", border: "1px solid rgba(224,107,94,0.5)", borderRadius: 12, padding: "2px 8px" }}>{L.nStillFree(vrij)}</span>
-            </span>
-          )} {showGroupPeek ? "▴" : "▾"}
+      <button onClick={() => setShowGroupPeek((v) => !v)} aria-expanded={showGroupPeek}
+        style={{ cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap",
+          fontSize: 14, fontWeight: 800, color: "#fff", lineHeight: 1, borderRadius: 11, padding: "0 12px", height: 38,
+          background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.22)" }}>
+        <GroepIcoon size={17} />
+        {L.groupWord} {totalPersons}
+        {vrij > 0
+          ? <><span aria-hidden style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(255,255,255,0.5)" }} /><span style={{ fontWeight: 700, color: "#bfe9ee" }}>{L.nStillFree(vrij)}</span></>
+          : <span style={{ fontWeight: 800, color: "#8fe3b0" }}>✓</span>}
+        <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+          style={{ opacity: 0.8, transition: "transform .2s ease", transform: showGroupPeek ? "rotate(180deg)" : "none" }}><path d="M6 9l6 6 6-6" /></svg>
       </button>
+    )
+  }
+  // Naampillen van iedereen die meedoet, plus een gestippelde pil per vrije plaats. De
+  // beheerder kan gasten en vrije plaatsen weghalen met het rode kruisje; dat vraagt
+  // altijd eerst (removeSpot / verwijderVrijePlaats), nooit in één tik.
+  const deelnemerPillen = () => {
+    const x = (label: string, onClick: () => void) => (
+      <button onClick={(e) => { e.stopPropagation(); onClick() }} aria-label={label} title={label}
+        style={{ flexShrink: 0, width: 28, height: 28, borderRadius: "50%", border: "none", background: "#fdeeec", color: "#c0453a",
+          display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
+        <svg aria-hidden width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    )
+    const bezet = participants.filter((q) => !(isFreeSpot(q) && !q.self_joined))
+    const vrije = participants.filter((q) => isFreeSpot(q) && !q.self_joined)
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+        {bezet.map((q) => {
+          const ikZelf = q.id === meId
+          const zit = Math.max(1, q.seats ?? 1)
+          const gescand = q.self_joined && !ikZelf
+          return (
+            <span key={q.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: ikZelf || !isAdmin ? "0 12px 0 5px" : "0 4px 0 5px",
+              borderRadius: 999, maxWidth: "100%", fontSize: 14, fontWeight: 800, color: "#123a42",
+              background: ikZelf ? "rgba(20,153,176,0.10)" : "#f2f6f7", border: `1px solid ${ikZelf ? "rgba(20,153,176,0.3)" : "#dde6e8"}` }}>
+              <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12.5, fontWeight: 800,
+                ...(gescand ? { background: "rgba(39,174,96,0.18)", color: "#1f8a4c" } : { background: "rgba(20,153,176,0.18)", color: "#0b6473" }) }}>
+                {(q.name || "?").trim().charAt(0).toUpperCase()}
+              </span>
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {q.name}{zit > 1 ? ` · ${zit}p.` : ""}{ikZelf ? ` (${L.adminWord})` : ""}
+              </span>
+              {gescand && <span style={{ flexShrink: 0, display: "inline-flex", color: "#1f8a4c" }} title={L.scannedBadge}><GsmVinkIcon /></span>}
+              {isAdmin && !ikZelf && x(L.removeName(q.name), () => { void removeSpot(q.id) })}
+            </span>
+          )
+        })}
+        {vrije.map((q) => (
+          <span key={q.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, height: 36, padding: isAdmin ? "0 4px 0 12px" : "0 12px",
+            borderRadius: 999, fontSize: 13.5, fontWeight: 700, color: "#8aa3a6", background: "#fff", border: "1.5px dashed #bfd3d6" }}>
+            {L.freeSeatPill}{Math.max(1, q.seats ?? 1) > 1 ? ` · ${q.seats}p.` : ""}
+            {isAdmin && x(L.removeFreeSeat, () => { void verwijderVrijePlaats(q.id) })}
+          </span>
+        ))}
+      </div>
+    )
+  }
+  // Kop van het blok: "Wie doet mee?" met een groepsicoon en de teller ernaast.
+  const wieDoetMeeKop = (extra?: React.ReactNode) => {
+    const vrij = participants.filter((q) => isFreeSpot(q) && !q.self_joined).reduce((a, q) => a + Math.max(1, q.seats ?? 1), 0)
+    const vol = vrij === 0
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 19, fontWeight: 800, color: "#123a42" }}>{L.whoJoins}</span>
+        <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 800, borderRadius: 999, padding: "5px 11px",
+          color: vol ? "#1f8a4c" : "#0b6473", background: vol ? "rgba(39,174,96,0.14)" : "rgba(20,153,176,0.10)" }}>
+          <GroepIcoon size={16} />{totalPersons - vrij}/{totalPersons}{vol ? " ✓" : ""}
+        </span>
+        {extra}
+      </div>
     )
   }
   // Verwijzing naar de zusterapp. Dicht is het een strook; open toont het
@@ -4329,56 +4392,12 @@ export default function RundoTable() {
     </>
   )
 
-  const groepPeekLijst = () => {
-    const iemandIngevuld = participants.some((q) => q.id !== ownerPid && !isFreeSpot(q))
-    return (
-    <div style={{ border: "1px solid rgba(18,58,66,0.12)", borderRadius: 12, padding: "10px 12px", marginTop: 8 }}>
-      {participants.map((p) => {
-        const isAdminSpot = p.id === ownerPid
-        const vrij = isFreeSpot(p) && !p.self_joined
-        // Drie toestanden voor een naam die jij invulde: gewoon toegevoegd, of de
-        // persoon kwam intussen zelf binnen via de link, of jij bent voor hem
-        // beginnen aantikken. Dat laatste is het enige geval waarin "admin duidt aan"
-        // ook echt klopt — vroeger stond dat er meteen, ook als je niets deed.
-        const ikDuidAan = !isAdminSpot && !p.self_joined && !vrij && claims.some((c) => c.participant_id === p.id)
-        const cat = isAdminSpot
-          ? { icon: "👤", label: L.tagAdmin, color: "#1f8a4c", bg: "rgba(39,174,96,0.14)", brd: "transparent" }
-          : p.self_joined
-          ? { icon: "📱", label: L.tagViaLink, color: "#0f7488", bg: "rgba(20,153,176,0.12)", brd: "rgba(20,153,176,0.35)" }
-          : vrij
-          ? (iemandIngevuld
-              ? { icon: "⏳", label: L.tagFree, color: "#b5591a", bg: "rgba(243,156,18,0.14)", brd: "rgba(243,156,18,0.45)" }
-              : { icon: "⏳", label: L.tagFree, color: "#7d999d", bg: "rgba(18,58,66,0.05)", brd: "transparent" })
-          : ikDuidAan
-          ? { icon: "✍️", label: L.tagByYou, color: "#8a5e0f", bg: "rgba(243,156,18,0.14)", brd: "transparent" }
-          : { icon: "✓", label: L.tagAdded, color: "#4a6e73", bg: "rgba(18,58,66,0.06)", brd: "transparent" }
-        // Een lege stoel is het enige waar je hier iets aan kan doen, en dat kan alleen op
-        // de andere tab. Tik erop en je staat er meteen, met de plaatsen opengeklapt.
-        const naarPlaatsen = () => {
-          setAdminTab("guests")
-          setShowNamesBlock(true)
-          setShowGroupPeek(false)
-          if (typeof window !== "undefined") {
-            window.setTimeout(() => document.getElementById("plaatsen-sectie")?.scrollIntoView({ behavior: "smooth", block: "start" }), 220)
-          }
-        }
-        return (
-          <div key={p.id} onClick={vrij ? naarPlaatsen : undefined}
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "8px 4px", borderBottom: "1px solid rgba(0,0,0,0.05)", cursor: vrij ? "pointer" : "default" }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: vrij ? "#8aa3a6" : "#123a42", fontStyle: vrij ? "italic" : "normal", display: "inline-flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-              <span style={{ flexShrink: 0 }}>{cat.icon}</span>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{vrij ? naamVan(p) : p.name}{!vrij && (p.seats ?? 1) > 1 ? ` · ${p.seats}p.` : ""}</span>
-            </span>
-            {/* Namen invullen gebeurt op de gasten-tab. Hier stond ook een veldje, maar
-                dat kon geen plaats voor twee personen aan, en dan heb je twee plekken
-                die hetzelfde half doen. Deze lijst toont nu alleen de stand. */}
-            <span style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 800, color: cat.color, background: cat.bg, border: `1px solid ${cat.brd}`, borderRadius: 14, padding: "4px 10px", whiteSpace: "nowrap" }}>{cat.label}{vrij ? " →" : ""}</span>
-          </div>
-        )
-      })}
+  const groepPeekLijst = () => (
+    <div style={{ background: "#fff", borderRadius: 16, padding: "13px 13px 14px", marginTop: 2 }}>
+      {wieDoetMeeKop()}
+      <div style={{ marginTop: 11 }}>{deelnemerPillen()}</div>
     </div>
-          )
-  }
+  )
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER: start
@@ -4881,7 +4900,9 @@ export default function RundoTable() {
         // nodig hebt (de bon erbij halen), onderaan naast de tafelnaam wat bij die regel
         // hoort — opnieuw scannen op de bon-tab, het groepje op de andere twee. Zo raakt
         // geen enkele regel vol en kunnen de teksten voluit.
-        const bonKnop = heeftBon ? (
+        // De beheerder heeft de bon-tab, dus op Gasten & QR en Toewijzen hoeft deze knop
+        // niet. Een gast heeft geen bon-tab en houdt hem wel.
+        const bonKnop = heeftBon && (!isAdmin || adminTab === "scan") ? (
           <KopKnop onClick={() => setViewReceipt(group.receipt_url!)}>
             {L.viewReceipt}{aantalFotos > 1 ? ` (${aantalFotos})` : ""}
           </KopKnop>
@@ -4924,6 +4945,7 @@ export default function RundoTable() {
             totalPersons={isAdmin && adminTab === "scan" ? undefined : participants.reduce((sum, p) => sum + Math.max(1, p.seats ?? 1), 0)}
             toonTag={!heeftBon}
             acties={acties}
+            actiesLinks={isAdmin && adminTab !== "scan" && !!groepKnop}
             onder={isAdmin && showGroupPeek && adminTab !== "scan" ? <div style={{ marginTop: 10 }}>{groepPeekLijst()}</div> : undefined}
             tabs={tabs} />
         )
@@ -5547,10 +5569,11 @@ export default function RundoTable() {
                     kaart "Met hoeveel zijn jullie?" bovenaan verdwijnen zodra je naam er staat. */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: vol ? "#1f8a4c" : "#123a42" }}>{L.groupOfN(totaalZit)}</span>
+                    <span style={{ display: "block", fontSize: 19, fontWeight: 800, color: vol ? "#1f8a4c" : "#123a42" }}>{L.whoJoins}</span>
                     {vol && <span style={{ display: "block", fontSize: 13.5, fontWeight: 800, color: "#1f8a4c", marginTop: 2 }}>{L.allTakenTitle}</span>}
                   </span>
                   <span style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span aria-hidden style={{ display: "inline-flex", color: "#4a6e73" }}><GroepIcoon size={19} /></span>
                     <button onClick={() => setGuestCount(totalPersons - 1)} disabled={totalPersons <= 1} aria-label={L.onePersonLess}
                       style={{ width: 30, height: 30, borderRadius: 9, border: "none", background: "rgba(18,58,66,0.05)", color: "#4a6e73", fontSize: 19, fontWeight: 800, cursor: totalPersons > 1 ? "pointer" : "default", opacity: totalPersons > 1 ? 1 : 0.4, fontFamily: "inherit" }}>−</button>
                     <b style={{ minWidth: 16, textAlign: "center", fontSize: 18, color: "#123a42" }}>{totaalZit}</b>
@@ -5558,6 +5581,10 @@ export default function RundoTable() {
                       style={{ width: 30, height: 30, borderRadius: 9, border: "none", background: "rgba(27,42,74,0.12)", color: "#123a42", fontSize: 19, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>+</button>
                   </span>
                 </div>
+
+                {/* Wie gescand heeft of een plaats inneemt staat hier meteen met naam, en elke
+                    vrije plaats als gestippelde pil. Het rode kruisje vraagt altijd eerst. */}
+                <div style={{ marginTop: 12 }}>{deelnemerPillen()}</div>
 
                 <div>
 
@@ -7685,7 +7712,7 @@ function BonKijker({ urls, onClose }: { urls: string[]; onClose: () => void }) {
   )
 }
 
-function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, toonTag, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; acties?: React.ReactNode; onder?: React.ReactNode; tabs?: React.ReactNode; toonTag?: boolean }) {
+function TopBar({ group, isAdmin, onHome, totalPersons, acties, actiesLinks, onder, tabs, toonTag, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; acties?: React.ReactNode; actiesLinks?: boolean; onder?: React.ReactNode; tabs?: React.ReactNode; toonTag?: boolean }) {
   const [lang] = useLang()
   const [naamBewerkt, setNaamBewerkt] = useState(false)
   const L = STRINGS[lang]
@@ -7699,7 +7726,10 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, too
           scherm en de naam staat kleiner en turquoise aan de overkant — zo lijken die twee
           niet meer op elkaar en heb je in één oogopslag wélke app en wélke tafel. Het woord
           "Tafel" hoeft er dan niet meer bij. */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px 0" }}>
+      {/* Naam en logo staan op dezelfde hoogte (center). De naam is groter dan vroeger,
+          maar neemt nooit meer dan de helft van de breedte: te lang = twee regels, en
+          wat dan nog niet past krijgt "…". */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px 0" }}>
         <span onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined}
           style={{ flex: 1, minWidth: 0, cursor: isAdmin ? "pointer" : "default" }}>
           <RundoLogo size={46} resto />
@@ -7709,11 +7739,13 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, too
           <input autoFocus defaultValue={group.name}
             onBlur={(e) => { onRenameGroup(e.target.value); setNaamBewerkt(false) }}
             onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setNaamBewerkt(false) }}
-            style={{ flexShrink: 0, width: "52%", fontSize: 16.5, fontWeight: 700, color: "#123a42", border: "1.5px solid rgba(79,209,224,0.6)", borderRadius: 9, padding: "4px 8px", background: "#fff", fontFamily: "inherit", textAlign: "right" }} />
+            style={{ flexShrink: 0, width: "50%", fontSize: 18, fontWeight: 700, color: "#123a42", border: "1.5px solid rgba(79,209,224,0.6)", borderRadius: 9, padding: "4px 8px", background: "#fff", fontFamily: "inherit", textAlign: "right" }} />
         ) : (
-          <span onClick={() => onRenameGroup && setNaamBewerkt(true)}
-            style={{ flexShrink: 0, maxWidth: "56%", marginTop: 2, textAlign: "right", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: 16.5, fontWeight: 700, color: "#4fd1e0", lineHeight: 1.2, cursor: onRenameGroup ? "pointer" : "default" }}>
-            {group.name}{onRenameGroup && <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)", marginLeft: 5 }}>✏️</span>}
+          <span onClick={() => onRenameGroup && setNaamBewerkt(true)} role={onRenameGroup ? "button" : undefined}
+            style={{ flexShrink: 0, maxWidth: "50%", display: "flex", alignItems: "center", gap: 7, justifyContent: "flex-end", cursor: onRenameGroup ? "pointer" : "default", padding: "4px 0" }}>
+            <span lang={lang} style={{ minWidth: 0, textAlign: "right", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+              overflowWrap: "break-word", hyphens: "auto", fontSize: 19, fontWeight: 800, color: "#4fd1e0", lineHeight: 1.2 }}>{group.name}</span>
+            {onRenameGroup && <span style={{ flexShrink: 0, display: "flex", opacity: 0.85 }}><PotloodIcon size={19} kleur="#4fd1e0" /></span>}
           </span>
         )}
       </div>
@@ -7725,8 +7757,10 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, too
           de regel met de ondertitel in plaats van er een lege regel onder te krijgen. */}
       {(toonTag || acties) && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: toonTag ? "7px 14px 0" : "11px 14px 0" }}>
+          {/* Op Gasten & QR en Toewijzen staat hier alleen de groepsknop, links tegen de rand. */}
+          {actiesLinks && acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
           <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.78)", lineHeight: 1.35 }}>{toonTag ? L.restoTagline : ""}</span>
-          {acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
+          {!actiesLinks && acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
         </div>
       )}
       {totalPersons != null && totalPersons > 1 && !acties && (
@@ -9893,6 +9927,14 @@ const ACTIVITEIT_ICONEN = [
   // keu met bal
   <svg key="f" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M20.4 3.6 9.8 14.2" /><path d="m7.4 16.6-3.8 3.8" /><circle cx="8.6" cy="15.4" r="1.7" /><circle cx="16.8" cy="17.4" r="3.2" /></svg>,
 ]
+
+function GroepIcoon({ size = 17 }: { size?: number }) {
+  return (
+    <svg aria-hidden width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" style={{ display: "block", flexShrink: 0 }}>
+      <circle cx="9" cy="8" r="3.2" /><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /><path d="M16 5.2a3 3 0 0 1 0 5.6M18 13.8c1.8.6 3 2.4 3 5.2" />
+    </svg>
+  )
+}
 
 function IdeeIcoon({ kleur = "#0f7488" }: { kleur?: string }) {
   const [i, setI] = useState(0)
