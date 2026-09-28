@@ -47,9 +47,11 @@ const VIDEO_STIJL: "naast-start" | "bij-kiezen" | "knop" | "mini" | "uit" = "naa
 // speler; "klein" (±370 kB) is alleen nodig voor de varianten "mini" en "bij-kiezen".
 const FILM = {
   // stappen = begin (in seconden) van elke scène, einde = begin van het slotbeeld.
+  // De filmpjes beginnen meteen met de eerste scène (het openingsscherm met het logo is
+  // eraf, het slotbeeld toont het al), dus de eerste stap start op 0.
   // Rundo heeft als eerste stap de keuze "Zelf opnemen of QR delen".
-  table: { klein: "/uitleg/resto-klein.mp4", groot: "/uitleg/resto-720.mp4", poster: "/uitleg/resto-poster.jpg", stappen: [1.5, 6.0, 10.9, 16.5], einde: 21.1 },
-  party: { klein: "/uitleg/rundo-klein.mp4", groot: "/uitleg/rundo-720.mp4", poster: "/uitleg/rundo-poster.jpg", stappen: [1.6, 6.6, 11.1, 15.9, 20.5], einde: 25.9 },
+  table: { klein: "/uitleg/resto-klein.mp4", groot: "/uitleg/resto-720.mp4", poster: "/uitleg/resto-poster.jpg", stappen: [0, 4.2, 9.1, 14.7], einde: 19.3 },
+  party: { klein: "/uitleg/rundo-klein.mp4", groot: "/uitleg/rundo-720.mp4", poster: "/uitleg/rundo-poster.jpg", stappen: [0, 4.8, 9.3, 14.1, 18.7], einde: 24.1 },
 }
 // Franse versies staan in /public/uitleg/fr/ met dezelfde bestandsnamen en dezelfde
 // scènetijden, dus alleen het pad verschilt.
@@ -405,7 +407,7 @@ export default function Home() {
   // marineblauwe tekst. Elke modus heeft één eigen tint (turquoise-blauw voor Resto,
   // goud voor Rundo) die terugkomt in de rand, de kaartkleur en de startbalk.
 
-  // Startknop: icoon van de modus + "Start". Pulseert zodra de kaart gekozen is.
+  // Startknop: "Start". Pulseert zodra de kaart gekozen is.
   const naastUitleg = VIDEO_STIJL === "naast-start"
   const startKnop = (m: Mode) => {
     const md = MODUS[m]
@@ -425,11 +427,9 @@ export default function Home() {
       </button>
     )
   }
-  // Icoon + label van de startknop (ook gebruikt in de uitlegspeler).
-  const knopInhoud = (m: Mode) => (<>
-    <Icoon naam={m === "table" ? "scan" : "noteer"} size={21} />
-    {t.start}
-  </>)
+  // Label van de startknop (ook gebruikt in de uitlegspeler). Zonder icoon: het woord
+  // zegt genoeg en de knop oogt rustiger.
+  const knopInhoud = (_m: Mode) => (<>{t.start}</>)
   const openFilm = (e: React.MouseEvent, m: Mode) => { e.stopPropagation(); setFilm(m) }
 
   // Kaart: logo en ondertitel links, je foto rechts die naar links in de kaartkleur
@@ -449,8 +449,8 @@ export default function Home() {
         style={{ ...S.kaart, background: md.kaart, cursor: "pointer",
           border: actief ? `2.5px solid ${md.kleur}` : `1.5px solid ${md.kleur}99`,
           boxShadow: actief ? `0 18px 34px -14px ${md.schaduw}` : `0 12px 26px -18px ${md.schaduw}`,
-          // Zacht dimmen: de andere kaart blijft goed leesbaar, ze wijkt alleen wat terug.
-          opacity: ander ? 0.8 : 1, filter: ander ? "saturate(0.75)" : undefined,
+          // Dimmen: de andere kaart blijft leesbaar, maar wijkt duidelijk terug.
+          opacity: ander ? 0.68 : 1, filter: ander ? "saturate(0.6)" : undefined,
           transform: actief ? "scale(1.012)" : undefined,
           transition: "opacity .25s ease, filter .25s ease, transform .25s ease, box-shadow .25s ease, border-color .25s ease" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
