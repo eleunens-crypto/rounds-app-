@@ -5802,7 +5802,7 @@ export default function RundoTable() {
       {/* ─── ADMIN: Per persoon (overzicht-tab) ─── */}
       {isAdmin && adminTab === "overview" && (
         <div id="rekening-per-persoon">
-          <div style={S.card}>
+          <div style={{ ...STAPKAART, marginBottom: 10 }}>
             {/* Stap 3, in dezelfde stijl als 1 en 2: genummerd bolletje, titel en inklappen.
                 "Details" per persoon blijft: tik op een naam, of op "alle details" eronder. */}
             {(() => {
@@ -5810,14 +5810,17 @@ export default function RundoTable() {
               return (
                 <div onClick={() => setPerPersoonOpen((v) => !v)}
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: perPersoonOpen ? 10 : 0, cursor: "pointer" }}>
-                  <h3 style={{ ...S.h3, marginBottom: 0, gap: 9, minWidth: 0 }}>
+                  <h3 style={{ ...S.h3, ...STAPTITEL, marginBottom: 0, gap: 10, minWidth: 0 }}>
                     {!group.finalized && (
                       <span style={{ flexShrink: 0, width: 23, height: 23, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800,
                         background: klaar3 ? "#1f8a4c" : "rgba(18,58,66,0.1)", color: klaar3 ? "#fff" : "#4a6e73" }}>{klaar3 ? "✓" : 3}</span>
                     )}
                     <span style={{ minWidth: 0 }}>{group.finalized ? `👥 ${L.finalSplitTitle}` : `3 · ${L.totalPerPerson}`}</span>
                   </h3>
-                  <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{perPersoonOpen ? L.collapseClose : L.collapseOpen}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+                    {!perPersoonOpen && <span style={{ fontSize: 15.5, fontWeight: 800, color: klaar3 ? "#1f8a4c" : "#4a6e73" }}>€{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span>}
+                    <KlapPijl open={perPersoonOpen} />
+                  </span>
                 </div>
               )
             })()}
@@ -8304,6 +8307,19 @@ const NEEMKNOP = { display: "inline-flex", alignItems: "center", justifyContent:
   cursor: "pointer", fontFamily: "inherit", flexShrink: 0 } as const
 
 const ITEMBAK = { background: "rgba(18,58,66,0.045)", borderRadius: 12, padding: 7 } as const
+// Stap 1, 2 en 3 bij de beheerder (Toewijzen) hebben één vorm: een losse witte kaart met
+// ronde hoeken en wat ruimte ertussen, zodat je ziet waar een stap begint en eindigt.
+// Rechts een rond knopje met een pijltje dat omdraait als de stap open is.
+const STAPKAART = { background: "#fff", margin: "10px -4px 0", border: "1px solid #D6E6E8", borderRadius: 16, padding: "12px 12px", boxShadow: "0 6px 14px -12px rgba(18,58,66,0.45)" } as const
+const STAPTITEL = { fontSize: 18.5, fontWeight: 800, color: "#123a42", lineHeight: 1.25, letterSpacing: -0.2 } as const
+function KlapPijl({ open }: { open: boolean }) {
+  return (
+    <span aria-hidden style={{ flexShrink: 0, width: 32, height: 32, borderRadius: "50%", background: "#EAF6F8", border: "1px solid #CFE3E6", color: "#0f7d90",
+      display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "transform .2s", transform: open ? "rotate(180deg)" : "none" }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+    </span>
+  )
+}
 const ITEMKAART = { background: "#fff", border: "1px solid rgba(18,58,66,0.1)", borderRadius: 11,
   padding: "11px 10px", marginBottom: 7, boxShadow: "0 1px 2px rgba(18,58,66,0.04)" } as const
 
@@ -8422,9 +8438,6 @@ function ClaimScreen(props: {
   // die stap gedaan is, grijs met zijn cijfer als hij nog moet of enkel naslagwerk is.
   const blokBol = (nr: number, klaar: boolean) => (
     <span style={{ flexShrink: 0, width: 23, height: 23, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, background: klaar ? "#1f8a4c" : "rgba(18,58,66,0.1)", color: klaar ? "#fff" : "#4a6e73" }}>{klaar ? "✓" : nr}</span>
-  )
-  const toonKnop = (open: boolean) => (
-    <span style={{ flexShrink: 0, border: "1.5px solid rgba(20,153,176,0.4)", color: "#0f7d90", borderRadius: 9, padding: "6px 11px", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{open ? `${L.hideAll} ▴` : `${L.showAll} ▾`}</span>
   )
   // Bij een afgesloten rekening is de verdeling van de tafel het enige dat nog telt:
   // die staat dus open, en de twee blokken van tijdens het bestellen gaan dicht.
@@ -8787,9 +8800,9 @@ function ClaimScreen(props: {
   // krijgt: de namen met hun bedrag, details dichtgeklapt.
   const eindVerdeling = () => (
     <>
-      <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0, marginBottom: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, marginBottom: 8 }}>
         {blokBol(3, true)}
-        <span style={{ fontSize: 17.5, fontWeight: 800, color: "#1f8a4c", lineHeight: 1.25 }}>👥 {L.finalSplitTitle}</span>
+        <span style={{ ...STAPTITEL, color: "#1f8a4c" }}>👥 {L.finalSplitTitle}</span>
       </div>
       {participants.length > 0 && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
@@ -8865,21 +8878,21 @@ function ClaimScreen(props: {
             </div>
           )
         })()}
-        <div style={S.card}>
+        <div style={STAPKAART}>
           {/* Zelfde opbouw als bij de gast: een genummerd bolletje, zodat de twee schermen
               dezelfde volgorde vertellen — eerst aanduiden, dan wat er op jouw naam staat. */}
           <div onClick={() => setStap1Open((v) => !v)} style={{ minWidth: 0, marginBottom: stap1Open ? 10 : 0, cursor: "pointer" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <h3 style={{ ...S.h3, marginBottom: 2, gap: 9, minWidth: 0 }}>
+              <h3 style={{ ...S.h3, ...STAPTITEL, marginBottom: 2, gap: 10, minWidth: 0 }}>
                 {blokBol(1, claimedUnits >= totalUnits && sharedDecided >= sharedItems.length)}
                 <span style={{ minWidth: 0 }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
               </h3>
               <span style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
-                {!stap1Open && <span style={{ fontSize: 15, fontWeight: 800, color: claimedUnits >= totalUnits ? "#1f8a4c" : "#4a6e73" }}>{claimedUnits}/{totalUnits}</span>}
-                <span style={{ fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{stap1Open ? L.collapseClose : L.collapseOpen}</span>
+                {!stap1Open && <span style={{ fontSize: 15.5, fontWeight: 800, color: claimedUnits >= totalUnits ? "#1f8a4c" : "#4a6e73" }}>{claimedUnits}/{totalUnits}</span>}
+                <KlapPijl open={stap1Open} />
               </span>
             </div>
-            {stap1Open && <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.claimSubAdmin}</div>}
+            {stap1Open && <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.4, marginTop: 2 }}>{L.claimSubAdmin}</div>}
           </div>
           {stap1Open && (<>
           {items.length === 0
@@ -9263,16 +9276,16 @@ function ClaimScreen(props: {
             namen. Hier staat het gewoon: wat er op jouw naam staat, en wat dat kost. Geen
             bevestigknop — als beheerder sluit je straks de hele rekening af. */}
         {meId && items.length > 0 && (
-          <div style={{ ...S.card, background: "linear-gradient(135deg,#fffdf6,#fdf6e3)", border: "1.5px solid rgba(196,152,32,0.45)" }}>
+          <div style={STAPKAART}>
             <div onClick={() => setEigenOpen((v) => !v)}
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: eigenOpen ? 11 : 0 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                 {blokBol(2, personTotal(meId).settled > 0.005)}
-                <span style={{ fontSize: 17.5, fontWeight: 800, color: "#5a4a1a" }}>2 · {meId && seatsOf(meId) > 1 ? L.whatWeTook : L.whatYouTook}</span>
+                <span style={STAPTITEL}>2 · {meId && seatsOf(meId) > 1 ? L.whatWeTook : L.whatYouTook}</span>
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
-                {!eigenOpen && <span style={{ fontSize: 19, fontWeight: 800, color: "#123a42" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>}
-                <span style={{ fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{eigenOpen ? L.collapseClose : L.collapseOpen}</span>
+                {!eigenOpen && <span style={{ fontSize: 15.5, fontWeight: 800, color: personTotal(meId).settled > 0.005 ? "#1f8a4c" : "#4a6e73" }}>€{personTotal(meId).settled.toFixed(2).replace(".", ",")}</span>}
+                <KlapPijl open={eigenOpen} />
               </span>
             </div>
             {eigenOpen && (() => {
@@ -9406,14 +9419,14 @@ function ClaimScreen(props: {
         {/* Na het afsluiten is dit lijstje identiek aan "Wat ik bevestigde": niets kan
             nog wijzigen, dus twee keer dezelfde regels. Alleen het bevestigde blijft. */}
         {!finalized && (
-        <div style={S.card}>
+        <div style={STAPKAART}>
         <h3 onClick={() => setGastItemsOpen((v) => !v)}
-          style={{ ...S.h3, marginBottom: gastItemsOpen ? 14 : 0, cursor: "pointer", justifyContent: "space-between", gap: 10 }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+          style={{ ...S.h3, marginBottom: gastItemsOpen ? 10 : 0, cursor: "pointer", justifyContent: "space-between", gap: 10 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             {blokBol(1, iConfirmed)}
-            <span style={{ fontSize: 17.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56", lineHeight: 1.25 }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
+            <span style={{ ...STAPTITEL, color: iConfirmed ? "#1f8a4c" : "#123a42" }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
           </span>
-          {toonKnop(gastItemsOpen)}
+          <KlapPijl open={gastItemsOpen} />
         </h3>
         {gastItemsOpen && (<>
         {/* Eén regel die zegt waaróm er niets meer beweegt, met de knop erbij genoemd.
@@ -9671,7 +9684,8 @@ function ClaimScreen(props: {
         </div>
         )}
 
-      <div style={{ ...S.card, background: "linear-gradient(135deg,#fbfaff,#f1f2fb)", border: finalized ? "1px solid rgba(90,108,166,0.18)" : "1.5px solid rgba(20,153,176,0.35)" }}>
+      {/* Zelfde witte kaart als stap 1 (en als de stappen bij de beheerder). */}
+      <div style={{ ...STAPKAART, marginBottom: 10 }}>
         {/* Tijdens het bestellen heet dit "dit ga ik bevestigen"; achteraf "wat ik
             bevestigde", dichtgeklapt maar nog op te vragen. */}
         {/* Is de rekening afgesloten, dan hoort dit blok er niet meer: wat je bevestigde
@@ -9680,11 +9694,11 @@ function ClaimScreen(props: {
         {!finalized && (<>
         <div onClick={() => setGastBevestigdOpen((v) => !v)}
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer", marginBottom: 10 }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             {blokBol(2, iConfirmed)}
-            <span style={{ fontSize: 17.5, fontWeight: 800, color: iConfirmed ? "#1f8a4c" : "#2b4f56", lineHeight: 1.25 }}>{finalized ? "" : "2 · "}{iConfirmed ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
+            <span style={{ ...STAPTITEL, color: iConfirmed ? "#1f8a4c" : "#123a42" }}>{finalized ? "" : "2 · "}{iConfirmed ? L.whatIConfirmed : L.aboutToConfirmTitle}</span>
           </span>
-          {toonKnop(gastBevestigdOpen)}
+          <KlapPijl open={gastBevestigdOpen} />
         </div>
         {/* Alleen de regels klappen dicht. Het bedrag eronder is wáárvoor een gast dit
             scherm opent — dat verstoppen achter dezelfde knop maakte het blok leeg, en
