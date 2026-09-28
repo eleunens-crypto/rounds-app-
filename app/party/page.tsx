@@ -1291,7 +1291,7 @@ const T = {
     kiesTitel: "Kies hoe je opneemt",
     kiesSub: "Twee manieren, allebei even makkelijk.",
     zelfTitel: "Zelf opnemen",
-    zelfSub: "Jij tikt alle rondjes aan.",
+    zelfSub: "Jij tikt alle drankjes aan.",
     zelfTag: "1 gsm",
     qrTitel: "QR delen",
     qrSub: "Ieder tikt zelf aan wat hij drinkt.",
@@ -2354,7 +2354,7 @@ const T = {
     kiesTitel: "Choisis comment noter",
     kiesSub: "Deux façons, aussi simples l'une que l'autre.",
     zelfTitel: "Noter soi-même",
-    zelfSub: "Tu notes toutes les tournées.",
+    zelfSub: "Tu notes toutes les boissons.",
     zelfTag: "1 téléphone",
     qrTitel: "Partager le QR",
     qrSub: "Chacun note ce qu'il boit.",
@@ -2980,6 +2980,9 @@ export default function PartyTest() {
   const [groepZoek, setGroepZoek] = useState("")
   const [groepenOpen, setGroepenOpen] = useState(true)
   const [savedGroups, setSavedGroups] = useState<SavedGroup[]>([])
+  // Pas true zodra we weten of er groepen zijn: zo zakt het keuzescherm niet eerst en
+  // springt het dan terug omhoog.
+  const [groepenGeladen, setGroepenGeladen] = useState(false)
   const [showAllGroups, setShowAllGroups] = useState(false)
   const [groepFilter, setGroepFilter] = useState<"alle" | "open" | "af" | "pin">("alle")
   // Werkblad voor het verdelen van de pot over namen; null = niet in bewerkmodus.
@@ -5031,7 +5034,7 @@ export default function PartyTest() {
     // Vastgezet maar een half jaar niet aangeraakt: voorstellen, niet beslissen.
     const stil = over.filter((g) => g.owned && g.pinned && g.name !== TESTGROEP_NAAM && nu - tijd(g.last_active) > PIN_STIL)
 
-    if (mounted.current) { setSavedGroups(over); setStalePins(stil) }
+    if (mounted.current) { setSavedGroups(over); setStalePins(stil); setGroepenGeladen(true) }
     return over
   }, [])
 
@@ -11271,22 +11274,31 @@ export default function PartyTest() {
   }
 
   if (view === "start") {
+    // Zonder opgeslagen groepen staat de kaart anders verloren bovenaan een leeg scherm.
+    // Dan zakt ze, met de taalkeuze erin: een kwart van de lege ruimte erboven, drie
+    // kwart eronder. Met groepen (of zolang we het nog niet weten) blijft alles bovenaan.
+    const zakken = groepenGeladen && savedGroups.length === 0
     return (
-      <div style={{ ...S.page, minHeight: "auto", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)" }}>
+      <div style={{ ...S.page, minHeight: "auto", padding: "0 0 40px" }}><div style={{ ...S.wrap, paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
+        display: "flex", flexDirection: "column", minHeight: "calc(100dvh - 40px)", boxSizing: "border-box" }}>
         {renderDialogs()}
         <style>{`@keyframes rundoWenk{0%,100%{transform:translateX(0);opacity:.6}50%{transform:translateX(3px);opacity:1}}
           @keyframes rundoLoop{from{width:0}to{width:100%}}
           input::placeholder,textarea::placeholder{color:#a7b0bf;opacity:1;} html,body{overflow-x:hidden;} button,input{font-family:inherit;}
           .rundo-kieskaart{transition:transform .12s ease,border-color .15s ease,box-shadow .15s ease;-webkit-tap-highlight-color:transparent}
           .rundo-kieskaart:active{transform:scale(0.985);border-color:var(--kleur)!important}
-          .rundo-kieskaart:focus-visible{outline:3px solid var(--kleur);outline-offset:2px}`}</style>
-        <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+          .rundo-kieskaart:focus-visible{outline:3px solid var(--kleur);outline-offset:2px}
+          .rundo-taal-groot{flex-shrink:0;display:flex;align-items:center;min-height:44px;padding-left:28px}
+          .rundo-taal-groot>*{transform:scale(1.4);transform-origin:right center}`}</style>
+        <div aria-hidden style={{ flex: `${zakken ? 1 : 0} 1 0px`, minHeight: 0, transition: "flex-grow .4s ease" }} />
+        <div style={{ ...S.card, padding: 0, overflow: "hidden", flexShrink: 0 }}>
         {/* Kop: alleen het merk en de taal. De vraag zelf staat groot in het vlak eronder,
             zoals in het uitlegfilmpje. */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 9, background: "#0E1A2E", padding: "11px 12px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/rundo-merk.png" alt="" height={34} style={{ width: "auto", flexShrink: 0, display: "block" }} />
-          <span style={{ flexShrink: 0 }}><LanguageToggle compact /></span>
+          {/* Groter dan vroeger: op een gsm moet je hem met je duim raken. */}
+          <span className="rundo-taal-groot"><LanguageToggle compact /></span>
         </div>
 
         {/* Variant A, in de stijl van het filmpje: twee korte kaarten met "of" ertussen.
@@ -11481,6 +11493,7 @@ export default function PartyTest() {
         {/* Eén trap hoger dan het logo: dit startscherm ís al de Party-keuze, dus de
             link hier gaat naar het Rundo-keuzescherm (Table of Party) op de site-root.
             De chooser zet bij binnenkomst zelf de zoom recht. */}
+        <div aria-hidden style={{ flex: `${zakken ? 3 : 0} 1 0px`, minHeight: 0, transition: "flex-grow .4s ease" }} />
         <div style={{ textAlign: "center", marginTop: 16 }}>
           {viaKiezer ? (
             <button onClick={() => verlaatMetNaamcheck(() => { window.location.href = "/" })} style={{ fontSize: 18, fontWeight: 800, color: "#8f7a47", background: "none", border: "none", padding: "10px 8px", minHeight: 44, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, fontFamily: "inherit" }}>{L.backToRundo}</button>
@@ -13646,6 +13659,8 @@ export default function PartyTest() {
         ) : undefined} />
         {showPot && renderPotModal()}
         {renderDialogs()}
+        {/* Het aanpasvenster voor je eigen drankje (via het prijslabeltje in een rondje). */}
+        {renderAddDrink()}
         {/* In QR draagt dit scherm dezelfde drie tabbladen als elk ander: "Rondjes" is
             hier het actieve blad, en je gaat weg via "Drankjes" of "Groep & QR". De losse
             terugpijl is dan overbodig. Toont AdminTabs niets — buiten QR, of nog vóór het
@@ -13845,7 +13860,18 @@ export default function PartyTest() {
                         const opNaamTonen = bewerk && !settle && opNaamHier > 0
                         return (
                         <div key={d.id} style={{ ...S.row, justifyContent: "space-between", padding: "3px 0" }}>
-                          <span style={{ fontSize: 17.5, fontWeight: 700, minWidth: 0, ...(bewerk && !settle && val <= 0 ? { color: "#a7b0bf" } : {}) }}>{d.emoji} {d.name}{opNaamTonen && (
+                          <span style={{ fontSize: 17.5, fontWeight: 700, minWidth: 0, ...(bewerk && !settle && val <= 0 ? { color: "#a7b0bf" } : {}) }}>{d.emoji} {d.name}{!bewerk && d.custom && d.by === me.current && (
+                            // Enkel bij een eigen drankje dat jij toevoegde: de richtprijs als
+                            // tikbaar labeltje. Opent hetzelfde venster als in het bestelscherm;
+                            // wat al besteld is blijft staan en rekent met de nieuwe prijs.
+                            <button onClick={(e) => { e.stopPropagation(); setEditDrinkKey(d.id); setNdName(d.name); setNdPrice(String(d.price).replace(".", ",")); setShowAddDrink(true) }}
+                              aria-label={L.editDrinkTitle(d.name)} title={L.editDrinkTitle(d.name)}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 5, marginLeft: 7, verticalAlign: "middle", cursor: "pointer", fontFamily: "inherit",
+                                fontSize: 13, fontWeight: 800, color: "#8a5e0f", background: "#fff4e0", border: "1px solid rgba(224,138,0,0.45)", borderRadius: 999, padding: "3px 9px" }}>
+                              {euro(d.price)}
+                              <svg aria-hidden width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z" /></svg>
+                            </button>
+                          )}{opNaamTonen && (
                             <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: "#8a5e0f" }}>👤 {L.lockedNamed(opNaamHier)}</span>
                           )}{!bewerk && (() => {
                             // Wie dronk wat — ook bij "gewoon rondjes", want ook daar kan je
