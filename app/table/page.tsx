@@ -4268,13 +4268,13 @@ export default function RundoTable() {
     return (
       <button onClick={() => setShowGroupPeek((v) => !v)} aria-expanded={showGroupPeek}
         style={{ cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap",
-          fontSize: 14, fontWeight: 800, color: "#fff", lineHeight: 1, borderRadius: 11, padding: "0 12px", height: 38,
-          background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.22)" }}>
-        <GroepIcoon size={17} />
+          fontSize: 14, fontWeight: 800, color: "#0F4F5B", lineHeight: 1, borderRadius: 11, padding: "0 12px", height: 36,
+          background: "#fff", border: `1px solid ${showGroupPeek ? "#138C9A" : "#CFE3E6"}` }}>
+        <span style={{ display: "inline-flex", color: "#138C9A" }}><GroepIcoon size={17} /></span>
         {L.groupWord} {totalPersons}
         {vrij > 0
-          ? <><span aria-hidden style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(255,255,255,0.5)" }} /><span style={{ fontWeight: 700, color: "#bfe9ee" }}>{L.nStillFree(vrij)}</span></>
-          : <span style={{ fontWeight: 800, color: "#8fe3b0" }}>✓</span>}
+          ? <><span aria-hidden style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(18,58,66,0.3)" }} /><span style={{ fontWeight: 700, color: "#138C9A" }}>{L.nStillFree(vrij)}</span></>
+          : <span style={{ fontWeight: 800, color: "#1f8a4c" }}>✓</span>}
         <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
           style={{ opacity: 0.8, transition: "transform .2s ease", transform: showGroupPeek ? "rotate(180deg)" : "none" }}><path d="M6 9l6 6 6-6" /></svg>
       </button>
@@ -4954,7 +4954,7 @@ export default function RundoTable() {
         // Op het startscherm is er nog niets te bekijken en niets te verdelen. Dan staat
         // hier alleen de weg terug, die vroeger verstopt zat achter een tik op het blok.
         const acties = (bonKnop || tweede) ? <>{bonKnop}{tweede}</>
-          : isAdmin && adminTab !== "guests" ? <KopKnop onClick={leaveGroup} stil titel={L.toTableHome}>⌂</KopKnop> : undefined
+          : isAdmin && adminTab !== "guests" ? <KopKnop onClick={leaveGroup} stil donker titel={L.toTableHome}>⌂</KopKnop> : undefined
         // Zolang er geen bon is, valt er niets te kiezen: Gasten en Toewijzen zijn dan
         // allebei op slot en een tik erop levert alleen een foutmelding. Dan tonen we ze
         // ook niet — het scherm heeft op dat moment één ding te zeggen.
@@ -7663,7 +7663,8 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, too
       {/* Naam en logo staan op dezelfde hoogte (center). De naam is groter dan vroeger,
           maar neemt nooit meer dan de helft van de breedte: te lang = twee regels, en
           wat dan nog niet past krijgt "…". */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px 10px", background: "#F2F8F8", borderBottom: "1px solid #DDEBEC" }}>
+      <div style={{ padding: "11px 14px 10px", background: "#F2F8F8", borderBottom: "1px solid #DDEBEC" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined}
           style={{ flex: 1, minWidth: 0, cursor: isAdmin ? "pointer" : "default" }}>
           <RundoLogo size={40} resto opDonker={false} />
@@ -7683,31 +7684,31 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, too
           </span>
         )}
       </div>
-      {/* De ondertitel krijgt een eigen regel over de volle breedte. Naast de tafelnaam viel
-          ze over twee regels en duwde ze alles eronder scheef. Ze verdwijnt zodra de bon
-          binnen is: dan weet je waar je bent. */}
-      {/* Tweede regel: links de ondertitel (als die er nog is), rechts wat je kan doen.
-          Zolang er niets te bekijken valt staat er rechts alleen het huisje — die deelt dan
-          de regel met de ondertitel in plaats van er een lege regel onder te krijgen. */}
-      <div style={{ background: "#123a42" }}>
-      {(toonTag || acties) && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: toonTag ? "9px 14px 0" : "10px 12px 0" }}>
-          {/* Knoppen links op de band (bon bekijken, opnieuw scannen of de groepsknop), de
-              tabbladen eronder over de volle breedte. Enkel naast de korte uitleg van vóór
-              de scan staat de knop rechts. */}
-          {!toonTag && acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
-          {toonTag && <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.78)", lineHeight: 1.35 }}>{L.restoTagline}</span>}
-          {toonTag && acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
-        </div>
+      {/* Variant B: de knoppen staan mee in de lichte strook, links op een tweede regel
+          onder logo en naam — bon bekijken en opnieuw scannen, of de groepsknop, of bij een
+          gast het aantal personen. De donkere band houdt enkel nog de tabbladen. */}
+      {!toonTag && acties && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 10 }}>{acties}</div>
       )}
       {totalPersons != null && totalPersons > 1 && !acties && (
-        <div style={{ display: "flex", justifyContent: "flex-start", padding: "10px 12px 0" }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.72)", whiteSpace: "nowrap", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 9, padding: "7px 10px" }}>
+        <div style={{ display: "flex", marginTop: 10 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", minHeight: 34, fontSize: 13, fontWeight: 800, color: "#0F4F5B", whiteSpace: "nowrap", background: "#fff", border: "1px solid #CFE3E6", borderRadius: 10, padding: "0 11px" }}>
             {L.persShort(totalPersons)}
           </span>
         </div>
       )}
-      {onder && <div style={{ padding: "0 14px" }}>{onder}</div>}
+      {/* "Wie doet mee?" klapt open net onder de groepsknop. */}
+      {onder && <div>{onder}</div>}
+      </div>
+      <div style={{ background: "#123a42" }}>
+      {/* Vóór de scan zijn er nog geen tabbladen: dan staat op de band de korte uitleg,
+          met het huisje ernaast. */}
+      {toonTag && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 14px 0" }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.78)", lineHeight: 1.35 }}>{L.restoTagline}</span>
+          {acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
+        </div>
+      )}
       {tabs ?? <div style={{ height: 10 }} />}
       </div>
     </div>
@@ -7717,14 +7718,16 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, too
 // Knopje rechtsboven of rechtsonder in de kop: dezelfde vorm voor "Bekijk bon", "Scan bon
 // opnieuw" en het groepje, zodat ze als één familie lezen. `stil` is voor wat je zelden
 // nodig hebt — zichtbaar, maar het trekt het oog niet weg van de rest.
-function KopKnop({ onClick, stil, titel, children }: { onClick: () => void; stil?: boolean; titel?: string; children: React.ReactNode }) {
+function KopKnop({ onClick, stil, donker, titel, children }: { onClick: () => void; stil?: boolean; donker?: boolean; titel?: string; children: React.ReactNode }) {
+  // Standaard voor de lichte strook bovenaan (wit knopje met een fijne turkooizen rand).
+  // `donker` is voor het huisje, dat vóór de scan nog op de donkere band staat.
   return (
     <button onClick={(e) => { e.stopPropagation(); onClick() }} title={titel}
       style={{ flexShrink: 0, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 5,
-        fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", lineHeight: 1, borderRadius: 9, padding: "8px 11px",
-        color: stil ? "rgba(255,255,255,0.68)" : "#dff6fa",
-        background: stil ? "transparent" : "rgba(255,255,255,0.10)",
-        border: `1px solid rgba(255,255,255,${stil ? 0.16 : 0.22})` }}>
+        fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", lineHeight: 1, borderRadius: 10, padding: "0 11px", minHeight: 34,
+        ...(donker
+          ? { color: stil ? "rgba(255,255,255,0.68)" : "#dff6fa", background: stil ? "transparent" : "rgba(255,255,255,0.10)", border: `1px solid rgba(255,255,255,${stil ? 0.16 : 0.22})` }
+          : { color: stil ? "#4a6e73" : "#0F4F5B", background: "#fff", border: "1px solid #CFE3E6" }) }}>
       {children}
     </button>
   )
