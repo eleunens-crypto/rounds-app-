@@ -591,6 +591,11 @@ const STRINGS = {
     loading: "Laden...",
     startGroup: "Groep starten",
     savedGroups: "Opgeslagen groepen",
+    homeAskTitle: "Naar het Rundo-startscherm?",
+    homeAskBody: "Je groep blijft bewaard. Je vindt ze terug onder “Opgeslagen groepen”.",
+    homeAskYes: "Ja, ga terug",
+    homeAskNo: "Blijf hier",
+    toRundoHome: "Naar het Rundo-startscherm",
     hide: "▲ verbergen",
     show: "▼ tonen",
     roleAdmin: "beheerder",
@@ -1312,6 +1317,11 @@ const STRINGS = {
     loading: "Chargement…",
     startGroup: "Démarrer le groupe",
     savedGroups: "Groupes enregistrés",
+    homeAskTitle: "Retour à l’accueil Rundo ?",
+    homeAskBody: "Ton groupe reste enregistré. Tu le retrouves sous « Groupes enregistrés ».",
+    homeAskYes: "Oui, retour",
+    homeAskNo: "Rester ici",
+    toRundoHome: "Vers l’accueil Rundo",
     hide: "▲ masquer",
     show: "▼ afficher",
     roleAdmin: "hôte",
@@ -2247,7 +2257,7 @@ export default function RundoTable() {
   // kop2/body2: een tweede kopje halverwege. Een opsomming die als gewone tekst onder de
   // uitleg hangt leest als één lange lap; met een kop erboven zie je meteen dat er twee
   // dingen staan — wat er aan de hand is, en wat jij hier wél mag.
-  const [confirmDlg, setConfirmDlg] = useState<{ title?: string; body: string; note?: string; kop2?: string; body2?: string; yes: string; danger?: boolean; onYes: () => void } | null>(null)
+  const [confirmDlg, setConfirmDlg] = useState<{ title?: string; body: string; note?: string; kop2?: string; body2?: string; yes: string; nee?: string; danger?: boolean; onYes: () => void } | null>(null)
   // Twee streepjes boven een venster dat uit twee stappen bestaat: eerst de fooi, dan het
   // resultaat. Die twee kwamen altijd vlak na elkaar als twee losse vensters — dan lijkt
   // het of er iets misging en er nog een scherm bij komt, in plaats van één handeling.
@@ -2278,8 +2288,8 @@ export default function RundoTable() {
     if (u >= 12) return L.guestDoneTitleNoon
     return L.guestDoneTitleMorn
   }
-  const askConfirm = (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean; note?: string; kop2?: string; body2?: string }) =>
-    setConfirmDlg({ body, yes, onYes, title: opts?.title, danger: opts?.danger, note: opts?.note, kop2: opts?.kop2, body2: opts?.body2 })
+  const askConfirm = (body: string, yes: string, onYes: () => void, opts?: { title?: string; danger?: boolean; note?: string; kop2?: string; body2?: string; nee?: string }) =>
+    setConfirmDlg({ body, yes, onYes, title: opts?.title, danger: opts?.danger, note: opts?.note, kop2: opts?.kop2, body2: opts?.body2, nee: opts?.nee })
   // Zolang het bontotaal niet nagekeken én bevestigd is, blijft de rest op slot: items,
   // btw, gasten en toewijzen. Anders bouw je de hele verdeling op een verkeerd bedrag.
   const requireTotal = () => {
@@ -2718,6 +2728,9 @@ export default function RundoTable() {
     }
   }
 
+  // Een tik op het logo in de kop brengt je naar het Rundo-startscherm (de keuze tussen
+  // Party en Resto), maar pas na een vraag: je zit midden in een groep. Die blijft bewaard.
+  const vraagNaarStart = () => askConfirm(L.homeAskBody, L.homeAskYes, () => { leaveGroup(); goToChooser() }, { title: L.homeAskTitle, nee: L.homeAskNo })
   const leaveGroup = () => {
     setGroup(null); setMeId(null); setItems([]); setClaims([]); setParticipants([]); setConfirmations([])
     setGroupName(""); setPartySize(""); setError(null)
@@ -4481,7 +4494,7 @@ export default function RundoTable() {
                 </div>
               )}
               <button onClick={() => { const fn = confirmDlg.onYes; setConfirmDlg(null); fn() }} style={{ ...S.btn, width: "100%", padding: "13px 0", fontWeight: 800, fontSize: 18, border: "none", color: "#fff", background: confirmDlg.danger ? "linear-gradient(135deg,#e74c3c,#c0392b)" : "linear-gradient(135deg,#1f8a4c,#27ae60)" }}>{confirmDlg.yes}</button>
-              <button onClick={() => setConfirmDlg(null)} style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 17.5, fontWeight: 700, color: "#4a6e73", background: "transparent", border: "none" }}>{L.cancel}</button>
+              <button onClick={() => setConfirmDlg(null)} style={{ ...S.btn, width: "100%", padding: "10px 0", marginTop: 8, fontSize: 17.5, fontWeight: 700, color: "#4a6e73", background: "transparent", border: "none" }}>{confirmDlg.nee ?? L.cancel}</button>
             </div>
           </div>
         )}
@@ -4558,7 +4571,24 @@ export default function RundoTable() {
     return (
       <div style={S.page}>
         {renderVensters()}
-        <div style={{ maxWidth: 420, margin: "40px auto" }}>
+        {/* Dezelfde lichte strook als bovenaan de tafel zelf: links het logo, rechts de
+            taalkeuze, en de korte uitleg klein eronder. Geen donkere band — die komt pas
+            als er tabbladen zijn. Ze staat helemaal bovenaan en loopt van rand tot rand,
+            net als op "Scan je rekening"; vroeger zakte alles 40 pixels en bleef er
+            blauw boven en opzij. Een tik op het logo brengt je naar het Rundo-startscherm. */}
+        <div style={{ margin: "-14px -14px 0", padding: "11px 14px 11px", background: "#F2F8F8", borderBottom: "1px solid #DDEBEC" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <span onClick={goToChooser} title={L.toRundoHome} style={{ minWidth: 0, cursor: "pointer" }}><RundoLogo size={40} resto opDonker={false} /></span>
+            <span style={{ flexShrink: 0, display: "flex", borderRadius: 999, boxShadow: "0 0 0 1px #CFE3E6" }}><LanguageToggle compact /></span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon-table.png" alt="" style={{ height: 16, width: "auto", objectFit: "contain", display: "block", flexShrink: 0 }} />
+            <span style={{ color: "#4a6e73", fontSize: 13.5, fontWeight: 600, lineHeight: 1.35 }}>{L.tableTagline}</span>
+          </div>
+        </div>
+
+        <div style={{ maxWidth: 420, margin: "0 auto 40px" }}>
           {/* De weg terug naar het keuzescherm hoort niet als eerste regel te schreeuwen:
               hij staat voortaan bescheiden onder de opgeslagen groepen. */}
           {/* Het logo is gemaakt voor een donkere ondergrond: "Rundo" is daar wit en het
@@ -4571,21 +4601,6 @@ export default function RundoTable() {
               tussen. Nu staat ze in de balk zelf, rechts naast het merk — dezelfde plek
               als in Rundo. Links houden we evenveel ruimte vrij, zodat het logo optisch
               in het midden blijft staan in plaats van naar links te schuiven. */}
-          {/* Dezelfde lichte strook als bovenaan de tafel zelf: links het logo, rechts de
-              taalkeuze, en de korte uitleg klein eronder. Geen donkere band — die komt pas
-              als er tabbladen zijn. */}
-          <div style={{ margin: "-14px -14px 0", padding: "11px 14px 11px", background: "#F2F8F8", borderBottom: "1px solid #DDEBEC" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-              <span style={{ minWidth: 0 }}><RundoLogo size={40} resto opDonker={false} /></span>
-              <span style={{ flexShrink: 0, display: "flex", borderRadius: 999, boxShadow: "0 0 0 1px #CFE3E6" }}><LanguageToggle compact /></span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icon-table.png" alt="" style={{ height: 16, width: "auto", objectFit: "contain", display: "block", flexShrink: 0 }} />
-              <span style={{ color: "#4a6e73", fontSize: 13.5, fontWeight: 600, lineHeight: 1.35 }}>{L.tableTagline}</span>
-            </div>
-          </div>
-
           <div style={S.card}>
             {/* Dit is de titel van de kaart, niet het bijschrift van een veld: op dit scherm
                 is een groepsnaam typen het enige wat je te doen hebt. */}
@@ -4688,7 +4703,7 @@ export default function RundoTable() {
     return (
       <div style={S.page}>
         {renderVensters()}
-        <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} toonTag totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
+        <TopBar group={group} isAdmin={isAdmin} onHome={vraagNaarStart} onRenameGroup={isAdmin ? renameGroup : undefined} signedUp={totalPersons} toonTag totalPersons={participants.reduce((s, p) => s + Math.max(1, p.seats ?? 1), 0)} />
         <div style={{ maxWidth: 440, margin: "0 auto" }}>
           {claimSpot === null && (() => {
             // Wie net gescand heeft, weet nog niet waar hij beland is. De groepsnaam
@@ -4975,7 +4990,7 @@ export default function RundoTable() {
         // Het aantal personen is een terugval voor de gast, die geen groepsblok heeft.
         // Op de bon-tab bestaat "de groep" nog niet, dus daar hoort het niet.
         return (
-          <TopBar group={group} isAdmin={isAdmin} onHome={leaveGroup}
+          <TopBar group={group} isAdmin={isAdmin} onHome={vraagNaarStart}
             onRenameGroup={isAdmin ? renameGroup : undefined}
             signedUp={totalPersons}
             totalPersons={isAdmin && adminTab === "scan" ? undefined : participants.reduce((sum, p) => sum + Math.max(1, p.seats ?? 1), 0)}
@@ -7664,7 +7679,7 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, too
           wat dan nog niet past krijgt "…". */}
       <div style={{ padding: "11px 14px 10px", background: "#F2F8F8", borderBottom: "1px solid #DDEBEC" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined}
+        <span onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toRundoHome : undefined}
           style={{ flex: 1, minWidth: 0, cursor: isAdmin ? "pointer" : "default" }}>
           <RundoLogo size={40} resto opDonker={false} />
         </span>
