@@ -4571,20 +4571,18 @@ export default function RundoTable() {
               tussen. Nu staat ze in de balk zelf, rechts naast het merk — dezelfde plek
               als in Rundo. Links houden we evenveel ruimte vrij, zodat het logo optisch
               in het midden blijft staan in plaats van naar links te schuiven. */}
-          <div style={{ margin: "-14px -14px 0", background: "#123a42", padding: "15px 14px 18px" }}>
+          {/* Dezelfde lichte strook als bovenaan de tafel zelf: links het logo, rechts de
+              taalkeuze, en de korte uitleg klein eronder. Geen donkere band — die komt pas
+              als er tabbladen zijn. */}
+          <div style={{ margin: "-14px -14px 0", padding: "11px 14px 11px", background: "#F2F8F8", borderBottom: "1px solid #DDEBEC" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-              <span style={{ width: 62, flexShrink: 0 }} aria-hidden />
-              <RundoLogo size={50} resto />
-              <span style={{ width: 62, flexShrink: 0, display: "flex", justifyContent: "flex-end" }}><LanguageToggle compact /></span>
+              <span style={{ minWidth: 0 }}><RundoLogo size={40} resto opDonker={false} /></span>
+              <span style={{ flexShrink: 0, display: "flex", borderRadius: 999, boxShadow: "0 0 0 1px #CFE3E6" }}><LanguageToggle compact /></span>
             </div>
-            {/* De ondertitel stond hieronder op het lichte vlak, in turquoise met een
-                icoontje — een derde kleur en een derde kader op een scherm waar maar één
-                ding te doen valt. Ze hoort bij het merk, dus staat ze in het donkere vlak,
-                net als in de kop van de tafel zelf. */}
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 7, marginTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icon-table.png" alt="" style={{ height: 18, width: "auto", objectFit: "contain", display: "block" }} />
-              <span style={{ color: "rgba(255,255,255,0.82)", fontSize: 15, fontWeight: 600 }}>{L.tableTagline}</span>
+              <img src="/icon-table.png" alt="" style={{ height: 16, width: "auto", objectFit: "contain", display: "block", flexShrink: 0 }} />
+              <span style={{ color: "#4a6e73", fontSize: 13.5, fontWeight: 600, lineHeight: 1.35 }}>{L.tableTagline}</span>
             </div>
           </div>
 
@@ -4953,8 +4951,9 @@ export default function RundoTable() {
           : groepKnop
         // Op het startscherm is er nog niets te bekijken en niets te verdelen. Dan staat
         // hier alleen de weg terug, die vroeger verstopt zat achter een tik op het blok.
-        const acties = (bonKnop || tweede) ? <>{bonKnop}{tweede}</>
-          : isAdmin && adminTab !== "guests" ? <KopKnop onClick={leaveGroup} stil donker titel={L.toTableHome}>⌂</KopKnop> : undefined
+        // Het huisje dat hier vóór de scan stond is weg: het logo linksboven brengt je
+        // al terug naar het Resto-startscherm.
+        const acties = (bonKnop || tweede) ? <>{bonKnop}{tweede}</> : undefined
         // Zolang er geen bon is, valt er niets te kiezen: Gasten en Toewijzen zijn dan
         // allebei op slot en een tik erop levert alleen een foutmelding. Dan tonen we ze
         // ook niet — het scherm heeft op dat moment één ding te zeggen.
@@ -7684,6 +7683,14 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, too
           </span>
         )}
       </div>
+      {/* Vóór de scan: de korte uitleg klein onder logo en naam, in de lichte strook. */}
+      {toonTag && (
+        <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon-table.png" alt="" style={{ height: 16, width: "auto", objectFit: "contain", display: "block", flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: "#4a6e73", lineHeight: 1.35 }}>{L.restoTagline}</span>
+        </div>
+      )}
       {/* Variant B: de knoppen staan mee in de lichte strook, links op een tweede regel
           onder logo en naam — bon bekijken en opnieuw scannen, of de groepsknop, of bij een
           gast het aantal personen. De donkere band houdt enkel nog de tabbladen. */}
@@ -7700,17 +7707,12 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, too
       {/* "Wie doet mee?" klapt open net onder de groepsknop. */}
       {onder && <div>{onder}</div>}
       </div>
-      <div style={{ background: "#123a42" }}>
-      {/* Vóór de scan zijn er nog geen tabbladen: dan staat op de band de korte uitleg,
-          met het huisje ernaast. */}
-      {toonTag && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 14px 0" }}>
-          <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.78)", lineHeight: 1.35 }}>{L.restoTagline}</span>
-          {acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
+      {/* Vóór de scan zijn er nog geen tabbladen: dan is er ook geen donkere band. */}
+      {!toonTag && (
+        <div style={{ background: "#123a42" }}>
+          {tabs ?? <div style={{ height: 10 }} />}
         </div>
       )}
-      {tabs ?? <div style={{ height: 10 }} />}
-      </div>
     </div>
   )
 }
