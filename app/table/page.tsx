@@ -805,6 +805,11 @@ const STRINGS = {
     totalConfirmedTitle: "Bon-totaal bevestigd",
     confirmAmount: "✓ Bevestig",
     changeAmount: "bedrag aanpassen",
+    scanAndTotalOk: "Scan gelukt, totaal klopt",
+    totalMatchesShort: "Totaal klopt met de bon",
+    bonWordShort: "Bon",
+    roundingDoneShort: (d: string) => `€${d} afronding aanvaard`,
+    roundingUndo: "afronding toch niet aanvaarden",
     confirmAmountTitle: "Bevestig dit bedrag",
     yes: "Ja",
     checkTaxShort: "BTW of korting",
@@ -1072,6 +1077,7 @@ const STRINGS = {
     statusNothing: "nog niets",
     nothingForPerson: (naam: string) => `${naam} duidde nog niets aan`,
     perPersonTitle: "🧾 Per persoon",
+    totalPerPerson: "Totaal per persoon",
     detailsHide: "▲ Details verbergen",
     detailsShow: "▼ Details tonen",
     nothingTapped: "Nog niets aangetikt.",
@@ -1513,6 +1519,11 @@ const STRINGS = {
     totalConfirmedTitle: "Total de l'addition confirmé",
     confirmAmount: "✓ Confirme",
     changeAmount: "modifier le montant",
+    scanAndTotalOk: "Scan réussi, le total correspond",
+    totalMatchesShort: "Le total correspond à l'addition",
+    bonWordShort: "Addition",
+    roundingDoneShort: (d: string) => `€${d} d'arrondi accepté`,
+    roundingUndo: "ne pas accepter l'arrondi",
     confirmAmountTitle: "Confirme ce montant",
     yes: "Oui",
     checkTaxShort: "TVA ou remise",
@@ -1770,6 +1781,7 @@ const STRINGS = {
     statusNothing: "rien encore",
     nothingForPerson: (naam: string) => `${naam} n'a encore rien indiqué`,
     perPersonTitle: "🧾 Par personne",
+    totalPerPerson: "Total par personne",
     detailsHide: "▲ Masquer les détails",
     detailsShow: "▼ Afficher les détails",
     nothingTapped: "Rien coché pour l'instant.",
@@ -2321,6 +2333,8 @@ export default function RundoTable() {
   const [scanSource, setScanSource] = useState<"ai" | "local" | null>(null)
   const [scanTotal, setScanTotal] = useState<string>("")
   const [expandedPeople, setExpandedPeople] = useState<Set<string>>(new Set())
+  // Stap 3 "Totaal per persoon" kan dicht, net als stap 1 en 2.
+  const [perPersoonOpen, setPerPersoonOpen] = useState(true)
   const [claimMode, setClaimMode] = useState<"item" | "person">("item")
   const [claimPid, setClaimPid] = useState<string | null>(null)
   const [scanFile, setScanFile] = useState<File | null>(null)
@@ -4115,12 +4129,23 @@ export default function RundoTable() {
   // kan al waar zijn terwijl je bovenaan nog "klopt dit betaalbedrag?" moet beantwoorden.
   // Scrollen vóór dat antwoord zou je wegduwen van de vraag die je eerst moet zien.
   const alKlaarOmTeDelen = billOk && receiptConfirmed && !receiptEditing
+  // Bevestigd én het klopt (tot op de cent, of een centenverschil dat je aanvaardde): dan
+  // tonen we bovenaan één klein groen blok in plaats van "Scan gelukt", het grote
+  // totaalkader en onderaan nog eens "Alles klopt" met een knop.
+  const bonKloptHelemaal = (() => {
+    const t = group?.receipt_total ?? null
+    if (t == null || !receiptConfirmed || receiptEditing) return false
+    const d = Math.abs(t - billTotal)
+    return d < 0.005 || (d <= 0.05 && roundingOk)
+  })()
   useEffect(() => {
-    if (!isAdmin || !alKlaarOmTeDelen || scrollAlKlaar.current) return
+    // Klopt alles en is het bevestigd, dan staat de knop naar Gasten bovenaan in het
+    // groene blok: dan hoeft er niet meer naar onder gescrold te worden.
+    if (bonKloptHelemaal || !isAdmin || !alKlaarOmTeDelen || scrollAlKlaar.current) return
     scrollAlKlaar.current = true
     if (typeof window === "undefined") return
     window.setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 220)
-  }, [isAdmin, alKlaarOmTeDelen])
+  }, [isAdmin, alKlaarOmTeDelen, bonKloptHelemaal])
   const billDiff = Math.abs((group?.receipt_total ?? 0) - billTotal)
   // Waarschuw zolang de bon niet klopt én de gebruiker het verschil niet bewust aanvaardde.
   const warnMismatch = !billOk && !billMismatchAck
@@ -4929,7 +4954,7 @@ export default function RundoTable() {
         // Op het startscherm is er nog niets te bekijken en niets te verdelen. Dan staat
         // hier alleen de weg terug, die vroeger verstopt zat achter een tik op het blok.
         const acties = (bonKnop || tweede) ? <>{bonKnop}{tweede}</>
-          : isAdmin ? <KopKnop onClick={leaveGroup} stil titel={L.toTableHome}>⌂</KopKnop> : undefined
+          : isAdmin && adminTab !== "guests" ? <KopKnop onClick={leaveGroup} stil titel={L.toTableHome}>⌂</KopKnop> : undefined
         // Zolang er geen bon is, valt er niets te kiezen: Gasten en Toewijzen zijn dan
         // allebei op slot en een tik erop levert alleen een foutmelding. Dan tonen we ze
         // ook niet — het scherm heeft op dat moment één ding te zeggen.
@@ -4957,7 +4982,6 @@ export default function RundoTable() {
             totalPersons={isAdmin && adminTab === "scan" ? undefined : participants.reduce((sum, p) => sum + Math.max(1, p.seats ?? 1), 0)}
             toonTag={!heeftBon}
             acties={acties}
-            actiesLinks={isAdmin && adminTab !== "scan" && !!groepKnop}
             onder={isAdmin && showGroupPeek && adminTab !== "scan" ? <div style={{ marginTop: 10 }}>{groepPeekLijst()}</div> : undefined}
             tabs={tabs} />
         )
@@ -5041,7 +5065,7 @@ export default function RundoTable() {
           )}
 
           {/* Scan-label bovenaan: vinkje bij AI-succes; duidelijke waarschuwing + retry bij lokale terugval */}
-          {items.length > 0 && scanSource === "ai" && (
+          {items.length > 0 && scanSource === "ai" && !bonKloptHelemaal && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "0 0 10px", padding: "8px 12px", borderRadius: 10, fontSize: 16, fontWeight: 700, background: "rgba(18,58,66,0.04)", border: "1px solid rgba(18,58,66,0.1)", color: "#4a6e73" }}>
               <span>{L.scanOk} <span style={{ color: "#1f8a4c", fontWeight: 800 }}>✓</span></span>
             </div>
@@ -5104,6 +5128,31 @@ export default function RundoTable() {
                     : { ...keuzeBtn, ...(receiptEditing ? { borderColor: "#0f7d90", color: "#0f7d90" } : {}) }}>{greenState ? L.changeAmount : L.noAdjust}</button>
               </span>
             )
+            if (bonKloptHelemaal) {
+              const diffTxt = diff.toFixed(2).replace(".", ",")
+              return (
+                <div style={{ ...S.card, padding: "12px 14px", marginBottom: 14, background: "rgba(39,174,96,0.07)", border: "1.5px solid rgba(39,174,96,0.55)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span aria-hidden style={{ flexShrink: 0, width: 28, height: 28, borderRadius: "50%", background: "#27ae60", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800 }}>✓</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: "#15703f", lineHeight: 1.25 }}>{scanSource === "ai" ? L.scanAndTotalOk : L.totalMatchesShort}</span>
+                      <span style={{ display: "block", fontSize: 14, color: "#3c6b51", marginTop: 2 }}>
+                        {L.bonWordShort} €{(entered ?? 0).toFixed(2).replace(".", ",")}{match ? "" : ` · ${L.roundingDoneShort(diffTxt)}`}
+                      </span>
+                    </span>
+                    <button onClick={() => { setReceiptEditing(true); window.setTimeout(() => { receiptInputRef.current?.focus(); receiptInputRef.current?.select() }, 60) }}
+                      style={{ flexShrink: 0, border: "none", background: "none", color: "#4a6e73", fontSize: 14, fontWeight: 700, textDecoration: "underline", cursor: "pointer", padding: "8px 2px", fontFamily: "inherit" }}>{L.changeAmount}</button>
+                  </div>
+                  {rounding && (
+                    <button onClick={() => setRoundingOk(false)}
+                      style={{ marginTop: 8, border: "none", background: "none", color: "#4a6e73", fontSize: 13.5, fontWeight: 700, textDecoration: "underline", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>{L.roundingUndo}</button>
+                  )}
+                  <button onClick={goGuests}
+                    style={{ width: "100%", marginTop: 11, minHeight: 48, border: "none", borderRadius: 12, fontSize: 16.5, fontWeight: 800, color: "#fff", cursor: "pointer", fontFamily: "inherit",
+                      background: "linear-gradient(135deg,#1f8a4c,#27ae60)", boxShadow: "0 6px 16px -8px rgba(31,138,76,0.7)" }}>{L.goGuestsBtn} →</button>
+                </div>
+              )
+            }
             return (
               <div className={greenState ? undefined : "rundo-needs-check"} style={{ ...S.card, padding: "18px 16px", marginBottom: 14, background: greenState ? "rgba(39,174,96,0.06)" : "rgba(243,156,18,0.12)", border: greenState ? "2px solid #27ae60" : "3px solid rgba(243,156,18,0.95)" }}>
                 {entered == null ? (
@@ -5304,7 +5353,7 @@ export default function RundoTable() {
             items={baseItems} claimedQty={claimedQty} participants={participants} claimsForItem={claimsForItem}
             sharerIds={sharerIds} shareHeads={shareHeads} toggleShareClaim={toggleShareClaim} setShareFixed={setShareFixed}
             onEdit={(it) => { if (!requireTotal()) return; setTotalDraft(null); setEditOrigineel(it); setEditItem(it) }} onToggleShared={(it) => { if (!requireTotal()) return; toggleShared(it) }} onDelete={(id) => { if (!requireTotal()) return; deleteItem(id) }} onAddManual={() => { if (!requireTotal()) return; openNewItem("bill") }} bareBill
-            recentItemId={recentItemId} onGoGuests={goGuests}
+            recentItemId={recentItemId} onGoGuests={bonKloptHelemaal ? undefined : goGuests}
             scanFlags={scanFlags}
             billOk={billOk}
             billOverBy={(receiptConfirmed && !receiptEditing && group?.receipt_total != null) ? +(billTotal - group.receipt_total).toFixed(2) : null}
@@ -5740,17 +5789,36 @@ export default function RundoTable() {
       {isAdmin && adminTab === "overview" && (
         <div id="rekening-per-persoon">
           <div style={S.card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <h3 style={{ ...S.h3, marginBottom: 0, gap: 8 }}>{group.finalized ? `👥 ${L.finalSplitTitle}` : L.perPersonTitle}</h3>
-              {participants.length > 0 && (() => {
-                const allOpen = participants.every((p) => expandedPeople.has(p.id))
-                return (
-                  <button style={S.smallBtn} onClick={() => setExpandedPeople(allOpen ? new Set() : new Set(participants.map((p) => p.id)))}>
+            {/* Stap 3, in dezelfde stijl als 1 en 2: genummerd bolletje, titel en inklappen.
+                "Details" per persoon blijft: tik op een naam, of op "alle details" eronder. */}
+            {(() => {
+              const klaar3 = openUnits === 0 && undecidedShared.length === 0
+              return (
+                <div onClick={() => setPerPersoonOpen((v) => !v)}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: perPersoonOpen ? 10 : 0, cursor: "pointer" }}>
+                  <h3 style={{ ...S.h3, marginBottom: 0, gap: 9, minWidth: 0 }}>
+                    {!group.finalized && (
+                      <span style={{ flexShrink: 0, width: 23, height: 23, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800,
+                        background: klaar3 ? "#1f8a4c" : "rgba(18,58,66,0.1)", color: klaar3 ? "#fff" : "#4a6e73" }}>{klaar3 ? "✓" : 3}</span>
+                    )}
+                    <span style={{ minWidth: 0 }}>{group.finalized ? `👥 ${L.finalSplitTitle}` : `3 · ${L.totalPerPerson}`}</span>
+                  </h3>
+                  <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{perPersoonOpen ? L.collapseClose : L.collapseOpen}</span>
+                </div>
+              )
+            })()}
+            {perPersoonOpen && (<>
+            {participants.length > 0 && (() => {
+              const allOpen = participants.every((p) => expandedPeople.has(p.id))
+              return (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+                  <button onClick={() => setExpandedPeople(allOpen ? new Set() : new Set(participants.map((p) => p.id)))}
+                    style={{ border: "none", background: "none", color: "#0f7d90", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "4px 2px", fontFamily: "inherit" }}>
                     {allOpen ? L.detailsHide : L.detailsShow}
                   </button>
-                )
-              })()}
-            </div>
+                </div>
+              )
+            })()}
             {participants.map((p) => {
               const t = personTotal(p.id)
               const st = guestStatus(p.id)
@@ -5861,6 +5929,7 @@ export default function RundoTable() {
                 </div>
               )
             })()}
+            </>)}
           </div>
 
           {!group.finalized && (
@@ -7574,7 +7643,7 @@ function BonKijker({ urls, onClose }: { urls: string[]; onClose: () => void }) {
   )
 }
 
-function TopBar({ group, isAdmin, onHome, totalPersons, acties, actiesLinks, onder, tabs, toonTag, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; acties?: React.ReactNode; actiesLinks?: boolean; onder?: React.ReactNode; tabs?: React.ReactNode; toonTag?: boolean }) {
+function TopBar({ group, isAdmin, onHome, totalPersons, acties, onder, tabs, toonTag, onRenameGroup }: { group: Group; isAdmin: boolean; onHome: () => void; signedUp?: number; totalPersons?: number; onRenameGroup?: (naam: string) => void; acties?: React.ReactNode; onder?: React.ReactNode; tabs?: React.ReactNode; toonTag?: boolean }) {
   const [lang] = useLang()
   const [naamBewerkt, setNaamBewerkt] = useState(false)
   const L = STRINGS[lang]
@@ -7582,8 +7651,11 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, actiesLinks, ond
   // daaronder een naamregel met een streepje, en dáár weer onder een witte pillenbalk met
   // eigen rand én schaduw. Vier omhulsels boven elkaar. Nu is het één donker vlak van rand
   // tot rand, met de tabbladen erin — het actieve blad loopt over in het witte vel eronder.
+  // Variant 2: licht boven, donker onder. Logo en groepsnaam staan op een lichte strook,
+  // zodat de kop luchtiger oogt; alleen de knoppen en de tabbladen staan nog op een
+  // smalle donkere band. Het actieve tabblad loopt nog altijd over in het witte vel.
   return (
-    <div style={{ margin: "-14px -14px 0", background: "#123a42" }}>
+    <div style={{ margin: "-14px -14px 0" }}>
       {/* Bovenste regel: links het merk, rechts de tafel. Het logo is het grootste op het
           scherm en de naam staat kleiner en turquoise aan de overkant — zo lijken die twee
           niet meer op elkaar en heb je in één oogopslag wélke app en wélke tafel. Het woord
@@ -7591,23 +7663,23 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, actiesLinks, ond
       {/* Naam en logo staan op dezelfde hoogte (center). De naam is groter dan vroeger,
           maar neemt nooit meer dan de helft van de breedte: te lang = twee regels, en
           wat dan nog niet past krijgt "…". */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px 10px", background: "#F2F8F8", borderBottom: "1px solid #DDEBEC" }}>
         <span onClick={isAdmin ? onHome : undefined} title={isAdmin ? L.toTableHome : undefined}
           style={{ flex: 1, minWidth: 0, cursor: isAdmin ? "pointer" : "default" }}>
-          <RundoLogo size={46} resto />
+          <RundoLogo size={40} resto opDonker={false} />
         </span>
         {/* Ter plekke aanpasbaar: tik op de naam en je typt erin. */}
         {onRenameGroup && naamBewerkt ? (
           <input autoFocus defaultValue={group.name}
             onBlur={(e) => { onRenameGroup(e.target.value); setNaamBewerkt(false) }}
             onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setNaamBewerkt(false) }}
-            style={{ flexShrink: 0, width: "50%", fontSize: 18, fontWeight: 700, color: "#123a42", border: "1.5px solid rgba(79,209,224,0.6)", borderRadius: 9, padding: "4px 8px", background: "#fff", fontFamily: "inherit", textAlign: "right" }} />
+            style={{ flexShrink: 0, width: "50%", fontSize: 18, fontWeight: 700, color: "#123a42", border: "1.5px solid rgba(19,140,154,0.5)", borderRadius: 9, padding: "4px 8px", background: "#fff", fontFamily: "inherit", textAlign: "right" }} />
         ) : (
           <span onClick={() => onRenameGroup && setNaamBewerkt(true)} role={onRenameGroup ? "button" : undefined}
             style={{ flexShrink: 0, maxWidth: "50%", display: "flex", alignItems: "center", gap: 7, justifyContent: "flex-end", cursor: onRenameGroup ? "pointer" : "default", padding: "4px 0" }}>
             <span lang={lang} style={{ minWidth: 0, textAlign: "right", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-              overflowWrap: "break-word", hyphens: "auto", fontSize: 19, fontWeight: 800, color: "#4fd1e0", lineHeight: 1.2 }}>{group.name}</span>
-            {onRenameGroup && <span style={{ flexShrink: 0, display: "flex", opacity: 0.85 }}><PotloodIcon size={19} kleur="#4fd1e0" /></span>}
+              overflowWrap: "break-word", hyphens: "auto", fontSize: 18, fontWeight: 800, color: "#0F6D7E", lineHeight: 1.2 }}>{group.name}</span>
+            {onRenameGroup && <span style={{ flexShrink: 0, display: "flex" }}><PotloodIcon size={17} kleur="#138C9A" /></span>}
           </span>
         )}
       </div>
@@ -7617,23 +7689,27 @@ function TopBar({ group, isAdmin, onHome, totalPersons, acties, actiesLinks, ond
       {/* Tweede regel: links de ondertitel (als die er nog is), rechts wat je kan doen.
           Zolang er niets te bekijken valt staat er rechts alleen het huisje — die deelt dan
           de regel met de ondertitel in plaats van er een lege regel onder te krijgen. */}
+      <div style={{ background: "#123a42" }}>
       {(toonTag || acties) && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: toonTag ? "7px 14px 0" : "11px 14px 0" }}>
-          {/* Op Gasten & QR en Toewijzen staat hier alleen de groepsknop, links tegen de rand. */}
-          {actiesLinks && acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
-          <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.78)", lineHeight: 1.35 }}>{toonTag ? L.restoTagline : ""}</span>
-          {!actiesLinks && acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: toonTag ? "9px 14px 0" : "10px 12px 0" }}>
+          {/* Knoppen links op de band (bon bekijken, opnieuw scannen of de groepsknop), de
+              tabbladen eronder over de volle breedte. Enkel naast de korte uitleg van vóór
+              de scan staat de knop rechts. */}
+          {!toonTag && acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
+          {toonTag && <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.78)", lineHeight: 1.35 }}>{L.restoTagline}</span>}
+          {toonTag && acties && <span style={{ flexShrink: 0, display: "flex", gap: 6, alignItems: "center" }}>{acties}</span>}
         </div>
       )}
       {totalPersons != null && totalPersons > 1 && !acties && (
-        <div style={{ display: "flex", justifyContent: "flex-end", padding: "11px 14px 0" }}>
+        <div style={{ display: "flex", justifyContent: "flex-start", padding: "10px 12px 0" }}>
           <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.72)", whiteSpace: "nowrap", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 9, padding: "7px 10px" }}>
             {L.persShort(totalPersons)}
           </span>
         </div>
       )}
       {onder && <div style={{ padding: "0 14px" }}>{onder}</div>}
-      {tabs ?? <div style={{ height: 14 }} />}
+      {tabs ?? <div style={{ height: 10 }} />}
+      </div>
     </div>
   )
 }
@@ -7660,7 +7736,7 @@ function KopKnop({ onClick, stil, titel, children }: { onClick: () => void; stil
 // bladen staan op 72% wit — genoeg om te zien dat je erop kan tikken.
 function KopTabs({ items, actief, onKies, klaarId }: { items: { id: string; label: string }[]; actief: string; onKies: (id: string) => void; klaarId?: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, padding: "12px 8px 0" }}>
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, padding: "10px 8px 0" }}>
       {items.map((t) => {
         const aan = actief === t.id
         const klaar = t.id === klaarId
@@ -7669,7 +7745,9 @@ function KopTabs({ items, actief, onKies, klaarId }: { items: { id: string; labe
             style={{ flex: 1, minWidth: 0, border: "none", cursor: "pointer", fontFamily: "inherit",
               borderRadius: "13px 13px 0 0", padding: aan ? "11px 3px 15px" : "11px 3px 13px",
               fontSize: 15, lineHeight: 1.15, fontWeight: aan ? 800 : 700,
-              background: aan ? (klaar ? "#eafaf1" : "#ffffff") : "transparent",
+              // Niet-actief: een heel lichte vulling met ronde bovenhoeken, zodat je ziet
+              // waar het ene tabblad ophoudt en het volgende begint.
+              background: aan ? (klaar ? "#eafaf1" : "#ffffff") : "rgba(255,255,255,0.07)",
               // Het turquoise streepje stond vroeger ónder het actieve woord. Daar kan het
               // niet meer: daar raakt het blad het witte vel, en een lijn zou die naad weer
               // opensnijden. Bovenaan is de rand die vrij is, en daar doet het hetzelfde
@@ -8280,6 +8358,8 @@ function ClaimScreen(props: {
   const [slotOpen, setSlotOpen] = useState(false)
   // Het eigen overzicht van de beheerder staat open zolang hij verdeelt; dichtklappen mag.
   const [eigenOpen, setEigenOpen] = useState(true)
+  // Stap 1 kan nu ook dicht, net als stap 2.
+  const [stap1Open, setStap1Open] = useState(true)
   // Uitleg die maar één keer hoeft. De sleutel hangt aan je plaats in déze tafel, dus bij
   // een volgend gezelschap krijg je ze opnieuw — dan zit er ook een ander gezelschap.
   // Bevestigd betekent: dit is wat ik nam. Dan hoort de lijst ook vast te staan — anders
@@ -8753,13 +8833,20 @@ function ClaimScreen(props: {
         <div style={S.card}>
           {/* Zelfde opbouw als bij de gast: een genummerd bolletje, zodat de twee schermen
               dezelfde volgorde vertellen — eerst aanduiden, dan wat er op jouw naam staat. */}
-          <div style={{ minWidth: 0, marginBottom: 10 }}>
-            <h3 style={{ ...S.h3, marginBottom: 2, gap: 9 }}>
-              {blokBol(1, claimedUnits >= totalUnits && sharedDecided >= sharedItems.length)}
-              <span style={{ minWidth: 0 }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
-            </h3>
-            <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.claimSubAdmin}</div>
+          <div onClick={() => setStap1Open((v) => !v)} style={{ minWidth: 0, marginBottom: stap1Open ? 10 : 0, cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <h3 style={{ ...S.h3, marginBottom: 2, gap: 9, minWidth: 0 }}>
+                {blokBol(1, claimedUnits >= totalUnits && sharedDecided >= sharedItems.length)}
+                <span style={{ minWidth: 0 }}>1 · {meId && seatsOf(meId) > 1 ? L.selectItemsPlural : L.selectItemsSingular}</span>
+              </h3>
+              <span style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+                {!stap1Open && <span style={{ fontSize: 15, fontWeight: 800, color: claimedUnits >= totalUnits ? "#1f8a4c" : "#4a6e73" }}>{claimedUnits}/{totalUnits}</span>}
+                <span style={{ fontSize: 16, fontWeight: 700, color: "#8aa3a6" }}>{stap1Open ? L.collapseClose : L.collapseOpen}</span>
+              </span>
+            </div>
+            {stap1Open && <div style={{ fontSize: 15, color: "#8aa3a6", lineHeight: 1.4 }}>{L.claimSubAdmin}</div>}
           </div>
+          {stap1Open && (<>
           {items.length === 0
             ? <div style={{ color: "#aaa", textAlign: "center", padding: 16, fontSize: 16.5 }}>{L.noItemsScanFirst}</div>
             : named.length === 0
@@ -9133,6 +9220,7 @@ function ClaimScreen(props: {
               </div>
             </div>
           )}
+          </>)}
         </div>
 
         {/* Een gast ziet altijd zijn eigen regels en zijn bedrag onder de lijst; de beheerder
