@@ -7737,27 +7737,42 @@ function KopKnop({ onClick, stil, donker, titel, children }: { onClick: () => vo
 // in het witte vel eronder, als een tabblad in een map. Daardoor zegt het niet alleen
 // "dit is actief" maar ook "dit blad hoort bij wat je hieronder ziet". De niet-actieve
 // bladen staan op 72% wit — genoeg om te zien dat je erop kan tikken.
+// Variant C: boven elk woord een klein icoon (bon, QR-code, mensen). De band wordt
+// daardoor vanzelf wat hoger en je herkent elk tabblad ook zonder te lezen. De letters
+// schalen mee met de schermbreedte (tot 16 punten), zodat de drie tabbladen ook op een
+// smal toestel en in het Frans altijd naast elkaar passen, op één regel.
+function KopTabIcoon({ id }: { id: string }) {
+  const p = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true }
+  if (id === "scan") return (<svg {...p}><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6" /></svg>)
+  if (id === "guests") return (<svg {...p}><rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1" /><rect x="14" y="3.5" width="6.5" height="6.5" rx="1" /><rect x="3.5" y="14" width="6.5" height="6.5" rx="1" /><path d="M14 14h3v3M20.5 14v6.5H14" /></svg>)
+  return (<svg {...p}><circle cx="8" cy="8" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M2.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14 14.5c.9-.4 1.9-.6 3-.6 2.5 0 4.5 1.8 4.5 4.6" /></svg>)
+}
+
 function KopTabs({ items, actief, onKies, klaarId }: { items: { id: string; label: string }[]; actief: string; onKies: (id: string) => void; klaarId?: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, padding: "10px 8px 0" }}>
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, padding: "12px 8px 0" }}>
       {items.map((t) => {
         const aan = actief === t.id
         const klaar = t.id === klaarId
         return (
           <button key={t.id} onClick={() => onKies(t.id)}
             style={{ flex: 1, minWidth: 0, border: "none", cursor: "pointer", fontFamily: "inherit",
-              borderRadius: "13px 13px 0 0", padding: aan ? "11px 3px 15px" : "11px 3px 13px",
-              fontSize: 15, lineHeight: 1.15, fontWeight: aan ? 800 : 700,
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+              borderRadius: "13px 13px 0 0", padding: aan ? "10px 2px 15px" : "10px 2px 13px",
+              fontSize: "clamp(13.5px, 4.2vw, 16px)", lineHeight: 1.15, fontWeight: aan ? 800 : 700,
               // Niet-actief: een heel lichte vulling met ronde bovenhoeken, zodat je ziet
               // waar het ene tabblad ophoudt en het volgende begint.
               background: aan ? (klaar ? "#eafaf1" : "#ffffff") : "rgba(255,255,255,0.07)",
-              // Het turquoise streepje stond vroeger ónder het actieve woord. Daar kan het
-              // niet meer: daar raakt het blad het witte vel, en een lijn zou die naad weer
-              // opensnijden. Bovenaan is de rand die vrij is, en daar doet het hetzelfde
-              // werk — zelfde kleur, zelfde dikte, alleen aan de andere kant van het woord.
+              // Het turquoise streepje staat bovenaan het actieve blad: onderaan raakt het
+              // blad het witte vel, en een lijn zou die naad weer opensnijden.
               boxShadow: aan ? `inset 0 4px 0 ${klaar ? "rgba(39,174,96,0.95)" : "#4fd1e0"}` : "none",
               color: aan ? (klaar ? "#1f8a4c" : "#0b3b45") : "rgba(255,255,255,0.72)" }}>
-            {t.label}{klaar ? " ✓" : ""}
+            <span style={{ display: "flex", color: aan ? (klaar ? "#1f8a4c" : "#138C9A") : "inherit", opacity: aan ? 1 : 0.85 }}>
+              <KopTabIcoon id={t.id} />
+            </span>
+            <span style={{ maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {t.label}{klaar ? " ✓" : ""}
+            </span>
           </button>
         )
       })}
