@@ -1085,6 +1085,8 @@ const STRINGS = {
     totalPerPerson: "Totaal per persoon",
     detailsHide: "▲ Details verbergen",
     detailsShow: "▼ Details tonen",
+    splitTotals: "Totalen",
+    splitDetails: "Details per persoon",
     nothingTapped: "Nog niets aangetikt.",
     sharedNPers: (n: number) => ` (gedeeld, ${n} pers.)`,
     sharedPart: " (gedeeld deel)",
@@ -1794,6 +1796,8 @@ const STRINGS = {
     totalPerPerson: "Total par personne",
     detailsHide: "▲ Masquer les détails",
     detailsShow: "▼ Afficher les détails",
+    splitTotals: "Totaux",
+    splitDetails: "Détails par personne",
     nothingTapped: "Rien coché pour l'instant.",
     sharedNPers: (n: number) => ` (partagé, ${n} pers.)`,
     sharedPart: " (part partagée)",
@@ -5807,33 +5811,34 @@ export default function RundoTable() {
                 "Details" per persoon blijft: tik op een naam, of op "alle details" eronder. */}
             {(() => {
               const klaar3 = openUnits === 0 && undecidedShared.length === 0
+              const eindKlaar = !!group.finalized
+              const toonPerPersoon = perPersoonOpen || eindKlaar
               return (
-                <div onClick={() => setPerPersoonOpen((v) => !v)}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: perPersoonOpen ? 10 : 0, cursor: "pointer" }}>
-                  <h3 style={{ ...S.h3, ...STAPTITEL, marginBottom: 0, gap: 10, minWidth: 0 }}>
-                    {!group.finalized && (
-                      <span style={{ flexShrink: 0, width: 23, height: 23, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800,
-                        background: klaar3 ? "#1f8a4c" : "rgba(18,58,66,0.1)", color: klaar3 ? "#fff" : "#4a6e73" }}>{klaar3 ? "✓" : 3}</span>
-                    )}
-                    <span style={{ minWidth: 0 }}>{group.finalized ? `👥 ${L.finalSplitTitle}` : `3 · ${L.totalPerPerson}`}</span>
+                // Na het afsluiten klapt deze kaart niet meer dicht: de namen met hun bedrag
+                // zijn waarvoor je hier kijkt, en dichtgeklapt bleef enkel het totaal over.
+                // Voor meer staat er de schakelaar Totalen / Details per persoon.
+                <div onClick={eindKlaar ? undefined : () => setPerPersoonOpen((v) => !v)}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: toonPerPersoon ? 10 : 0, cursor: eindKlaar ? "default" : "pointer" }}>
+                  <h3 style={{ ...S.h3, ...STAPTITEL, marginBottom: 0, gap: 10, minWidth: 0, color: eindKlaar ? "#1f8a4c" : STAPTITEL.color }}>
+                    <span style={{ flexShrink: 0, width: 25, height: 25, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800,
+                      background: klaar3 || eindKlaar ? "#1f8a4c" : "rgba(18,58,66,0.1)", color: klaar3 || eindKlaar ? "#fff" : "#4a6e73" }}>{klaar3 || eindKlaar ? "✓" : 3}</span>
+                    <span style={{ minWidth: 0 }}>{eindKlaar ? `👥 ${L.finalSplitTitle}` : `3 · ${L.totalPerPerson}`}</span>
                   </h3>
-                  <span style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
-                    {!perPersoonOpen && <span style={{ fontSize: 15.5, fontWeight: 800, color: klaar3 ? "#1f8a4c" : "#4a6e73" }}>€{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span>}
-                    <KlapPijl open={perPersoonOpen} />
-                  </span>
+                  {!eindKlaar && (
+                    <span style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+                      {!perPersoonOpen && <span style={{ fontSize: 15.5, fontWeight: 800, color: klaar3 ? "#1f8a4c" : "#4a6e73" }}>€{(billTotal + tipTotal).toFixed(2).replace(".", ",")}</span>}
+                      <KlapPijl open={perPersoonOpen} />
+                    </span>
+                  )}
                 </div>
               )
             })()}
-            {perPersoonOpen && (<>
+            {(perPersoonOpen || group.finalized) && (<>
             {participants.length > 0 && (() => {
               const allOpen = participants.every((p) => expandedPeople.has(p.id))
               return (
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
-                  <button onClick={() => setExpandedPeople(allOpen ? new Set() : new Set(participants.map((p) => p.id)))}
-                    style={{ border: "none", background: "none", color: "#0f7d90", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "4px 2px", fontFamily: "inherit" }}>
-                    {allOpen ? L.detailsHide : L.detailsShow}
-                  </button>
-                </div>
+                <DetailSchakelaar details={allOpen} totalen={L.splitTotals} detailsTekst={L.splitDetails}
+                  onKies={(d) => setExpandedPeople(d ? new Set(participants.map((p) => p.id)) : new Set())} />
               )
             })()}
             {participants.map((p) => {
@@ -5846,7 +5851,7 @@ export default function RundoTable() {
                   <div onClick={() => setExpandedPeople((cur) => { const n = new Set(cur); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
                     style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 4px", cursor: "pointer" }}>
                     <span style={{ fontWeight: 700, fontSize: 18, display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-                      <span style={{ fontSize: 15.5, color: "#8aa3a6", width: 12, display: "inline-block", flexShrink: 0 }}>{open ? "▼" : "▶"}</span>
+                      <MiniPijl open={open} />
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
                       <span style={{ fontSize: 15, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 8, padding: "3px 7px", flexShrink: 0 }}>{st.label}</span>
                     </span>
@@ -8312,6 +8317,31 @@ const ITEMBAK = { background: "rgba(18,58,66,0.045)", borderRadius: 12, padding:
 // Rechts een rond knopje met een pijltje dat omdraait als de stap open is.
 const STAPKAART = { background: "#fff", margin: "10px -4px 0", border: "1px solid #D6E6E8", borderRadius: 16, padding: "12px 12px", boxShadow: "0 6px 14px -12px rgba(18,58,66,0.45)" } as const
 const STAPTITEL = { fontSize: 18.5, fontWeight: 800, color: "#123a42", lineHeight: 1.25, letterSpacing: -0.2 } as const
+// Klein rond pijltje per persoon in een verdeling: zelfde vorm als KlapPijl, maar kleiner.
+function MiniPijl({ open }: { open: boolean }) {
+  return (
+    <span aria-hidden style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: "#EAF6F8", border: "1px solid #CFE3E6", color: "#0f7d90",
+      display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "transform .2s", transform: open ? "rotate(180deg)" : "none" }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+    </span>
+  )
+}
+// Schakelaar "Totalen / Details per persoon" boven een verdeling. Je ziet meteen welke
+// stand aan staat; bij beheerder en gast dezelfde.
+function DetailSchakelaar({ details, onKies, totalen, detailsTekst }: { details: boolean; onKies: (details: boolean) => void; totalen: string; detailsTekst: string }) {
+  const knop = (aan: boolean, tekst: string, waarde: boolean) => (
+    <button type="button" onClick={(e) => { e.stopPropagation(); onKies(waarde) }}
+      style={{ flex: 1, minWidth: 0, border: "none", cursor: "pointer", fontFamily: "inherit", padding: "8px 4px", borderRadius: 9, fontSize: 14.5, fontWeight: 800,
+        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        background: aan ? "#fff" : "transparent", color: aan ? "#0b3b45" : "#4a6e73", boxShadow: aan ? "0 1px 3px rgba(18,58,66,0.18)" : "none" }}>{tekst}</button>
+  )
+  return (
+    <div style={{ display: "flex", background: "#EEF4F5", borderRadius: 12, padding: 3, margin: "0 0 6px" }}>
+      {knop(!details, totalen, false)}
+      {knop(details, detailsTekst, true)}
+    </div>
+  )
+}
 function KlapPijl({ open }: { open: boolean }) {
   return (
     <span aria-hidden style={{ flexShrink: 0, width: 32, height: 32, borderRadius: "50%", background: "#EAF6F8", border: "1px solid #CFE3E6", color: "#0f7d90",
@@ -8805,12 +8835,8 @@ function ClaimScreen(props: {
         <span style={{ ...STAPTITEL, color: "#1f8a4c" }}>👥 {L.finalSplitTitle}</span>
       </div>
       {participants.length > 0 && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-          <button onClick={() => setOpenGuestRows((cur) => cur.size >= participants.length ? new Set() : new Set(participants.map((q) => q.id)))}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", fontFamily: "inherit", fontSize: 14.5, fontWeight: 800, color: "#0f7488", background: "rgba(20,153,176,0.12)", border: "1px solid rgba(20,153,176,0.3)", borderRadius: 9, padding: "6px 10px" }}>
-            {openGuestRows.size >= participants.length ? `${L.hideDetails} \u25b4` : `${L.showDetails} \u25be`}
-          </button>
-        </div>
+        <DetailSchakelaar details={openGuestRows.size >= participants.length} totalen={L.splitTotals} detailsTekst={L.splitDetails}
+          onKies={(d) => setOpenGuestRows(d ? new Set(participants.map((q) => q.id)) : new Set())} />
       )}
       {participants.map((p) => {
         const pt = personTotal(p.id)
@@ -8821,8 +8847,8 @@ function ClaimScreen(props: {
           <div key={p.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.05)", borderRadius: 8, background: isMe ? "rgba(233,196,95,0.16)" : "transparent" }}>
             <div onClick={() => setOpenGuestRows((cur) => { const n = new Set(cur); n.has(p.id) ? n.delete(p.id) : n.add(p.id); return n })}
               style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 8px", cursor: "pointer" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                <span style={{ fontSize: 15.5, color: "#8aa3a6", width: 12, flexShrink: 0 }}>{rowOpen ? "\u25bc" : "\u25b6"}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <MiniPijl open={rowOpen} />
                 <span style={{ fontSize: 17.5, fontWeight: isMe ? 800 : 600, color: "#123a42", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{naamVan(p)}{isMe ? L.youSuffix : ""}</span>
               </span>
               <span style={{ fontSize: 18, fontWeight: 800, color: "#123a42", flexShrink: 0, marginLeft: 8 }}>€{pt.settled.toFixed(2).replace(".", ",")}</span>
